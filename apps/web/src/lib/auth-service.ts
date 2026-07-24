@@ -19,21 +19,13 @@ export const authService = {
       return { success: true, token: 'mock-jwt-token' };
     }
     
-    const response = await apiFetch(`${API_BASE}/login`, {
+    return apiFetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(credentials),
       skipAuthRedirect: true
     });
-
-    if (response && response.token) {
-      if (typeof window !== 'undefined') {
-        document.cookie = `auth_token=${response.token}; path=/; max-age=86400; samesite=lax`;
-      }
-    }
-
-    return response;
   },
 
   /**
@@ -47,17 +39,11 @@ export const authService = {
       }
       return { success: true };
     }
-    const response = await apiFetch(`${API_BASE}/logout`, {
+    return apiFetch(`${API_BASE}/logout`, {
       method: 'POST',
       credentials: 'include',
       skipAuthRedirect: true
     });
-    
-    if (typeof window !== 'undefined') {
-      document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    }
-    
-    return response;
   },
   
   /**

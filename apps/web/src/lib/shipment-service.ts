@@ -3,17 +3,17 @@ const API_BASE = `${API_HOST}/api/admin`;
 
 export const shipmentService = {
   async getShipments(params: Record<string, string | number | boolean> = {}) {
-    const url = new URL(`${API_BASE}/shipments`);
-    Object.keys(params).forEach(key => url.searchParams.append(key, String(params[key])));
+    const searchParams = new URLSearchParams();
+    Object.keys(params).forEach(key => searchParams.append(key, String(params[key])));
     
-    return apiFetch(url.toString(), { credentials: 'include' });
+    return apiFetch(`${API_BASE}/shipments?${searchParams.toString()}`, { credentials: 'include' });
   },
 
   async exportShipments(params: Record<string, string | number | boolean> = {}, exportType: string = 'current_month') {
-    const url = new URL(`${API_BASE}/shipments/export`);
-    Object.keys(params).forEach(key => url.searchParams.append(key, String(params[key])));
+    const searchParams = new URLSearchParams();
+    Object.keys(params).forEach(key => searchParams.append(key, String(params[key])));
     
-    const res = await fetch(url.toString(), { credentials: 'include' });
+    const res = await fetch(`${API_BASE}/shipments/export?${searchParams.toString()}`, { credentials: 'include' });
     if (!res.ok) throw new Error('Failed to export');
     
     const blob = await res.blob();

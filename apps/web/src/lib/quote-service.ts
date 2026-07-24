@@ -47,17 +47,17 @@ export interface GetQuotesResponse {
 }
 
 export async function getQuotes(params: Record<string, string | number | boolean | string[]> = {}): Promise<GetQuotesResponse> {
-  const url = new URL(`${API_URL}/quotations`);
+  const searchParams = new URLSearchParams();
   Object.keys(params).forEach(key => {
     if (params[key] !== undefined && params[key] !== '') {
       if (Array.isArray(params[key])) {
-        (params[key] as string[]).forEach(val => url.searchParams.append(key, val));
+        (params[key] as string[]).forEach(val => searchParams.append(key, val));
       } else {
-        url.searchParams.append(key, String(params[key]));
+        searchParams.append(key, String(params[key]));
       }
     }
   });
-  return apiFetch(url.toString());
+  return apiFetch(`${API_URL}/quotations?${searchParams.toString()}`);
 }
 
 export async function getQuote(id: string): Promise<QuotationRequest> {
