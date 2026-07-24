@@ -30,7 +30,7 @@ export default function LoginPage() {
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
     if (!email) {
-      newErrors.email = 'Username or email is required';
+      newErrors.email = 'Username is required';
     }
     if (!password) {
       newErrors.password = 'Password is required';
@@ -100,12 +100,12 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className={errors.email ? 'text-red-500' : ''}>
-                Username or Email
+                Username
               </Label>
               <Input
                 id="email"
                 type="text"
-                placeholder="admin@ksrshipping.com"
+                placeholder="admin"
                 className="premium-input h-12"
                 value={email}
                 onChange={(e) => {
