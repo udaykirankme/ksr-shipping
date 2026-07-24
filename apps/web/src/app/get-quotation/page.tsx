@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, User, MapPin, Package, ArrowRight, Truck, ChevronDown } from "lucide-react";
+import { CheckCircle2, User, MapPin, Package, ArrowRight, Truck } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
@@ -84,7 +84,6 @@ export default function GetQuotationPage() {
   }
 
   const inputClasses = "w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 outline-none text-gray-900 font-medium placeholder:font-normal placeholder:text-gray-400 hover:border-gray-300";
-  const selectClasses = "w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 outline-none text-gray-900 font-medium appearance-none cursor-pointer hover:border-gray-300";
 
   return (
     <div className="bg-gray-50 min-h-screen pt-[104px] lg:pt-[130px] pb-24 relative overflow-hidden">

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Search, Filter, Download, FileSpreadsheet, FileText, RefreshCw, CheckCircle, Star, Trash2 } from "lucide-react";
+import { Search, Download, FileSpreadsheet, FileText, RefreshCw, CheckCircle, Star, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -164,7 +163,7 @@ export function MessageListClient() {
             <DateFilter value={dateFilter} onChange={setDateFilter} />
           </div>
           <div className="flex gap-2 w-full lg:flex-1 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar">
-            {["All", "Needs Attention", "To Be Responded", "Responded", "Starred"].map(status => (
+            {["All", "To Be Responded", "Responded", "Starred"].map(status => (
               <Button
                 key={status}
                 variant={statusFilter === status ? "default" : "outline"}
@@ -256,7 +255,7 @@ export function MessageListClient() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={`text-sm line-clamp-1 max-w-[200px] ${!msg.opened_at ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>{msg.subject || 'No Subject'}</span>
+                      <span className={`text-sm line-clamp-1 max-w-[200px] ${!msg.opened_at ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>{msg.subject || msg.message}</span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-gray-600 whitespace-nowrap">{formatDate(msg.created_at)}</span>

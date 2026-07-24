@@ -4,15 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
-  ArrowLeft, Save, Box, MapPin, Phone, Clock, RefreshCw, AlertTriangle, Trash2
+  ArrowLeft, Save, Box, MapPin, Phone, Clock, RefreshCw, AlertTriangle, Trash2, CheckCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { getQuote, updateQuote, updateQuoteStatus, QuotationRequest, deleteQuote } from "@/lib/quote-service";
 import { formatDateTime } from "@/lib/format";
 
-const QUOTE_WORKFLOW = ['New', 'Contacted', 'Quoted', 'Rejected', 'Closed'];
+
 
 export function QuoteDetailClient({ id }: { id: string }) {
   const router = useRouter();
@@ -21,10 +20,7 @@ export function QuoteDetailClient({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   
-  // Status Modal State
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
-  const [statusNote, setStatusNote] = useState("");
+
 
   useEffect(() => {
     let mounted = true;
@@ -76,18 +72,15 @@ export function QuoteDetailClient({ id }: { id: string }) {
     }
   };
 
-  const handleUpdateStatus = async () => {
-    if (!quote || !newStatus) return;
+  const handleMarkResponded = async () => {
+    if (!quote || quote.status !== 'New') return;
     setSaving(true);
     setError("");
     try {
       await updateQuoteStatus(id, {
-        status: newStatus,
-        note: statusNote,
+        status: 'Contacted',
         version: quote.version
       });
-      setStatusModalOpen(false);
-      setStatusNote("");
       await loadData();
     } catch (err: unknown) {
       const errorMsg = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
@@ -136,7 +129,7 @@ export function QuoteDetailClient({ id }: { id: string }) {
     }
   };
 
-  const currentIndex = QUOTE_WORKFLOW.indexOf(quote.status);
+
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -149,22 +142,36 @@ export function QuoteDetailClient({ id }: { id: string }) {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-gray-900">{quote.quote_id}</h1>
-              <Badge variant="outline" className={`${getStatusColor(quote.status)} border-0 font-medium`}>
-                {quote.status}
-              </Badge>
+              {quote.status !== 'New' ? (
+                <Badge variant="success">
+                  <CheckCircle className="w-3 h-3 mr-1" /> Responded
+                </Badge>
+              ) : (
+                <Badge variant="warning">
+                  Pending
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-gray-500 mt-1">Created on {formatDateTime(quote.created_at)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            onClick={() => setStatusModalOpen(true)}
-            className="gap-2"
-          >
-            Update Status
-          </Button>
+          {quote.status === 'New' && (
+            <Button 
+              onClick={handleMarkResponded}
+              disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all gap-2"
+            >
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              Mark as Responded
+            </Button>
+          )}
+          {quote.status !== 'New' && (
+            <Button disabled variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-2">
+              <CheckCircle className="w-4 h-4" /> Responded
+            </Button>
+          )}
           <Button 
             onClick={handleSave} 
             disabled={saving}
@@ -321,50 +328,6 @@ export function QuoteDetailClient({ id }: { id: string }) {
         </div>
 
       </div>
-
-      {/* Status Update Modal */}
-      {statusModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Update Quote Status</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">New Status</label>
-                <PremiumSelect
-                  value={newStatus}
-                  onChange={(val) => setNewStatus(val)}
-                  options={QUOTE_WORKFLOW.map((s, i) => ({
-                    label: `${s} ${i <= currentIndex ? '(Completed)' : ''}`,
-                    value: s,
-                    disabled: i <= currentIndex
-                  }))}
-                  placeholder="Select Status..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status Note (Optional)</label>
-                <textarea 
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 outline-none transition-all focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                  rows={3}
-                  value={statusNote}
-                  onChange={(e) => setStatusNote(e.target.value)}
-                  placeholder="E.g., Spoke with customer, waiting for reply..."
-                />
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setStatusModalOpen(false)} disabled={saving}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateStatus} disabled={!newStatus || saving} className="bg-orange-500 hover:bg-orange-600 text-white">
-                {saving ? 'Updating...' : 'Confirm Update'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

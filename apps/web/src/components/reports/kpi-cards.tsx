@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, FileText, MessageSquare, IndianRupee, TrendingUp, Bell, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Package, FileText, MessageSquare, IndianRupee, TrendingUp, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KpiCardsProps {

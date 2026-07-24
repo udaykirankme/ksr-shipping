@@ -123,7 +123,7 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
               <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
                 <MessageSquare className="w-5 h-5 text-blue-500" />
-                {message.subject || 'No Subject Provided'}
+                {message.subject || message.message}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">

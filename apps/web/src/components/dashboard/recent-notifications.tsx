@@ -15,7 +15,7 @@ interface NotificationItem {
 // Dummy data removed as per requirements until Notifications module is built
 const dummyNotifications: NotificationItem[] = [];
 
-export function RecentNotifications({ notifications = dummyNotifications }: { notifications?: NotificationItem[] }) {
+export function RecentNotifications() {
   const getIcon = (type: string) => {
     switch(type) {
       case "shipment": return <Package className="w-4 h-4 text-orange-600" />;

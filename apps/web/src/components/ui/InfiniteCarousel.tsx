@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { motion, useAnimationFrame, useMotionValue, useMotionValueEvent, PanInfo } from "framer-motion";
+import { motion, useAnimationFrame, useMotionValue, useMotionValueEvent } from "framer-motion";
 
 interface InfiniteCarouselProps {
   children: React.ReactNode;
@@ -52,7 +52,7 @@ export function InfiniteCarousel({ children, speed = 1, pauseOnHover = true }: I
   });
 
   // Smooth auto-scroll loop
-  useAnimationFrame((time, delta) => {
+  useAnimationFrame((_time, delta) => {
     if (contentWidth === 0 || isDragging) return;
     
     const timeSinceInteraction = performance.now() - lastInteractionTime.current;

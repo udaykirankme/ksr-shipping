@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { PrismaClient, Prisma, Shipment } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import { z } from 'zod';
+
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // Validate all route parameters named 'id' to ensure they are valid UUIDs
 // This prevents Prisma from crashing with HTTP 500 when given invalid formats like 'undefined' or 'abc'
-router.param('id', (req, res, next, id) => {
+router.param('id', (_req, res, next, id) => {
   const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
   if (!uuidRegex.test(id)) {
     return res.status(400).json({ success: false, message: 'Invalid ID format' });
@@ -687,7 +687,11 @@ router.get('/quotations', async (req, res) => {
         { is_starred: true },
         { status: { notIn: ['Closed'] } }
       ];
-    } else if (status) {
+    } else if (status === 'To Be Responded') {
+      where.status = 'New';
+    } else if (status === 'Responded') {
+      where.status = { notIn: ['New'] };
+    } else if (status && status !== 'All') {
       where.status = status;
     }
 
@@ -1202,7 +1206,7 @@ router.get('/notifications/:id', async (req, res) => {
   }
 });
 
-router.delete('/notifications/cleanup', async (req, res) => {
+router.delete('/notifications/cleanup', async (_req, res) => {
   try {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -1231,7 +1235,7 @@ router.post('/notifications/delete-bulk', async (req, res) => {
   }
 });
 
-router.delete('/notifications/read-all', async (req, res) => {
+router.delete('/notifications/read-all', async (_req, res) => {
   try {
     await prisma.notification.deleteMany({
       where: { read_at: { not: null } }
@@ -1242,7 +1246,7 @@ router.delete('/notifications/read-all', async (req, res) => {
     res.status(500).json({ success: false, message: 'Database error'  });
   }
 });
-router.delete('/notifications/read-all', async (req, res) => {
+router.delete('/notifications/read-all', async (_req, res) => {
   try {
     await prisma.notification.deleteMany({
       where: { read_at: { not: null } }
@@ -1280,7 +1284,7 @@ router.patch('/notifications/read-bulk', async (req, res) => {
   }
 });
 
-router.patch('/notifications/read-all', async (req, res) => {
+router.patch('/notifications/read-all', async (_req, res) => {
   try {
     await prisma.notification.updateMany({
       where: { read_at: null },
@@ -1451,7 +1455,7 @@ router.get('/reports/analytics', async (req, res) => {
 
 // --- Settings Endpoints ---
 
-router.get('/settings', async (req, res) => {
+router.get('/settings', async (_req, res) => {
   try {
     const settings = await prisma.systemSetting.findMany();
     
@@ -1526,7 +1530,7 @@ router.patch('/settings', async (req, res) => {
 
 // --- Services Endpoints ---
 
-router.get('/services', async (req, res) => {
+router.get('/services', async (_req, res) => {
   try {
     const services = await prisma.service.findMany({
       orderBy: { display_order: 'asc' }
@@ -1675,7 +1679,7 @@ router.post('/service-through/reorder', async (req, res) => {
 
 // --- Service Through Endpoints ---
 
-router.get('/service-through', async (req, res) => {
+router.get('/service-through', async (_req, res) => {
   try {
     const items = await prisma.serviceThrough.findMany({
       orderBy: { display_order: 'asc' }

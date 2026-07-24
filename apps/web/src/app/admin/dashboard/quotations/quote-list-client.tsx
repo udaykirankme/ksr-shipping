@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Search, RefreshCw, Star, Trash2 } from "lucide-react";
+import { Search, RefreshCw, Star, Trash2, CheckCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ export function QuoteListClient() {
   const [quotes, setQuotes] = useState<QuotationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("all-time");
   
   const [page, setPage] = useState(1);
@@ -118,16 +117,7 @@ export function QuoteListClient() {
   };
 
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'New': return 'bg-blue-100 text-blue-700';
-      case 'Contacted': return 'bg-yellow-100 text-yellow-700';
-      case 'Quoted': return 'bg-purple-100 text-purple-700';
-      case 'Rejected': return 'bg-red-100 text-red-700';
-      case 'Closed': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
+
 
   return (
     <div className="space-y-6">
@@ -162,7 +152,7 @@ export function QuoteListClient() {
         </div>
         
         <div className="flex gap-2 w-full lg:flex-1 overflow-x-auto pb-2 lg:pb-0 hide-scrollbar">
-          {["", "Needs Attention", "New", "Contacted", "Quoted", "Rejected", "Closed", "Starred"].map(status => (
+          {["All", "To Be Responded", "Responded", "Starred"].map(status => (
             <Button
               key={status}
               variant={statusFilter === status ? "default" : "outline"}
@@ -170,7 +160,7 @@ export function QuoteListClient() {
               onClick={() => { setStatusFilter(status); setPage(1); }}
             >
               {status === "Starred" ? <Star className="w-4 h-4 mr-1 fill-current" /> : null}
-              {status === "" ? "All Quotes" : status}
+              {status}
             </Button>
           ))}
         </div>
@@ -282,9 +272,15 @@ export function QuoteListClient() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={`${getStatusColor(quote.status)} border-0 font-semibold px-3 py-1 rounded-full`}>
-                        {quote.status}
-                      </Badge>
+                      {quote.status !== 'New' ? (
+                        <Badge variant="success">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Responded
+                        </Badge>
+                      ) : (
+                        <Badge variant="warning">
+                          Pending
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-gray-500 text-sm">
                       {formatDate(quote.created_at)}

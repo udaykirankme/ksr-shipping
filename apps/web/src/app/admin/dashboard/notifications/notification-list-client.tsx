@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { Search, RefreshCw, Star, Package, FileText, MessageSquare, AlertCircle, Trash } from "lucide-react";
+import { Search, RefreshCw, Star, Package, FileText, MessageSquare, AlertCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +15,8 @@ export function NotificationListClient() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Needs Attention");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("all-time");
   
@@ -86,16 +84,7 @@ export function NotificationListClient() {
     router.push(`/admin/dashboard/notifications/${notif.id}`);
   };
 
-  const toggleSelection = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedIds(next);
-  };
+
 
   const toggleAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -204,7 +193,7 @@ export function NotificationListClient() {
           </div>
 
           <div className="flex gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 hide-scrollbar">
-            {["All", "Needs Attention", "Unread", "Read", "Starred"].map(status => (
+            {["All", "Unread", "Read", "Starred"].map(status => (
               <Button
                 key={status}
                 variant={statusFilter === status ? "default" : "outline"}

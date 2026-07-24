@@ -1,7 +1,6 @@
 "use client";
 
-import { business } from "@ksr/config";
-import { ShieldCheck, Target, Users, Zap, Clock, ThumbsUp, PackageCheck, Home, MapPin, Globe2, Box, HeartPulse, Building2, HeadphonesIcon, Network } from "lucide-react";
+import { ShieldCheck, Zap, ThumbsUp, PackageCheck, Home, MapPin, Globe2, Box, HeartPulse, Building2, HeadphonesIcon, Network } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { useInView, animate, motion } from "framer-motion";
 import Link from "next/link";

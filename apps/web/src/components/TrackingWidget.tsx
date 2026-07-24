@@ -57,7 +57,7 @@ export function TrackingWidget({ compact = false, centered = false }: { compact?
             <p className="text-xs text-gray-500 max-w-[70%]">
               One tracking number, every courier partner — no need to know who&apos;s carrying it.
             </p>
-            <Link href="/track" className="text-xs font-semibold text-orange-600 whitespace-nowrap hover:text-orange-700">
+            <Link href="/faq" className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors whitespace-nowrap">
               How it works? &rarr;
             </Link>
           </div>

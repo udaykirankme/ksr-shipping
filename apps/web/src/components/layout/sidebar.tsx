@@ -14,7 +14,6 @@ import {
   Bell,
   BarChart3,
   Settings,
-  User,
   LogOut,
 } from "lucide-react";
 

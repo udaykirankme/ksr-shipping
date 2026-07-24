@@ -43,7 +43,6 @@ const PARTNERS = [
 ];
 
 export default function Home() {
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   
   
