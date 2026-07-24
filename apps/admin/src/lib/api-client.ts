@@ -1,3 +1,5 @@
+export const API_HOST = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export interface ApiFetchOptions extends RequestInit {
   skipAuthRedirect?: boolean;
 }

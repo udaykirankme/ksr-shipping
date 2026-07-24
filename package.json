@@ -9,9 +9,9 @@
     "database"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w apps/admin\" \"npm run dev -w apps/web\" \"npm run dev -w server/api\"",
+    "dev": "concurrently \"npm run dev -w apps/web\" \"npm run dev -w server/api\"",
     "build": "npm run build --workspaces --if-present",
-    "start": "concurrently \"npm run start -w apps/admin\" \"npm run start -w apps/web\" \"npm run start -w server/api\"",
+    "start": "concurrently \"npm run start -w apps/web\" \"npm run start -w server/api\"",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },

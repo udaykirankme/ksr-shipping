@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { PublicLayoutWrapper } from "@/components/layout/PublicLayoutWrapper";
 import { business } from "@ksr/config";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -48,12 +46,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className={`${inter.className} bg-white text-gray-900 antialiased min-h-screen flex flex-col`}>
-        <Navbar />
-        <main className="flex-1">
-           {children}
-        </main>
-        <Footer />
-        <WhatsAppButton />
+        <PublicLayoutWrapper>
+          {children}
+        </PublicLayoutWrapper>
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface Option {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 interface PremiumSelectProps {
@@ -16,9 +17,10 @@ interface PremiumSelectProps {
   options: Option[];
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
-export function PremiumSelect({ value, onChange, options, placeholder = "Select an option", required }: PremiumSelectProps) {
+export function PremiumSelect({ value, onChange, options, placeholder = "Select an option", required, disabled }: PremiumSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -42,17 +44,20 @@ export function PremiumSelect({ value, onChange, options, placeholder = "Select 
          value={value} 
          onChange={(e) => onChange(e.target.value)} 
          required={required} 
+         disabled={disabled}
          className="hidden"
       >
          <option value="" disabled>{placeholder}</option>
-         {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+         {options.map(opt => <option key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</option>)}
       </select>
 
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         className={cn(
           "w-full px-5 py-4 rounded-xl border flex items-center justify-between transition-all duration-300 outline-none text-left",
+          disabled ? "bg-gray-50/50 border-gray-200 text-gray-500 cursor-not-allowed opacity-75" :
           isOpen 
             ? "bg-white border-orange-500 ring-4 ring-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.15)]" 
             : "bg-gray-50/50 border-gray-200 hover:bg-white hover:border-orange-300 hover:shadow-[0_0_15px_rgba(249,115,22,0.1)]"
