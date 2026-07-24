@@ -148,7 +148,7 @@ export default function Home() {
       <WhyChooseCarousel />
 
       {/* 3. Services Scroll Section */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-24 bg-gray-50 overflow-hidden">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                <motion.div 
@@ -165,9 +165,10 @@ export default function Home() {
                </motion.div>
                <h3 className="mt-4 text-3xl md:text-4xl font-black text-gray-900">Services built around<br/>what you&apos;re sending</h3>
             </div>
+         </div>
             
-            <div className="flex flex-col gap-6 relative group/container">
-               <InfiniteCarousel speed={1}>
+         <div className="flex flex-col gap-6 relative group/container">
+            <InfiniteCarousel speed={1}>
                  <div className="flex gap-6 pr-6">
                     {[
                        { id: "international-courier", title: "International Courier", icon: Plane, desc: "Worldwide shipping with customs handled for you." },
@@ -195,7 +196,6 @@ export default function Home() {
                  </div>
                </InfiniteCarousel>
             </div>
-         </div>
       </section>
 
       {/* 4. Stats Strip */}
