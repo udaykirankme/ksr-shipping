@@ -55,7 +55,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       data: { last_login_at: new Date() }
     });
 
-    res.json({ success: true, data: { message: 'Logged in successfully', user: { id: user.id, username: user.username, role: user.role } } });
+    res.json({ success: true, data: { token, message: 'Logged in successfully', user: { id: user.id, username: user.username, role: user.role } } });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
