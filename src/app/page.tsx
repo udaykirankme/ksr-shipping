@@ -157,7 +157,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="hidden lg:flex lg:col-span-6 lg:col-start-7 lg:mt-36 relative z-20 w-full min-w-0 scroll-mt-[90px] mb-16 justify-end"
+              className="hidden lg:flex lg:col-span-6 lg:col-start-7 lg:mt-48 relative z-20 w-full min-w-0 scroll-mt-[90px] mb-16 justify-end"
             >
               <TrackingWidget />
             </motion.div>
