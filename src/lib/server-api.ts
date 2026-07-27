@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { getApiUrl } from '@/lib/api-url';
 
 export async function getServerCookieHeader(): Promise<string> {
@@ -9,12 +9,36 @@ export async function getServerCookieHeader(): Promise<string> {
     .join('; ');
 }
 
+async function getServerFetchUrl(path: string): Promise<string> {
+  if (typeof window !== 'undefined') {
+    return getApiUrl(path);
+  }
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+
+  try {
+    const headerStore = await headers();
+    const host = headerStore.get('x-forwarded-host') ?? headerStore.get('host');
+    const protocol = headerStore.get('x-forwarded-proto') ?? 'https';
+    if (host) {
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      return `${protocol}://${host}${normalizedPath}`;
+    }
+  } catch {
+    // headers() is unavailable outside a request context
+  }
+
+  return getApiUrl(path);
+}
+
 export async function serverApiFetch<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T | null> {
   try {
-    const res = await fetch(getApiUrl(path), {
+    const res = await fetch(await getServerFetchUrl(path), {
       ...init,
       headers: {
         ...init?.headers,
