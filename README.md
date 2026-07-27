@@ -59,8 +59,7 @@ public/               # Static assets
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `DIRECT_URL` | Direct PostgreSQL URL for Prisma |
+| `DATABASE_URL` | PostgreSQL connection string (required on Vercel) |
 | `JWT_SECRET` | Secret for admin auth tokens |
 | `NEXT_PUBLIC_APP_URL` | Optional. Base URL for server-side API calls |
 
@@ -73,7 +72,25 @@ public/               # Static assets
 | `npm run start` | Start production server |
 | `npm run db:push` | Sync Prisma schema to database |
 | `npm run db:seed` | Seed demo data |
+| `npm run db:setup` | Push schema and seed demo data |
 | `npm run db:up` | Start PostgreSQL via Docker |
+
+## Deploying to Vercel
+
+1. In Vercel project **Settings → General**, set **Root Directory** to `.` (not `apps/web`).
+2. Add environment variables under **Settings → Environment Variables**:
+   - `DATABASE_URL` — cloud PostgreSQL URL ([Neon](https://neon.tech), Supabase, or Vercel Postgres)
+   - `JWT_SECRET` — long random string
+3. Redeploy the project.
+4. From your machine, initialize the production database once:
+
+```bash
+DATABASE_URL="your-production-url" npm run db:setup
+```
+
+5. Log in at `/admin/login` with `admin` / `admin123`.
+
+Check database connectivity: `GET /api/db-health`
 
 ## Built With
 

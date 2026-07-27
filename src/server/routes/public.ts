@@ -7,6 +7,27 @@ import crypto from 'crypto';
 
 const router = Router();
 
+router.get('/db-health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    const adminCount = await prisma.adminUser.count();
+    res.json({
+      success: true,
+      data: {
+        database: 'connected',
+        admin_users: adminCount,
+      },
+    });
+  } catch (error: any) {
+    console.error('Database health check failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 100,
