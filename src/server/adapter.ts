@@ -8,6 +8,15 @@ async function readBody(req: NextRequest): Promise<string | undefined> {
   return text || undefined;
 }
 
+const SKIP_REQUEST_HEADERS = new Set([
+  'host',
+  'content-length',
+  'if-none-match',
+  'if-modified-since',
+  'if-match',
+  'if-unmodified-since',
+]);
+
 function buildResponse(supertestRes: request.Response): Response {
   const headers = new Headers();
   for (const [key, value] of Object.entries(supertestRes.headers)) {
@@ -22,8 +31,12 @@ function buildResponse(supertestRes: request.Response): Response {
     headers.set(key, Array.isArray(value) ? value.join(', ') : String(value));
   }
 
-  return new Response(supertestRes.text, {
-    status: supertestRes.status,
+  // The Fetch Response constructor rejects 304 in Next.js route handlers.
+  const status = supertestRes.status === 304 || supertestRes.status < 200 ? 200 : supertestRes.status;
+  headers.delete('etag');
+
+  return new Response(supertestRes.text || null, {
+    status,
     headers,
   });
 }
@@ -41,7 +54,7 @@ export async function handleExpressRequest(
   let agent = request(app)[method](fullPath);
 
   for (const [key, value] of req.headers.entries()) {
-    if (key.toLowerCase() === 'host' || key.toLowerCase() === 'content-length') continue;
+    if (SKIP_REQUEST_HEADERS.has(key.toLowerCase())) continue;
     agent = agent.set(key, value);
   }
 

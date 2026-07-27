@@ -1,39 +1,30 @@
-import { cookies } from "next/headers";
 import { Package, Truck, TrendingUp } from "lucide-react";
 import { CircularKpi } from "@/components/dashboard/circular-kpi";
 import { ShipmentOverview } from "@/components/dashboard/shipment-overview";
 import { RecentShipments } from "@/components/dashboard/recent-shipments";
 import { RecentNotifications } from "@/components/dashboard/recent-notifications";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import { getApiUrl } from "@/lib/api-url";
+import { serverApiFetch } from "@/lib/server-api";
 
 export const metadata = {
   title: "Dashboard | KSR Shipping Services Admin",
 };
 
 async function getDashboardStats() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
-
-  try {
-    const res = await fetch(getApiUrl('/api/admin/dashboard-stats'), {
-      headers: {
-        Cookie: `auth_token=${token}`
-      },
-      cache: 'no-store'
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch (e) {
-    return null;
-  }
+  return serverApiFetch<{
+    createdShipments: number;
+    deliveredShipments: number;
+    monthlyRevenue: number;
+    monthlyProfit: number;
+    recentShipments: unknown[];
+    statusCounts?: Record<string, number>;
+  }>('/api/admin/dashboard-stats');
 }
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const response = await getDashboardStats();
-  const stats = response?.data || {
+  const stats = (await getDashboardStats()) || {
     createdShipments: 0,
     deliveredShipments: 0,
     monthlyRevenue: 0,

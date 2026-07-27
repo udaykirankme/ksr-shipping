@@ -111,7 +111,7 @@ router.post('/quotations', apiLimiter, async (req, res) => {
           title: 'New Quote Request',
           message: `New request received from ${newQuote.name}.`,
           related_entity_id: newQuote.id,
-          target_url: `/dashboard/quotations/${newQuote.id}`
+          target_url: `/admin/dashboard/quotations/${newQuote.id}`
         }
       });
 
@@ -167,7 +167,7 @@ router.post('/contact', apiLimiter, async (req, res) => {
           title: 'New Contact Message',
           message: `New enquiry received from ${newContact.name}.`,
           related_entity_id: newContact.id,
-          target_url: `/dashboard/messages/${newContact.id}`
+          target_url: `/admin/dashboard/messages/${newContact.id}`
         }
       });
 

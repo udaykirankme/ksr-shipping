@@ -1,27 +1,9 @@
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { ShipmentDetailClient } from './shipment-detail-client';
-import { getApiUrl } from '@/lib/api-url';
+import { serverApiFetch } from '@/lib/server-api';
 
 async function getShipment(id: string) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
-
-  const res = await fetch(getApiUrl(`/api/admin/shipments/${id}`), {
-    headers: {
-      Cookie: `auth_token=${token}`
-    },
-    cache: 'no-store'
-  });
-
-  if (!res.ok) {
-    return null;
-  }
-  const json = await res.json();
-  if (json.success && json.data) {
-    return json.data;
-  }
-  return json;
+  return serverApiFetch(`/api/admin/shipments/${id}`);
 }
 
 export default async function ShipmentDetailPage({ params }: { params: Promise<{ id: string }> }) {

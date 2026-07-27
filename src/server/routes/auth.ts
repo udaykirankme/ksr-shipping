@@ -66,4 +66,26 @@ router.post('/logout', (_req, res) => {
   res.json({ success: true, data: { message: 'Logged out successfully' } });
 });
 
+router.get('/me', (req, res) => {
+  const token = req.cookies.auth_token;
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    return res.json({
+      success: true,
+      data: {
+        user: {
+          id: decoded.id,
+          role: decoded.role,
+        },
+      },
+    });
+  } catch {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+});
+
 export default router;

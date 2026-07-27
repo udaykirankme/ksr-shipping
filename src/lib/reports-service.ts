@@ -21,8 +21,7 @@ export const reportsService = {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       });
-    } catch (err) {
-      console.error('Network error fetching analytics:', err);
+    } catch {
       return null;
     }
   },

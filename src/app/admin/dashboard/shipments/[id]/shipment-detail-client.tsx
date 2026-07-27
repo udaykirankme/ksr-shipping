@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { shipmentService } from '@/lib/shipment-service';
 import { formatDateTime, formatCurrency, formatDateToYYYYMMDD } from '@/lib/format';
-import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, CheckCircle2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, CheckCircle2, RefreshCw, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
 import { PremiumTimePicker } from "@/components/ui/PremiumTimePicker";
 import { ServicesApi, ServiceThroughApi, ServiceItem } from '@/lib/services-api';
+import {
+  buildStatusUpdateShareMessage,
+  openWhatsAppShare,
+} from '@/lib/whatsapp-share';
 
 const STATUS_WORKFLOW = [
   'Shipment Created',
@@ -20,6 +24,43 @@ const STATUS_WORKFLOW = [
   'Out For Delivery',
   'Delivered'
 ];
+
+function getCurrentOccurredAt(): string {
+  const now = new Date();
+  const dateStr = formatDateToYYYYMMDD(now);
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${dateStr}T${hours}:${minutes}:00`;
+}
+
+function getNextStatusUpdate(currentStatus: string) {
+  const currentIndex = STATUS_WORKFLOW.indexOf(currentStatus);
+  if (currentIndex > -1 && currentIndex < STATUS_WORKFLOW.length - 1) {
+    return {
+      status: STATUS_WORKFLOW[currentIndex + 1],
+      occurred_at: getCurrentOccurredAt(),
+    };
+  }
+  return { status: '', occurred_at: getCurrentOccurredAt() };
+}
+
+type SavedStatusShare = {
+  status: string;
+  location: string;
+  occurredAt: string;
+  note?: string;
+};
+
+function isStatusFormComplete(update: {
+  status: string;
+  location: string;
+  occurred_at: string;
+}): boolean {
+  if (!update.status?.trim() || !update.location?.trim()) return false;
+  if (!update.occurred_at?.includes('T')) return false;
+  const [datePart, timePart] = update.occurred_at.split('T');
+  return Boolean(datePart && timePart?.substring(0, 5));
+}
 
 export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: string, initialData: any }) {
   const router = useRouter();
@@ -33,23 +74,25 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const [success, setSuccess] = useState('');
   
   // Status Update state
-  const [statusUpdate, setStatusUpdate] = useState({
-    status: '',
+  const [statusUpdate, setStatusUpdate] = useState(() => ({
+    status: getNextStatusUpdate(initialData.current_status).status,
     location: '',
     note: '',
-    occurred_at: ''
-  });
+    occurred_at: getCurrentOccurredAt(),
+  }));
+  const [savedStatusShare, setSavedStatusShare] = useState<SavedStatusShare | null>(null);
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
 
   const isDelivered = shipment.current_status === 'Delivered';
   
   useEffect(() => {
-    // Determine next sequential status
-    const currentIndex = STATUS_WORKFLOW.indexOf(shipment.current_status);
-    if (currentIndex > -1 && currentIndex < STATUS_WORKFLOW.length - 1) {
-      setStatusUpdate(prev => ({ ...prev, status: STATUS_WORKFLOW[currentIndex + 1] }));
-    }
+    const nextUpdate = getNextStatusUpdate(shipment.current_status);
+    setStatusUpdate((prev) => ({
+      ...prev,
+      status: nextUpdate.status,
+      occurred_at: nextUpdate.occurred_at,
+    }));
   }, [shipment.current_status]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -59,6 +102,31 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setStatusUpdate((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  const getSavedStatusShareMessage = (recipientName?: string) => {
+    if (!savedStatusShare) return '';
+    return buildStatusUpdateShareMessage({
+      trackingId: shipment.tracking_id,
+      status: savedStatusShare.status,
+      location: savedStatusShare.location,
+      occurredAt: savedStatusShare.occurredAt,
+      note: savedStatusShare.note,
+      recipientName,
+    });
+  };
+
+  const handleShareStatusToSender = () => {
+    if (!savedStatusShare) return;
+    openWhatsAppShare(formData.sender_phone, getSavedStatusShareMessage(formData.sender_name));
+  };
+
+  const handleShareStatusToReceiver = () => {
+    if (!savedStatusShare) return;
+    openWhatsAppShare(formData.receiver_phone, getSavedStatusShareMessage(formData.receiver_name));
+  };
+
+  const canSubmitStatusUpdate = isStatusFormComplete(statusUpdate);
+  const canShareStatusUpdate = savedStatusShare !== null;
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,25 +164,39 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
   const handleStatusUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSubmitStatusUpdate) {
+      setError('Please fill in status, location, update date, and update time.');
+      return;
+    }
+
     setError('');
     setSuccess('');
     setLoading(true);
 
+    const submittedUpdate = { ...statusUpdate };
+
     try {
       const res = await shipmentService.updateStatus(shipmentId, {
-        ...statusUpdate,
+        ...submittedUpdate,
         version: shipment.version // OCC
       });
       
       setShipment({ ...res.shipment, history: [res.history, ...(shipment.history || [])] });
-      setSuccess('Status updated successfully');
+      setSavedStatusShare({
+        status: submittedUpdate.status,
+        location: submittedUpdate.location,
+        occurredAt: submittedUpdate.occurred_at,
+        note: submittedUpdate.note,
+      });
+      setSuccess('Status updated successfully. You can now share this update with the sender or receiver.');
       
-      // Reset status input
+      // Reset status input with next status and current date/time
+      const nextUpdate = getNextStatusUpdate(res.shipment.current_status);
       setStatusUpdate({
-        status: STATUS_WORKFLOW[STATUS_WORKFLOW.indexOf(res.shipment.current_status) + 1] || '',
+        status: nextUpdate.status,
         location: '',
         note: '',
-        occurred_at: new Date().toISOString().slice(0, 16)
+        occurred_at: nextUpdate.occurred_at,
       });
       router.refresh();
     } catch (err: any) {
@@ -425,37 +507,43 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
               <h2 className="text-lg font-bold text-gray-900 mb-6">Update Status</h2>
               <form onSubmit={handleStatusUpdate} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">New Status <span className="text-red-500">*</span></label>
                   <PremiumSelect
                     value={statusUpdate.status}
-                    onChange={(value) => handleStatusChange({ target: { name: 'status', value } } as any)}
+                    onChange={(value) =>
+                      setStatusUpdate((prev) => ({
+                        ...prev,
+                        status: value,
+                        occurred_at: getCurrentOccurredAt(),
+                      }))
+                    }
                     options={STATUS_WORKFLOW.map(s => ({ label: s, value: s }))}
                     placeholder="Select status..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location <span className="text-red-500">*</span></label>
                   <input required name="location" value={statusUpdate.location} onChange={handleStatusChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" placeholder="e.g. Mumbai Hub" />
                 </div>
                 <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Date <span className="text-red-500">*</span></label>
                     <PremiumDatePicker 
                       value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : ''} 
                       onChange={(date) => {
                         const dateStr = formatDateToYYYYMMDD(date);
                         const timeStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : '12:00';
-                        setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00Z` }));
+                        setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
                       }} 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Time</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Time <span className="text-red-500">*</span></label>
                     <PremiumTimePicker 
                       value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : ''} 
                       onChange={(timeStr) => {
                         const dateStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : formatDateToYYYYMMDD(new Date());
-                        setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00Z` }));
+                        setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
                       }} 
                     />
                   </div>
@@ -466,12 +554,37 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 </div>
                 <button 
                   type="submit"
-                  disabled={loading || !statusUpdate.status || !statusUpdate.location}
+                  disabled={loading || !canSubmitStatusUpdate}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   Update Status
                 </button>
+                {!canShareStatusUpdate && (
+                  <p className="text-xs text-center text-gray-500">
+                    Save the status update first to enable WhatsApp sharing.
+                  </p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleShareStatusToSender}
+                    disabled={!canShareStatusUpdate || !formData.sender_phone?.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share to Sender
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareStatusToReceiver}
+                    disabled={!canShareStatusUpdate || !formData.receiver_phone?.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share to Receiver
+                  </button>
+                </div>
               </form>
             </div>
           )}

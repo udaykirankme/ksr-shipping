@@ -50,7 +50,7 @@ export const contactService = {
 
   async toggleStar(id: string, is_starred?: boolean) {
     return apiFetch(`${API_BASE}/contact-messages/${id}/star`, {
-      method: 'POST',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_starred })
     });

@@ -13,10 +13,10 @@ export function PublicLayoutWrapper({ children }: { children: React.ReactNode })
 
   if (isAdmin) {
     return (
-      <>
+      <div className="min-h-screen w-full">
         {children}
         <Toaster position="top-right" richColors />
-      </>
+      </div>
     );
   }
 

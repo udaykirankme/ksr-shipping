@@ -6,8 +6,20 @@ import adminRoutes from './routes/admin';
 
 const app = express();
 
+app.set('etag', false);
+app.disable('x-powered-by');
+
 app.use(express.json());
 app.use(cookieParser());
+
+app.use((_req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  });
+  next();
+});
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

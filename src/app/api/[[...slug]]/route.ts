@@ -9,7 +9,9 @@ type RouteContext = { params: Promise<{ slug?: string[] }> };
 async function handler(req: NextRequest, context: RouteContext) {
   const { slug = [] } = await context.params;
   const pathname = `/api/${slug.join('/')}`.replace(/\/$/, '') || '/api';
-  return handleExpressRequest(app, req, pathname);
+  const response = await handleExpressRequest(app, req, pathname);
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  return response;
 }
 
 export const GET = handler;

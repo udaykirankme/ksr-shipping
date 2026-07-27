@@ -49,7 +49,6 @@ export const notificationService = {
         credentials: 'include'
       });
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
       return { items: [], total: 0, page: 1, totalPages: 1, unreadCount: 0 };
     }
   },
@@ -62,21 +61,21 @@ export const notificationService = {
 
   async markAsRead(id: string) {
     return apiFetch(`${API_BASE}/notifications/${id}/read`, {
-      method: 'POST',
+      method: 'PATCH',
       credentials: 'include'
     });
   },
 
   async markAllAsRead() {
     return apiFetch(`${API_BASE}/notifications/read-all`, {
-      method: 'POST',
+      method: 'PATCH',
       credentials: 'include'
     });
   },
 
   async markBulkAsRead(ids: string[]) {
     return apiFetch(`${API_BASE}/notifications/read-bulk`, {
-      method: 'POST',
+      method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids })
@@ -85,7 +84,7 @@ export const notificationService = {
 
   async toggleStar(id: string, is_starred?: boolean) {
     return apiFetch(`${API_BASE}/notifications/${id}/star`, {
-      method: 'POST',
+      method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_starred })

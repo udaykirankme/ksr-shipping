@@ -4,13 +4,25 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { shipmentService } from '@/lib/shipment-service';
 import { getQuote } from '@/lib/quote-service';
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { ServicesApi, ServiceThroughApi, ServiceItem } from '@/lib/services-api';
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
 import { PremiumTimePicker } from "@/components/ui/PremiumTimePicker";
 import { formatDateToYYYYMMDD } from "@/lib/format";
+import {
+  buildShipmentCreatedShareMessage,
+  openWhatsAppShare,
+} from '@/lib/whatsapp-share';
+
+function getCurrentBookedDateTime() {
+  const now = new Date();
+  return {
+    booked_date: formatDateToYYYYMMDD(now),
+    booked_time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+  };
+}
 
 export default function NewShipmentPage() {
   const router = useRouter();
@@ -25,11 +37,10 @@ export default function NewShipmentPage() {
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     official_tracking_id: '',
     shipment_type: 'Domestic',
-    booked_date: formatDateToYYYYMMDD(new Date()),
-    booked_time: new Date().toISOString().substring(11, 16),
+    ...getCurrentBookedDateTime(),
     estimated_delivery: '',
     service: '',
     service_through: '',
@@ -61,9 +72,11 @@ export default function NewShipmentPage() {
     
     internal_notes: '',
     source_quote_id: ''
-  });
+  }));
 
   useEffect(() => {
+    setFormData((prev) => ({ ...prev, ...getCurrentBookedDateTime() }));
+
     Promise.all([
       ServicesApi.getServices(),
       ServiceThroughApi.getItems()
@@ -109,14 +122,14 @@ export default function NewShipmentPage() {
     setLoading(true);
 
     try {
+      const booked = getCurrentBookedDateTime();
       const res = await shipmentService.createShipment({
         ...formData,
+        ...booked,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         num_packages: parseInt(formData.num_packages) || 1,
         paid_amount: parseFloat(formData.paid_amount) || 0,
         received_amount: parseFloat(formData.received_amount) || 0,
-        booked_date: formData.booked_date,
-        booked_time: formData.booked_time,
         source_quote_id: formData.source_quote_id || null
       });
       setCreatedId(res.tracking_id);
@@ -150,22 +163,58 @@ export default function NewShipmentPage() {
            </span>
         </div>
 
-        <div className="flex justify-center gap-4">
-          <button 
-            onClick={() => router.push('/admin/dashboard/shipments')}
-            className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            Back to Shipments
-          </button>
-          <button 
-            onClick={() => {
-              setCreatedId(null);
-              setFormData(prev => ({ ...prev, official_tracking_id: '' })); // reset some fields
-            }}
-            className="rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 transition-colors"
-          >
-            Create Another
-          </button>
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
+            <button 
+              onClick={() => router.push('/admin/dashboard/shipments')}
+              className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              Back to Shipments
+            </button>
+            <button 
+              onClick={() => {
+                setCreatedId(null);
+                setFormData((prev) => ({
+                  ...prev,
+                  official_tracking_id: '',
+                  ...getCurrentBookedDateTime(),
+                }));
+              }}
+              className="rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 transition-colors"
+            >
+              Create Another
+            </button>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                openWhatsAppShare(
+                  formData.sender_phone,
+                  buildShipmentCreatedShareMessage(createdId, formData.sender_name),
+                )
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!formData.sender_phone?.trim()}
+            >
+              <Share2 className="w-4 h-4" />
+              Share to Sender
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                openWhatsAppShare(
+                  formData.receiver_phone,
+                  buildShipmentCreatedShareMessage(createdId, formData.receiver_name),
+                )
+              }
+              className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!formData.receiver_phone?.trim()}
+            >
+              <Share2 className="w-4 h-4" />
+              Share to Receiver
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -225,14 +274,16 @@ export default function NewShipmentPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Booked Date <span className="text-red-500">*</span></label>
               <PremiumDatePicker 
                 value={formData.booked_date} 
-                onChange={(date) => setFormData((prev: any) => ({ ...prev, booked_date: formatDateToYYYYMMDD(date) }))} 
+                onChange={() => {}} 
+                disabled
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Booked Time <span className="text-red-500">*</span></label>
               <PremiumTimePicker 
                 value={formData.booked_time} 
-                onChange={(time) => setFormData((prev: any) => ({ ...prev, booked_time: time }))} 
+                onChange={() => {}} 
+                disabled
               />
             </div>
             <div>

@@ -9,8 +9,7 @@ async function main() {
   console.log('Seeding database...');
 
   // Demo Admin User
-  // Password is 'password123' hashed with bcrypt (cost 10)
-  const passwordHash = '$2a$10$02nGlDyW/L8uLihCdwb2cuUVdiIcMZ6xJs8YFT2XB8DnuLPrqYVcy'; // This is 'password123'
+  const passwordHash = '$2a$10$DN58xT9gcdGT3JbEtZmIXOLeoT8s9BVqjV.T6hGhzCMly0gVr.are'; // admin123
 
   const admin = await prisma.adminUser.upsert({
     where: { username: 'admin' },

@@ -105,7 +105,7 @@ export async function deleteBulk(ids: string[]): Promise<void> {
 
 export async function toggleStar(id: string, is_starred?: boolean): Promise<{ success: boolean; is_starred: boolean }> {
   return apiFetch(`${API_URL}/quotations/${id}/star`, {
-    method: 'POST',
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ is_starred })
   });

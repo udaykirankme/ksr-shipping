@@ -8,6 +8,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions)
   const mergedInit: RequestInit = {
     ...init,
     credentials: init?.credentials || 'include',
+    cache: init?.cache ?? 'no-store',
   };
   
   let res: Response;
@@ -25,6 +26,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions)
         window.location.href = '/admin/login';
       }
     }
+    throw new Error('Session expired. Please sign in again.');
   }
 
   const contentType = res.headers.get('content-type');

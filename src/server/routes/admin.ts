@@ -1240,17 +1240,6 @@ router.delete('/notifications/read-all', async (_req, res) => {
     await prisma.notification.deleteMany({
       where: { read_at: { not: null } }
     });
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Database error'  });
-  }
-});
-router.delete('/notifications/read-all', async (_req, res) => {
-  try {
-    await prisma.notification.deleteMany({
-      where: { read_at: { not: null } }
-    });
     res.json({ success: true, data: { success: true } });
   } catch (err) {
     console.error(err);
