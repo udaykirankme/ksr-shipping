@@ -62,6 +62,23 @@ function isStatusFormComplete(update: {
   return Boolean(datePart && timePart?.substring(0, 5));
 }
 
+function getLatestHistoryShare(history: any[] | undefined): SavedStatusShare | null {
+  const latest = history?.[0];
+  if (!latest?.status || !latest?.location || !latest?.occurred_at) return null;
+
+  const occurredAt =
+    typeof latest.occurred_at === 'string'
+      ? latest.occurred_at
+      : new Date(latest.occurred_at).toISOString();
+
+  return {
+    status: latest.status,
+    location: latest.location,
+    occurredAt,
+    note: latest.note || undefined,
+  };
+}
+
 export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: string, initialData: any }) {
   const router = useRouter();
   const [shipment, setShipment] = useState(initialData);
@@ -80,7 +97,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     note: '',
     occurred_at: getCurrentOccurredAt(),
   }));
-  const [savedStatusShare, setSavedStatusShare] = useState<SavedStatusShare | null>(null);
+  const [savedStatusShare, setSavedStatusShare] = useState<SavedStatusShare | null>(() =>
+    initialData.current_status === 'Delivered'
+      ? getLatestHistoryShare(initialData.history)
+      : null
+  );
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
 
@@ -501,91 +522,102 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
         {/* Right Column: Timeline & Status Update */}
         <div className="space-y-6">
-          {!isDelivered && (
+          {(!isDelivered || canShareStatusUpdate) && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-orange-200 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10 opacity-50"></div>
-              <h2 className="text-lg font-bold text-gray-900 mb-6">Update Status</h2>
-              <form onSubmit={handleStatusUpdate} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Status <span className="text-red-500">*</span></label>
-                  <PremiumSelect
-                    value={statusUpdate.status}
-                    onChange={(value) =>
-                      setStatusUpdate((prev) => ({
-                        ...prev,
-                        status: value,
-                        occurred_at: getCurrentOccurredAt(),
-                      }))
-                    }
-                    options={STATUS_WORKFLOW.map(s => ({ label: s, value: s }))}
-                    placeholder="Select status..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location <span className="text-red-500">*</span></label>
-                  <input required name="location" value={statusUpdate.location} onChange={handleStatusChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" placeholder="e.g. Mumbai Hub" />
-                </div>
-                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-6">
+                {isDelivered ? 'Share Status Update' : 'Update Status'}
+              </h2>
+              {!isDelivered ? (
+                <form onSubmit={handleStatusUpdate} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Date <span className="text-red-500">*</span></label>
-                    <PremiumDatePicker 
-                      value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : ''} 
-                      onChange={(date) => {
-                        const dateStr = formatDateToYYYYMMDD(date);
-                        const timeStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : '12:00';
-                        setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
-                      }} 
+                    <label className="block text-sm font-medium text-gray-700 mb-2">New Status <span className="text-red-500">*</span></label>
+                    <PremiumSelect
+                      value={statusUpdate.status}
+                      onChange={(value) =>
+                        setStatusUpdate((prev) => ({
+                          ...prev,
+                          status: value,
+                          occurred_at: getCurrentOccurredAt(),
+                        }))
+                      }
+                      options={STATUS_WORKFLOW.map(s => ({ label: s, value: s }))}
+                      placeholder="Select status..."
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Time <span className="text-red-500">*</span></label>
-                    <PremiumTimePicker 
-                      value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : ''} 
-                      onChange={(timeStr) => {
-                        const dateStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : formatDateToYYYYMMDD(new Date());
-                        setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
-                      }} 
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location <span className="text-red-500">*</span></label>
+                    <input required name="location" value={statusUpdate.location} onChange={handleStatusChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" placeholder="e.g. Mumbai Hub" />
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Note (Optional)</label>
-                  <textarea name="note" value={statusUpdate.note} onChange={handleStatusChange} rows={2} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" placeholder="Add any operational notes..." />
-                </div>
-                <button 
-                  type="submit"
-                  disabled={loading || !canSubmitStatusUpdate}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  Update Status
-                </button>
-                {!canShareStatusUpdate && (
-                  <p className="text-xs text-center text-gray-500">
-                    Save the status update first to enable WhatsApp sharing.
+                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Update Date <span className="text-red-500">*</span></label>
+                      <PremiumDatePicker 
+                        value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : ''} 
+                        onChange={(date) => {
+                          const dateStr = formatDateToYYYYMMDD(date);
+                          const timeStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : '12:00';
+                          setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
+                        }} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Update Time <span className="text-red-500">*</span></label>
+                      <PremiumTimePicker 
+                        value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : ''} 
+                        onChange={(timeStr) => {
+                          const dateStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : formatDateToYYYYMMDD(new Date());
+                          setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
+                        }} 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Note (Optional)</label>
+                    <textarea name="note" value={statusUpdate.note} onChange={handleStatusChange} rows={2} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" placeholder="Add any operational notes..." />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={loading || !canSubmitStatusUpdate}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    Update Status
+                  </button>
+                  {!canShareStatusUpdate && (
+                    <p className="text-xs text-center text-gray-500">
+                      Save the status update first to enable WhatsApp sharing.
+                    </p>
+                  )}
+                </form>
+              ) : (
+                savedStatusShare && (
+                  <p className="text-sm text-gray-600 mb-4">
+                    Share the <span className="font-semibold text-gray-900">{savedStatusShare.status}</span> update
+                    {savedStatusShare.location ? ` from ${savedStatusShare.location}` : ''} with the sender or receiver.
                   </p>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleShareStatusToSender}
-                    disabled={!canShareStatusUpdate || !formData.sender_phone?.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share to Sender
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleShareStatusToReceiver}
-                    disabled={!canShareStatusUpdate || !formData.receiver_phone?.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share to Receiver
-                  </button>
-                </div>
-              </form>
+                )
+              )}
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${!isDelivered ? 'pt-1' : ''}`}>
+                <button
+                  type="button"
+                  onClick={handleShareStatusToSender}
+                  disabled={!canShareStatusUpdate || !formData.sender_phone?.trim()}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share to Sender
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareStatusToReceiver}
+                  disabled={!canShareStatusUpdate || !formData.receiver_phone?.trim()}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share to Receiver
+                </button>
+              </div>
             </div>
           )}
 
