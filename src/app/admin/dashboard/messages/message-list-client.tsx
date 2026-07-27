@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Download, FileSpreadsheet, FileText, RefreshCw, CheckCircle, Star, Trash2 } from "lucide-react";
+import { Search, RefreshCw, CheckCircle, Star, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,28 +106,9 @@ export function MessageListClient() {
           <p className="text-sm text-gray-500 mt-1">Manage and respond to customer inquiries</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="bg-white" onClick={() => {
-            const currentSearch = search;
-            setSearch(""); setTimeout(() => setSearch(currentSearch), 10);
-          }}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          <Button variant="outline" className="bg-white" onClick={() => fetchMessages()}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
-          <div className="relative group">
-            <Button variant="outline" className="bg-white">
-              <Download className="w-4 h-4 mr-2" /> Export
-            </Button>
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 p-2 flex flex-col gap-1">
-              <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors text-left">
-                <FileSpreadsheet className="w-4 h-4 text-green-600" /> Export as CSV
-              </button>
-              <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors text-left">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Export as Excel
-              </button>
-              <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors text-left">
-                <FileText className="w-4 h-4 text-red-600" /> Export as PDF
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle, RefreshCw, Mail, Phone, Clock, User, MessageSquare, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, RefreshCw, Mail, Phone, Clock, User, MessageSquare, Trash2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { contactService, ContactMessage } from "@/lib/contact-service";
 import { formatDate } from "@/lib/format";
+import { openWhatsAppShare, buildContactReplyMessage } from "@/lib/whatsapp-share";
 
 export function MessageDetailClient({ messageId }: { messageId: string }) {
   const router = useRouter();
@@ -89,7 +90,16 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
             <p className="text-sm text-gray-500 mt-1">Submitted on {formatDate(message.created_at)}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            type="button"
+            onClick={() => openWhatsAppShare(message.phone, buildContactReplyMessage(message.name))}
+            disabled={!message.phone?.trim()}
+            className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white rounded-xl shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Share2 className="w-4 h-4" />
+            Reply on WhatsApp
+          </Button>
           {!message.responded && (
             <Button 
               onClick={handleMarkResponded}

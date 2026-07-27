@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
-  ArrowLeft, Save, Box, MapPin, Phone, Clock, RefreshCw, AlertTriangle, Trash2, CheckCircle
+  ArrowLeft, Save, Box, MapPin, Phone, Clock, RefreshCw, AlertTriangle, Trash2, CheckCircle, Share2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getQuote, updateQuote, updateQuoteStatus, QuotationRequest, deleteQuote } from "@/lib/quote-service";
 import { formatDateTime } from "@/lib/format";
+import { openWhatsAppShare, buildQuoteReplyMessage } from "@/lib/whatsapp-share";
 
 
 
@@ -156,7 +157,16 @@ export function QuoteDetailClient({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+          <Button
+            type="button"
+            onClick={() => openWhatsAppShare(quote.phone, buildQuoteReplyMessage(quote.name))}
+            disabled={!quote.phone?.trim()}
+            className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white rounded-xl shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Share2 className="w-4 h-4" />
+            Reply on WhatsApp
+          </Button>
           {quote.status === 'New' && (
             <Button 
               onClick={handleMarkResponded}

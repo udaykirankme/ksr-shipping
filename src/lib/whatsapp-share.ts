@@ -83,6 +83,36 @@ Thank you for choosing ${business.name}.
 — Team ${business.name}`;
 }
 
+export function buildContactReplyMessage(customerName?: string): string {
+  const greeting = customerName?.trim()
+    ? `Hello Mr/Mrs. ${customerName.trim()},`
+    : 'Hello,';
+
+  return `${greeting}
+
+Thank you for contacting KSR Shipping Services.
+
+We're here to assist you.
+
+Regards,
+KSR Shipping Services - A Courier Service`;
+}
+
+export function buildQuoteReplyMessage(customerName?: string): string {
+  const greeting = customerName?.trim()
+    ? `Hello Mr/Mrs. ${customerName.trim()},`
+    : 'Hello,';
+
+  return `${greeting}
+
+Thank you for your quotation request.
+
+Based on the details you shared, here is your shipping quotation. If you have any questions or would like to proceed with the booking, please let me know. We'll be happy to assist you.
+
+Regards,
+KSR Shipping Services - A Courier Service`;
+}
+
 export function openWhatsAppShare(phone: string, message: string) {
   if (!phone?.trim()) {
     alert('Phone number is not available for this contact.');

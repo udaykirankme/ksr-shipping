@@ -122,10 +122,8 @@ export default function NewShipmentPage() {
     setLoading(true);
 
     try {
-      const booked = getCurrentBookedDateTime();
       const res = await shipmentService.createShipment({
         ...formData,
-        ...booked,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         num_packages: parseInt(formData.num_packages) || 1,
         paid_amount: parseFloat(formData.paid_amount) || 0,
@@ -274,16 +272,14 @@ export default function NewShipmentPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Booked Date <span className="text-red-500">*</span></label>
               <PremiumDatePicker 
                 value={formData.booked_date} 
-                onChange={() => {}} 
-                disabled
+                onChange={(date) => setFormData((prev: any) => ({ ...prev, booked_date: formatDateToYYYYMMDD(date) }))} 
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Booked Time <span className="text-red-500">*</span></label>
               <PremiumTimePicker 
                 value={formData.booked_time} 
-                onChange={() => {}} 
-                disabled
+                onChange={(time: string) => setFormData((prev: any) => ({ ...prev, booked_time: time }))} 
               />
             </div>
             <div>
