@@ -10,8 +10,6 @@ export const metadata = {
   title: "Dashboard | KSR Shipping Services Admin",
 };
 
-export const revalidate = 30;
-
 export default async function DashboardPage() {
   let stats;
   try {

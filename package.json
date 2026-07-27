@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:standalone": "node .next/standalone/server.js",
+    "deploy:hostinger": "bash deploy/hostinger/deploy.sh",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

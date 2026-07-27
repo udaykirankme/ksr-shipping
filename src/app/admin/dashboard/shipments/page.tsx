@@ -5,6 +5,8 @@ export const metadata = {
   title: "Shipments | KSR Shipping Services Admin",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ShipmentsPage() {
   const initial = await getShipmentsList({ page: 1, limit: 10, isActive: true });
 
