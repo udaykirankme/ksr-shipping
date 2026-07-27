@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { Prisma, Shipment } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { getDashboardStats } from '@/lib/dashboard-stats';
+import { getShipmentsList } from '@/lib/shipments-query';
 
 
 const router = Router();
@@ -115,79 +118,11 @@ async function deleteNotifications(ids: string[]) {
 router.get('/dashboard-stats', async (req, res) => {
   try {
     const { month, year } = req.query;
-    const targetDate = new Date();
-    
-    if (month && year) {
-      targetDate.setFullYear(Number(year));
-      targetDate.setMonth(Number(month) - 1); // JS months are 0-indexed
-    }
-    targetDate.setHours(0, 0, 0, 0);
-    
-    const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-    const firstDayOfNextMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 1);
-
-    const [
-      createdShipmentsThisMonth,
-      deliveredShipmentsThisMonth,
-      financialsThisMonth,
-      statusGroups
-    ] = await Promise.all([
-      // Created KPI -> Booking Date
-      prisma.shipment.count({
-        where: {
-          booked_date: { gte: firstDayOfMonth, lt: firstDayOfNextMonth }
-        }
-      }),
-      // Delivered KPI -> Booking Date
-      prisma.shipment.count({
-        where: {
-          booked_date: { gte: firstDayOfMonth, lt: firstDayOfNextMonth },
-          current_status: 'Delivered'
-        }
-      }),
-      // Revenue and Profit -> Booking Date, Active Shipments only
-      prisma.shipment.findMany({
-        where: {
-          booked_date: { gte: firstDayOfMonth, lt: firstDayOfNextMonth },
-          is_active: true
-        },
-        select: { received_amount: true, profit: true }
-      }),
-      // Status Overview for this month based on booked date
-      prisma.shipment.groupBy({
-        by: ['current_status'],
-        where: {
-          booked_date: { gte: firstDayOfMonth, lt: firstDayOfNextMonth }
-        },
-        _count: {
-          _all: true,
-        },
-      })
-    ]);
-
-
-    const monthlyRevenue = financialsThisMonth.reduce((acc: number, curr: { received_amount: number | null; profit: number | null; }) => acc + (curr.received_amount || 0), 0);
-    const monthlyProfit = financialsThisMonth.reduce((acc: number, curr: { received_amount: number | null; profit: number | null; }) => acc + (curr.profit || 0), 0);
-
-    const statusCounts = statusGroups.reduce((acc: Record<string, number>, curr: { current_status: string; _count: { _all: number; }; }) => {
-      acc[curr.current_status] = curr._count._all;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Also get recent shipments
-    const recentShipments = await prisma.shipment.findMany({
-      orderBy: { created_at: 'desc' },
-      take: 5
-    });
-
-    res.json({ success: true, data: {
-      createdShipments: createdShipmentsThisMonth,
-      deliveredShipments: deliveredShipmentsThisMonth,
-      monthlyRevenue,
-      monthlyProfit,
-      recentShipments,
-      statusCounts
-    } });
+    const stats = await getDashboardStats(
+      month ? Number(month) : undefined,
+      year ? Number(year) : undefined,
+    );
+    res.json({ success: true, data: stats });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Database error'  });
@@ -278,47 +213,19 @@ router.get('/shipments/export', async (req, res) => {
 router.get('/shipments', async (req, res) => {
   try {
     const { search, status, courier, startDate, endDate, isActive, page = '1', limit = '10' } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-    
-    let where: Record<string, unknown> = {};
-    if (isActive !== undefined) {
-      where.is_active = isActive === 'true';
-    } else {
-      where.is_active = true; // default
-    }
 
-    if (status) where.current_status = status;
-    if (courier) where.courier = courier;
-    
-    if (startDate && endDate) {
-      where.booked_date = { gte: new Date(startDate as string), lte: new Date(endDate as string) };
-    }
-    
-    if (search) {
-      where.OR = [
-        { tracking_id: { contains: search as string, mode: 'insensitive' } },
-        { official_tracking_id: { contains: search as string, mode: 'insensitive' } },
-        { sender_name: { contains: search as string, mode: 'insensitive' } },
-        { receiver_name: { contains: search as string, mode: 'insensitive' } },
-        { sender_phone: { contains: search as string, mode: 'insensitive' } },
-        { receiver_phone: { contains: search as string, mode: 'insensitive' } },
-      ];
-    }
+    const data = await getShipmentsList({
+      search: search as string | undefined,
+      status: status as string | undefined,
+      courier: courier as string | undefined,
+      startDate: startDate as string | undefined,
+      endDate: endDate as string | undefined,
+      isActive: isActive !== undefined ? isActive === 'true' : true,
+      page: Number(page),
+      limit: Number(limit),
+    });
 
-    const [shipments, total] = await Promise.all([
-      prisma.shipment.findMany({
-        where,
-        orderBy: [
-          { booked_date: 'desc' },
-          { created_at: 'desc' }
-        ],
-        skip,
-        take: Number(limit)
-      }),
-      prisma.shipment.count({ where })
-    ]);
-    
-    res.json({ success: true, data: { shipments, total, page: Number(page), limit: Number(limit) } });
+    res.json({ success: true, data });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Database error'  });
@@ -339,7 +246,6 @@ router.get('/shipments/:id', async (req, res) => {
   }
 });
 
-import crypto from 'crypto';
 
 const generateTrackingId = async () => {
   const randomNum = crypto.randomInt(1000000000, 10000000000);
@@ -1121,6 +1027,16 @@ router.delete('/contact-messages/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+router.get('/notifications/unread-count', async (_req, res) => {
+  try {
+    const unreadCount = await prisma.notification.count({ where: { read_at: null } });
+    res.json({ success: true, data: { unreadCount } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Database error' });
   }
 });
 

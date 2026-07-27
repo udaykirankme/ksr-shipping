@@ -61,6 +61,8 @@ export default function Home() {
             height={1200}
             className="w-full h-auto opacity-100"
             priority
+            quality={75}
+            sizes="100vw"
           />
         </div>
 
@@ -73,7 +75,8 @@ export default function Home() {
             priority
             className="object-cover object-[center_46%] opacity-100"
             style={{ maskImage: 'radial-gradient(ellipse 80% 80% at center, black 60%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at center, black 60%, transparent 100%)' }}
-            quality={100}
+            quality={75}
+            sizes="(max-width: 1024px) 100vw, 50vw"
           />
         </div>
 

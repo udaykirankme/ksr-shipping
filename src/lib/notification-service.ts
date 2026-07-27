@@ -33,6 +33,17 @@ export interface NotificationFilters {
 }
 
 export const notificationService = {
+  async getUnreadCount(): Promise<number> {
+    try {
+      const data = await apiFetch(`${API_BASE}/notifications/unread-count`, {
+        credentials: 'include',
+      });
+      return data?.unreadCount ?? 0;
+    } catch {
+      return 0;
+    }
+  },
+
   async getNotifications(filters?: NotificationFilters): Promise<NotificationResponse> {
     const params = new URLSearchParams();
     if (filters) {

@@ -25,7 +25,7 @@ export function QuoteListClient() {
 
   useEffect(() => {
     let mounted = true;
-    const fetchData = async () => {
+    const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const data = await getQuotes({
@@ -44,9 +44,12 @@ export function QuoteListClient() {
       } finally {
         if (mounted) setLoading(false);
       }
+    }, 300);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
     };
-    fetchData();
-    return () => { mounted = false; };
   }, [page, statusFilter, dateFilter, search]);
 
   const handleStar = async (e: React.MouseEvent, quoteId: string, currentStatus: boolean) => {

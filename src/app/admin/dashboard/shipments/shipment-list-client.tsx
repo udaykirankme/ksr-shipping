@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Filter, ArrowRight, RefreshCw, ArchiveRestore, Trash2, Download } from "lucide-react";
@@ -35,35 +35,61 @@ interface ShipmentData {
   [key: string]: unknown;
 }
 
-export function ShipmentListClient() {
+export function ShipmentListClient({
+  initialShipments = [],
+  initialTotal = 0,
+}: {
+  initialShipments?: ShipmentData[];
+  initialTotal?: number;
+}) {
   const router = useRouter();
-  const [shipments, setShipments] = useState<ShipmentData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitialData = initialShipments.length > 0 || initialTotal > 0;
+  const [shipments, setShipments] = useState<ShipmentData[]>(initialShipments);
+  const [loading, setLoading] = useState(!hasInitialData);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isActiveFilter, setIsActiveFilter] = useState(true);
   
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const limit = 10;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(Math.max(1, Math.ceil(initialTotal / limit)));
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const skipInitialFetch = useRef(hasInitialData);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     let mounted = true;
+
+    if (
+      skipInitialFetch.current &&
+      page === 1 &&
+      !debouncedSearch &&
+      !statusFilter &&
+      isActiveFilter
+    ) {
+      skipInitialFetch.current = false;
+      return;
+    }
+
     const fetchData = async () => {
       setLoading(true);
       try {
         const data = await shipmentService.getShipments({
           page,
           limit,
-          search,
+          search: debouncedSearch,
           status: statusFilter,
           isActive: isActiveFilter
         });
         if (mounted) {
           setShipments(data.shipments);
-          setTotalPages(Math.ceil(data.total / limit));
+          setTotalPages(Math.max(1, Math.ceil(data.total / limit)));
         }
       } catch (err) {
         console.error(err);
@@ -74,7 +100,7 @@ export function ShipmentListClient() {
     
     fetchData();
     return () => { mounted = false; };
-  }, [page, statusFilter, isActiveFilter, search]); // Refresh on change
+  }, [page, statusFilter, isActiveFilter, debouncedSearch]);
 
   // Provide manual refresh
   const handleRefresh = async () => {
@@ -84,7 +110,7 @@ export function ShipmentListClient() {
       const data = await shipmentService.getShipments({
         page: 1,
         limit,
-        search,
+        search: debouncedSearch,
         status: statusFilter,
         isActive: isActiveFilter
       });
@@ -146,7 +172,7 @@ export function ShipmentListClient() {
       }
 
       await shipmentService.exportShipments({
-        search,
+        search: debouncedSearch,
         status: statusFilter,
         isActive: isActiveFilter,
         startDate: startDate.toISOString(),

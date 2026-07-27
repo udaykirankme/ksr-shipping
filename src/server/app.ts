@@ -13,11 +13,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use((_req, res, next) => {
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    Pragma: 'no-cache',
-    Expires: '0',
-  });
+  if (!res.getHeader('Cache-Control')) {
+    res.set('Cache-Control', 'private, no-cache');
+  }
   next();
 });
 

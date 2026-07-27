@@ -30,7 +30,7 @@ export function Header() {
 
   const fetchNotifications = async () => {
     try {
-      const data = await notificationService.getNotifications();
+      const data = await notificationService.getNotifications({ limit: 10 });
       if (isMounted.current && data) {
         setNotifications(data.items || []);
         setUnreadCount(data.unreadCount || 0);
@@ -40,11 +40,28 @@ export function Header() {
     }
   };
 
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await notificationService.getUnreadCount();
+      if (isMounted.current) {
+        setUnreadCount(count);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // 60 seconds polling
-    return () => clearInterval(interval);
+    fetchUnreadCount();
   }, []);
+
+  const handleToggleDropdown = async () => {
+    const nextOpen = !isDropdownOpen;
+    setIsDropdownOpen(nextOpen);
+    if (nextOpen) {
+      await fetchNotifications();
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -148,7 +165,7 @@ export function Header() {
           <div className="relative" ref={dropdownRef}>
             <button 
               type="button" 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              onClick={handleToggleDropdown}
               className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500 relative transition-colors"
             >
               <span className="sr-only">View notifications</span>

@@ -4,33 +4,28 @@ import { ShipmentOverview } from "@/components/dashboard/shipment-overview";
 import { RecentShipments } from "@/components/dashboard/recent-shipments";
 import { RecentNotifications } from "@/components/dashboard/recent-notifications";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import { serverApiFetch } from "@/lib/server-api";
+import { getDashboardStats } from "@/lib/dashboard-stats";
 
 export const metadata = {
   title: "Dashboard | KSR Shipping Services Admin",
 };
 
-async function getDashboardStats() {
-  return serverApiFetch<{
-    createdShipments: number;
-    deliveredShipments: number;
-    monthlyRevenue: number;
-    monthlyProfit: number;
-    recentShipments: unknown[];
-    statusCounts?: Record<string, number>;
-  }>('/api/admin/dashboard-stats');
-}
-
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 export default async function DashboardPage() {
-  const stats = (await getDashboardStats()) || {
-    createdShipments: 0,
-    deliveredShipments: 0,
-    monthlyRevenue: 0,
-    monthlyProfit: 0,
-    recentShipments: []
-  };
+  let stats;
+  try {
+    stats = await getDashboardStats();
+  } catch {
+    stats = {
+      createdShipments: 0,
+      deliveredShipments: 0,
+      monthlyRevenue: 0,
+      monthlyProfit: 0,
+      recentShipments: [],
+      statusCounts: {},
+    };
+  }
 
   const formatRupee = (val: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
@@ -38,7 +33,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* KPI Widgets Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-6">
         <CircularKpi 
           title="Shipments Created" 
@@ -66,7 +60,6 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Main Charts / Overview Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ShipmentOverview statusCounts={stats.statusCounts} />
@@ -76,12 +69,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <QuickActions />
 
-      {/* Recent Shipments Table */}
       <RecentShipments initialData={stats.recentShipments} />
-      
     </div>
   );
 }
