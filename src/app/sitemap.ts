@@ -1,50 +1,18 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from "next";
+import { PUBLIC_ROUTES, SITEMAP_IMAGES, absoluteUrl } from "@/lib/seo/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://ksrshipping.com'; // Placeholder, ideally from config
+  const imageEntries = SITEMAP_IMAGES.map((image) => absoluteUrl(image.path));
 
-  return [
-    {
-      url: `${baseUrl}`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/services`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/get-quotation`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/track`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/why-choose-us`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/restricted-items`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-  ];
+  return PUBLIC_ROUTES.map((route) => ({
+    url: absoluteUrl(route.path),
+    lastModified: new Date(),
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+    ...(route.path === "/" || route.path === "/services"
+      ? {
+          images: imageEntries,
+        }
+      : {}),
+  }));
 }

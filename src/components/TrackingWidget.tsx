@@ -32,11 +32,18 @@ export function TrackingWidget({ compact = false, centered = false }: { compact?
         </h3>
       </div>
       
-      <form onSubmit={handleTrack}>
+      <form onSubmit={handleTrack} aria-label="Track your shipment">
         <div className="relative mb-4">
-          <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400" />
+          <label htmlFor="tracking-id-input" className="sr-only">
+            Tracking ID or AWB Number
+          </label>
+          <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400" aria-hidden="true" />
           <input
+            id="tracking-id-input"
             type="text"
+            name="trackingId"
+            autoComplete="off"
+            aria-required="true"
             className="w-full pl-12 pr-4 py-3.5 bg-white/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow text-gray-900 placeholder-gray-400"
             placeholder="Enter Tracking ID / AWB Number"
             value={trackingId}

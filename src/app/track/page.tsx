@@ -1,11 +1,6 @@
 import { Suspense } from "react";
 import TrackResult from "./TrackResult";
 
-export const metadata = {
-  title: 'Track Shipment | KSR Shipping Services',
-  description: 'Track your shipment with KSR Shipping Services'
-};
-
 export default function TrackPage() {
   return (
     <div className="min-h-[70vh] bg-gray-50 pt-[104px] lg:pt-[130px] pb-16 relative overflow-hidden">

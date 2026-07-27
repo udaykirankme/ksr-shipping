@@ -1,6 +1,3 @@
-export const metadata = {
-  title: 'Privacy Policy | KSR Shipping Services'
-};
 
 export default function PrivacyPolicyPage() {
   return (

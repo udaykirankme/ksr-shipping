@@ -1,6 +1,3 @@
-export const metadata = {
-  title: 'Terms & Conditions | KSR Shipping Services'
-};
 
 export default function TermsPage() {
   return (

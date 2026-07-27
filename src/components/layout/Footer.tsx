@@ -42,7 +42,7 @@ export function Footer() {
           </div>
 
           {/* Quick Links */}
-          <div>
+          <nav aria-label="Footer quick links">
             <h4 className="text-white font-semibold mb-6">Quick Links</h4>
             <ul className="space-y-4 text-sm">
               <li><Link href="/" className="hover:text-orange-500 transition-colors">Home</Link></li>
@@ -53,10 +53,10 @@ export function Footer() {
               <li><a href={business.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Reviews on Google Maps</a></li>
               <li><a href={business.googleReviewUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Write a Google Review</a></li>
             </ul>
-          </div>
+          </nav>
 
           {/* Contact */}
-          <div>
+          <address className="not-italic">
             <h4 className="text-white font-semibold mb-6">Contact Us</h4>
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
@@ -80,7 +80,7 @@ export function Footer() {
                 </a>
               </li>
             </ul>
-          </div>
+          </address>
 
           {/* Google Maps Container */}
           <div>

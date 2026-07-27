@@ -1,6 +1,15 @@
 export const business = {
   name: "KSR Shipping Services",
   logoUrl: "/logo.png",
+  siteUrl: "https://ksrshipping.com",
+  locality: "Begumpet",
+  region: "Telangana",
+  country: "IN",
+  postalCode: "500016",
+  geo: {
+    latitude: 17.44121770125202,
+    longitude: 78.46720187527508,
+  },
   address: "Khaja Mansion, beside HDFC ATM, Near Ramalingeswara Temple, Prakash Nagar, Begumpet, Hyderabad, Telangana 500016",
   phone: "+91 99638 14267",
   phoneSecondary: "+91 99120 14267",

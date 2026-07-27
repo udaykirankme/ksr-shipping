@@ -1,18 +1,26 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { PublicLayoutWrapper } from "@/components/layout/PublicLayoutWrapper";
-import { business } from "@/lib/config";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { rootMetadata } from "@/lib/seo/metadata";
+import { buildGlobalSchemaGraph, buildWebPageSchema } from "@/lib/seo/schema";
+import { pageSeo } from "@/lib/seo/pages";
+import { THEME_COLOR } from "@/lib/seo/site";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
-export const metadata: Metadata = {
-  title: business.seo.defaultTitle,
-  description: business.seo.defaultDescription,
-  keywords: business.seo.keywords,
-  icons: {
-    icon: '/favicon.ico',
-  },
+export const metadata: Metadata = rootMetadata;
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: THEME_COLOR,
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -20,35 +28,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
-    name: business.name,
-    image: business.logoUrl,
-    '@id': '',
-    url: 'https://ksr-shipping.com', // Placeholder URL
-    telephone: business.phone,
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: business.address,
-      addressLocality: 'Hyderabad',
-      addressRegion: 'Telangana',
-      addressCountry: 'IN'
-    }
-  };
+  const homeSeo = pageSeo.home;
 
   return (
-    <html lang="en" suppressHydrationWarning className="scroll-smooth">
+    <html lang="en-IN" suppressHydrationWarning className="scroll-smooth">
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        <link rel="preconnect" href="https://www.google.com" />
+        <link rel="dns-prefetch" href="https://www.google.com" />
+        <link rel="preconnect" href="https://maps.googleapis.com" />
+        <link rel="dns-prefetch" href="https://maps.googleapis.com" />
+        <JsonLd data={buildGlobalSchemaGraph()} />
+        <JsonLd
+          data={buildWebPageSchema({
+            path: homeSeo.path,
+            title: homeSeo.title,
+            description: homeSeo.description,
+          })}
         />
       </head>
-      <body suppressHydrationWarning className={`${inter.className} bg-white text-gray-900 antialiased min-h-screen flex flex-col`}>
-        <PublicLayoutWrapper>
-          {children}
-        </PublicLayoutWrapper>
+      <body
+        suppressHydrationWarning
+        className={`${inter.className} ${inter.variable} bg-white text-gray-900 antialiased min-h-screen flex flex-col`}
+      >
+        <PublicLayoutWrapper>{children}</PublicLayoutWrapper>
       </body>
     </html>
   );

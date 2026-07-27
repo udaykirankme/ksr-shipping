@@ -41,14 +41,14 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 z-50">
+          <Link href="/" className="flex items-center gap-2 z-50" aria-label={`${business.name} — Home`}>
              <div className="relative h-10 lg:h-12 w-32 lg:w-40">
                 <Image src={business.logoUrl || '/logo.png'} alt={business.name} fill className="object-contain object-left" sizes="160px" />
              </div>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex space-x-1 lg:space-x-6 items-center">
+          <nav className="hidden lg:flex space-x-1 lg:space-x-6 items-center" aria-label="Primary navigation">
             {navLinks.map((link) => (
               <div key={link.name} className="relative group">
                 <Link
@@ -70,7 +70,7 @@ export function Navbar() {
 
           {/* CTA Button & Right actions */}
           <div className="hidden md:flex items-center space-x-4 ml-4">
-             <a href={`tel:${business.phone.replace(/\s+/g, '')}`} className="flex items-center gap-2 text-sm font-bold text-gray-800 hover:text-orange-600 transition-colors px-4 py-2 rounded-full border border-gray-200 hover:border-orange-200 bg-white">
+             <a href={`tel:${business.phone.replace(/\s+/g, '')}`} className="flex items-center gap-2 text-sm font-bold text-gray-800 hover:text-orange-600 transition-colors px-4 py-2 rounded-full border border-gray-200 hover:border-orange-200 bg-white" aria-label={`Call us at ${business.phone}`}>
                 <Phone className="w-4 h-4 text-orange-500" />
                 <span className="hidden xl:inline">Call Us</span>
              </a>
@@ -94,8 +94,10 @@ export function Navbar() {
              </a>
              <button
                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-               className="p-2 text-gray-900 focus:outline-none"
+               className="p-2 text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 rounded-lg"
                aria-label="Toggle Menu"
+               aria-expanded={mobileMenuOpen}
+               aria-controls="mobile-navigation"
              >
                {mobileMenuOpen ? (
                  <X className={cn("w-6 h-6", isScrolled ? "text-gray-900" : "text-gray-900")} />
@@ -116,6 +118,9 @@ export function Navbar() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
             className="absolute top-full left-0 w-full bg-white shadow-xl flex flex-col md:hidden border-t border-gray-100 max-h-[calc(100vh-80px)] overflow-y-auto"
+            id="mobile-navigation"
+            role="navigation"
+            aria-label="Mobile navigation"
           >
             <div className="px-4 py-6 space-y-2">
               {navLinks.map((link) => (

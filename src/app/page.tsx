@@ -63,6 +63,8 @@ export default function Home() {
             priority
             quality={75}
             sizes="100vw"
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
 
@@ -77,6 +79,8 @@ export default function Home() {
             style={{ maskImage: 'radial-gradient(ellipse 80% 80% at center, black 60%, transparent 100%)', WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at center, black 60%, transparent 100%)' }}
             quality={75}
             sizes="(max-width: 1024px) 100vw, 50vw"
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
 
