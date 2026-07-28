@@ -96,3 +96,22 @@ export function toBusinessDateTimeFields(date: string | Date) {
     time: toBusinessTimeInput(date),
   };
 }
+
+/** Inclusive start and exclusive end of a business month in IST. */
+export function getBusinessMonthRange(month?: number, year?: number): { gte: Date; lt: Date } {
+  const [currentYearStr, currentMonthStr] = toBusinessDateInput(new Date()).split('-');
+  const targetYear = year ?? Number(currentYearStr);
+  const targetMonth = month ?? Number(currentMonthStr);
+
+  const gte = parseBusinessDateTime(
+    `${targetYear}-${String(targetMonth).padStart(2, '0')}-01T00:00:00`,
+  );
+
+  const nextMonth = targetMonth === 12 ? 1 : targetMonth + 1;
+  const nextYear = targetMonth === 12 ? targetYear + 1 : targetYear;
+  const lt = parseBusinessDateTime(
+    `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00`,
+  );
+
+  return { gte, lt };
+}

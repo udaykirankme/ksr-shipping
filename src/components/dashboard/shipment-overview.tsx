@@ -16,6 +16,7 @@ export function ShipmentOverview({ statusCounts = {} }: { statusCounts?: Record<
     <Card className="h-full overflow-hidden border border-orange-100/50 shadow-[0_4px_20px_rgba(255,106,0,0.05)] hover:shadow-[0_4px_25px_rgba(255,106,0,0.15)] transition-all duration-300 bg-white">
       <CardHeader className="pb-6 border-b border-gray-100/50">
         <CardTitle className="text-lg">Shipment Status Overview</CardTitle>
+        <p className="text-sm text-gray-500 mt-1">Active shipments by current status</p>
       </CardHeader>
       <CardContent className="p-0">
         <div className="grid grid-cols-2 md:grid-cols-3 divide-x divide-y divide-gray-50">
