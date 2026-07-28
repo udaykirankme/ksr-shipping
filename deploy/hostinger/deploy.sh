@@ -38,10 +38,17 @@ echo "==> Preparing standalone bundle..."
 cp -r public .next/standalone/
 mkdir -p .next/standalone/.next
 cp -r .next/static .next/standalone/.next/
+cp .env .next/standalone/.env
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "ERROR: DATABASE_URL is empty in .env"
+  exit 1
+fi
+
+echo "==> Syncing database schema..."
+npm run db:push
 
 echo "==> Restarting PM2..."
-export DATABASE_URL JWT_SECRET NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_APP_URL PORT NODE_ENV=production
-
 if pm2 describe ksr-shipping >/dev/null 2>&1; then
   pm2 restart ecosystem.config.js --update-env
 else

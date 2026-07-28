@@ -23,6 +23,7 @@ router.get('/db-health', async (_req, res) => {
     res.status(500).json({
       success: false,
       message: 'Database connection failed',
+      hint: 'Set DATABASE_URL on the server, run npm run db:push, then npm run db:seed',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

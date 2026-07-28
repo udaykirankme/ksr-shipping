@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import rateLimit from 'express-rate-limit';
 
@@ -57,6 +58,17 @@ router.post('/login', loginLimiter, async (req, res) => {
     res.json({ success: true, data: { message: 'Logged in successfully', user: { id: user.id, username: user.username, role: user.role } } });
   } catch (error) {
     console.error('Login error:', error);
+
+    if (
+      error instanceof Prisma.PrismaClientInitializationError ||
+      error instanceof Prisma.PrismaClientKnownRequestError
+    ) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database unavailable. Ensure DATABASE_URL is configured and the database is running.',
+      });
+    }
+
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

@@ -9,7 +9,12 @@ import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { Star } from "lucide-react";
 
-export function Header() {
+type HeaderProps = {
+  onMenuClick?: () => void;
+  mobileSidebarOpen?: boolean;
+};
+
+export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -132,7 +137,13 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-x-4 glass-panel border-b-0 px-4 sm:gap-x-6 sm:px-6 lg:px-8">
-      <button type="button" className="-m-2.5 p-2.5 text-gray-700 md:hidden">
+      <button
+        type="button"
+        className="-m-2.5 p-2.5 text-gray-700 md:hidden rounded-lg hover:bg-orange-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+        onClick={onMenuClick}
+        aria-expanded={mobileSidebarOpen}
+        aria-controls="admin-mobile-sidebar"
+      >
         <span className="sr-only">Open sidebar</span>
         <Menu className="h-6 w-6" aria-hidden="true" />
       </button>
