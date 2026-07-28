@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getDashboardStats } from '@/lib/dashboard-stats';
 import { getShipmentsList } from '@/lib/shipments-query';
+import { parseBusinessDateTime, toBusinessDateInput, toBusinessTimeInput } from '@/lib/datetime';
 
 
 const router = Router();
@@ -189,8 +190,8 @@ router.get('/shipments/export', async (req, res) => {
           s.service_through,
           s.current_status,
           s.weight,
-          s.booked_date ? s.booked_date.toISOString().split('T')[0] : '',
-          s.booked_date ? s.booked_date.toISOString().substring(11, 16) : '',
+          s.booked_date ? toBusinessDateInput(s.booked_date) : '',
+          s.booked_date ? toBusinessTimeInput(s.booked_date) : '',
           s.estimated_delivery ? s.estimated_delivery.toISOString().split('T')[0] : '',
           s.profit,
           s.paid_amount,
@@ -278,13 +279,13 @@ router.post('/shipments', async (req, res) => {
       return res.status(400).json({ success: false, message: `Field received_amount is required` });
     }
 
-    if (data.estimated_delivery) data.estimated_delivery = new Date(data.estimated_delivery);
+    if (data.estimated_delivery) data.estimated_delivery = parseBusinessDateTime(data.estimated_delivery);
     if (data.booked_date) {
       if (data.booked_time) {
-        data.booked_date = new Date(`${data.booked_date}T${data.booked_time}:00`);
+        data.booked_date = parseBusinessDateTime(`${data.booked_date}T${data.booked_time}:00`);
         delete data.booked_time;
       } else {
-        data.booked_date = new Date(data.booked_date);
+        data.booked_date = parseBusinessDateTime(data.booked_date);
       }
     } else {
       data.booked_date = new Date();
@@ -424,7 +425,7 @@ router.put('/shipments/:id', async (req, res) => {
       updateData.profit = received - paid;
     }
 
-    if (updateData.estimated_delivery) updateData.estimated_delivery = new Date(updateData.estimated_delivery);
+    if (updateData.estimated_delivery) updateData.estimated_delivery = parseBusinessDateTime(updateData.estimated_delivery);
     
     // Ensure booked_date and booked_time cannot be changed after creation
     delete updateData.booked_date;
@@ -489,8 +490,10 @@ router.patch('/shipments/:id/status', async (req, res) => {
       version: { increment: 1 }
     };
     
+    const occurredAt = occurred_at ? parseBusinessDateTime(occurred_at) : new Date();
+
     if (status === 'Delivered') {
-      updateData.delivered_at = new Date(occurred_at || Date.now());
+      updateData.delivered_at = occurredAt;
     }
 
     const [shipment, history] = await prisma.$transaction([
@@ -503,7 +506,7 @@ router.patch('/shipments/:id/status', async (req, res) => {
           shipment_id: req.params.id,
           status,
           location,
-          occurred_at: new Date(occurred_at || Date.now()),
+          occurred_at: occurredAt,
           note,
           updated_by: (req as any).user.id
         }

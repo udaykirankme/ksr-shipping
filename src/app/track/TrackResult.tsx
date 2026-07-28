@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { TrackingWidget } from "@/components/TrackingWidget";
 import { CheckCircle2, Clock, MapPin, Box, Hand, Truck, Plane, User, XCircle, RotateCcw, Headset, ArrowRight, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
 
 const getStatusColor = (status: string) => {
@@ -269,8 +270,7 @@ export default function TrackResult() {
                                </div>
                                <div className="whitespace-nowrap text-left sm:text-right text-sm font-medium text-gray-500">
                                  <time dateTime={event.occurred_at}>
-                                   {new Date(event.occurred_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}<br/>
-                                   <span className="text-gray-400 text-xs uppercase">{new Date(event.occurred_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                                   {formatDateTime(event.occurred_at)}
                                  </time>
                                </div>
                              </div>

@@ -1,5 +1,6 @@
 import { business } from '@/lib/config';
 import { formatDateTime } from '@/lib/format';
+import { parseBusinessDateTime } from '@/lib/datetime';
 
 export function normalizeWhatsAppPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -18,11 +19,7 @@ function getTrackUrl(trackingId: string): string {
 
 function formatOccurredAtLabel(occurredAt: string): string {
   if (!occurredAt) return 'N/A';
-  const [datePart, timePart = '00:00:00'] = occurredAt.split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes] = timePart.split(':').map(Number);
-  if (!year || !month || !day) return 'N/A';
-  return formatDateTime(new Date(year, month - 1, day, hours || 0, minutes || 0));
+  return formatDateTime(parseBusinessDateTime(occurredAt));
 }
 
 export function buildShipmentCreatedShareMessage(

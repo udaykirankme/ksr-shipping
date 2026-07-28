@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { shipmentService } from '@/lib/shipment-service';
 import { formatDateTime, formatCurrency, formatDateToYYYYMMDD } from '@/lib/format';
+import {
+  getCurrentBusinessDateTimeInput,
+  toBusinessDateTimeFields,
+  toBusinessTimeInput,
+} from '@/lib/datetime';
 import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, CheckCircle2, RefreshCw, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
@@ -26,11 +31,7 @@ const STATUS_WORKFLOW = [
 ];
 
 function getCurrentOccurredAt(): string {
-  const now = new Date();
-  const dateStr = formatDateToYYYYMMDD(now);
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `${dateStr}T${hours}:${minutes}:00`;
+  return getCurrentBusinessDateTimeInput();
 }
 
 function getNextStatusUpdate(currentStatus: string) {
@@ -62,19 +63,31 @@ function isStatusFormComplete(update: {
   return Boolean(datePart && timePart?.substring(0, 5));
 }
 
-function getLatestHistoryShare(history: any[] | undefined): SavedStatusShare | null {
-  const latest = history?.[0];
-  if (!latest?.status || !latest?.location || !latest?.occurred_at) return null;
+function getShareableStatus(shipment: {
+  history?: any[];
+  current_location?: string | null;
+}): SavedStatusShare | null {
+  const latest = shipment.history?.[0];
+  if (!latest?.status || !latest?.occurred_at) return null;
+
+  const location =
+    latest.location?.trim() ||
+    shipment.current_location?.trim() ||
+    '';
+
+  if (!location) return null;
 
   const occurredAt =
     typeof latest.occurred_at === 'string'
       ? latest.occurred_at
-      : new Date(latest.occurred_at).toISOString();
+      : latest.occurred_at.toISOString();
+
+  const { date, time } = toBusinessDateTimeFields(occurredAt);
 
   return {
     status: latest.status,
-    location: latest.location,
-    occurredAt,
+    location,
+    occurredAt: `${date}T${time}:00`,
     note: latest.note || undefined,
   };
 }
@@ -84,7 +97,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const [shipment, setShipment] = useState(initialData);
   const [formData, setFormData] = useState({ 
     ...initialData,
-    booked_time: initialData.booked_date ? new Date(initialData.booked_date).toISOString().substring(11, 16) : ''
+    booked_time: initialData.booked_date ? toBusinessTimeInput(initialData.booked_date) : ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,15 +110,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     note: '',
     occurred_at: getCurrentOccurredAt(),
   }));
-  const [savedStatusShare, setSavedStatusShare] = useState<SavedStatusShare | null>(() =>
-    initialData.current_status === 'Delivered'
-      ? getLatestHistoryShare(initialData.history)
-      : null
-  );
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
 
   const isDelivered = shipment.current_status === 'Delivered';
+  const shareableStatus = getShareableStatus(shipment);
   
   useEffect(() => {
     const nextUpdate = getNextStatusUpdate(shipment.current_status);
@@ -125,29 +134,29 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   };
 
   const getSavedStatusShareMessage = (recipientName?: string) => {
-    if (!savedStatusShare) return '';
+    if (!shareableStatus) return '';
     return buildStatusUpdateShareMessage({
       trackingId: shipment.tracking_id,
-      status: savedStatusShare.status,
-      location: savedStatusShare.location,
-      occurredAt: savedStatusShare.occurredAt,
-      note: savedStatusShare.note,
+      status: shareableStatus.status,
+      location: shareableStatus.location,
+      occurredAt: shareableStatus.occurredAt,
+      note: shareableStatus.note,
       recipientName,
     });
   };
 
   const handleShareStatusToSender = () => {
-    if (!savedStatusShare) return;
+    if (!shareableStatus) return;
     openWhatsAppShare(formData.sender_phone, getSavedStatusShareMessage(formData.sender_name));
   };
 
   const handleShareStatusToReceiver = () => {
-    if (!savedStatusShare) return;
+    if (!shareableStatus) return;
     openWhatsAppShare(formData.receiver_phone, getSavedStatusShareMessage(formData.receiver_name));
   };
 
   const canSubmitStatusUpdate = isStatusFormComplete(statusUpdate);
-  const canShareStatusUpdate = savedStatusShare !== null;
+  const canShareStatusUpdate = shareableStatus !== null;
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +178,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setShipment(updated);
       setFormData({
         ...updated,
-        booked_time: updated.booked_date ? new Date(updated.booked_date).toISOString().substring(11, 16) : ''
+        booked_time: updated.booked_date ? toBusinessTimeInput(updated.booked_date) : ''
       });
       setSuccess('Shipment details updated successfully');
       router.refresh();
@@ -203,12 +212,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       });
       
       setShipment({ ...res.shipment, history: [res.history, ...(shipment.history || [])] });
-      setSavedStatusShare({
-        status: submittedUpdate.status,
-        location: submittedUpdate.location,
-        occurredAt: submittedUpdate.occurred_at,
-        note: submittedUpdate.note,
-      });
       setSuccess('Status updated successfully. You can now share this update with the sender or receiver.');
       
       // Reset status input with next status and current date/time
@@ -262,7 +265,10 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setLoading(true);
       const data = await shipmentService.getShipment(shipmentId);
       setShipment(data);
-      setFormData(data);
+      setFormData({
+        ...data,
+        booked_time: data.booked_date ? toBusinessTimeInput(data.booked_date) : '',
+      });
       
       const [s, st] = await Promise.all([
         ServicesApi.getServices(),
@@ -522,7 +528,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
         {/* Right Column: Timeline & Status Update */}
         <div className="space-y-6">
-          {(!isDelivered || canShareStatusUpdate) && (
+          {(shareableStatus || !isDelivered) && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-orange-200 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10 opacity-50"></div>
               <h2 className="text-lg font-bold text-gray-900 mb-6">
@@ -586,15 +592,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                   </button>
                   {!canShareStatusUpdate && (
                     <p className="text-xs text-center text-gray-500">
-                      Save the status update first to enable WhatsApp sharing.
+                      WhatsApp sharing becomes available once the shipment has a saved status with location.
                     </p>
                   )}
                 </form>
               ) : (
-                savedStatusShare && (
+                shareableStatus && (
                   <p className="text-sm text-gray-600 mb-4">
-                    Share the <span className="font-semibold text-gray-900">{savedStatusShare.status}</span> update
-                    {savedStatusShare.location ? ` from ${savedStatusShare.location}` : ''} with the sender or receiver.
+                    Share the <span className="font-semibold text-gray-900">{shareableStatus.status}</span> update
+                    {shareableStatus.location ? ` from ${shareableStatus.location}` : ''} with the sender or receiver.
                   </p>
                 )
               )}
