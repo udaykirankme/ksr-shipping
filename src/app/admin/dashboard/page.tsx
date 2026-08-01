@@ -10,6 +10,8 @@ export const metadata = {
   title: "Dashboard | KSR Shipping Services Admin",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   let stats;
   try {

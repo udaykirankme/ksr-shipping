@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { getBusinessMonthRange } from '@/lib/datetime';
 
 export type DashboardStats = {
   createdShipments: number;
@@ -9,20 +10,13 @@ export type DashboardStats = {
   statusCounts: Record<string, number>;
 };
 
+const ACTIVE_SHIPMENT_WHERE = { is_active: true };
+
 export async function getDashboardStats(month?: number, year?: number): Promise<DashboardStats> {
-  const targetDate = new Date();
-
-  if (month && year) {
-    targetDate.setFullYear(year);
-    targetDate.setMonth(month - 1);
-  }
-
-  targetDate.setHours(0, 0, 0, 0);
-
-  const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-  const firstDayOfNextMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 1);
+  const { gte: monthStart, lt: monthEnd } = getBusinessMonthRange(month, year);
   const monthWhere = {
-    booked_date: { gte: firstDayOfMonth, lt: firstDayOfNextMonth },
+    ...ACTIVE_SHIPMENT_WHERE,
+    booked_date: { gte: monthStart, lt: monthEnd },
   };
 
   const [
@@ -37,15 +31,16 @@ export async function getDashboardStats(month?: number, year?: number): Promise<
       where: { ...monthWhere, current_status: 'Delivered' },
     }),
     prisma.shipment.aggregate({
-      where: { ...monthWhere, is_active: true },
+      where: monthWhere,
       _sum: { received_amount: true, profit: true },
     }),
     prisma.shipment.groupBy({
       by: ['current_status'],
-      where: monthWhere,
+      where: ACTIVE_SHIPMENT_WHERE,
       _count: { _all: true },
     }),
     prisma.shipment.findMany({
+      where: ACTIVE_SHIPMENT_WHERE,
       orderBy: { created_at: 'desc' },
       take: 5,
       select: {

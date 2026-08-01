@@ -11,6 +11,7 @@ import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
 import { PremiumTimePicker } from "@/components/ui/PremiumTimePicker";
 import { formatDateToYYYYMMDD } from "@/lib/format";
+import { toBusinessTimeInput } from "@/lib/datetime";
 import {
   buildShipmentCreatedShareMessage,
   openWhatsAppShare,
@@ -20,7 +21,7 @@ function getCurrentBookedDateTime() {
   const now = new Date();
   return {
     booked_date: formatDateToYYYYMMDD(now),
-    booked_time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    booked_time: toBusinessTimeInput(now),
   };
 }
 

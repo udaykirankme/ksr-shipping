@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Search, Menu, Package, FileText, MessageSquare, AlertCircle, BellRing } from "lucide-react";
+import { Bell, Search, Menu, Package, FileText, MessageSquare, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { notificationService, NotificationItem } from "@/lib/notification-service";
-import { usePushNotifications } from "@/lib/use-push-notifications";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { Star } from "lucide-react";
 
-export function Header({ onMenuClick }: { onMenuClick?: () => void } = {}) {
+type HeaderProps = {
+  onMenuClick?: () => void;
+  mobileSidebarOpen?: boolean;
+};
+
+export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) {
   const router = useRouter();
-  const { isSupported, permission, subscription, subscribe } = usePushNotifications();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -134,10 +137,12 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void } = {}) {
 
   return (
     <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-x-4 glass-panel border-b-0 px-4 sm:gap-x-6 sm:px-6 lg:px-8">
-      <button 
-        type="button" 
-        className="-m-2.5 p-2.5 text-gray-700 md:hidden"
-        onClick={() => onMenuClick?.()}
+      <button
+        type="button"
+        className="-m-2.5 p-2.5 text-gray-700 md:hidden rounded-lg hover:bg-orange-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+        onClick={onMenuClick}
+        aria-expanded={mobileSidebarOpen}
+        aria-controls="admin-mobile-sidebar"
       >
         <span className="sr-only">Open sidebar</span>
         <Menu className="h-6 w-6" aria-hidden="true" />
@@ -167,16 +172,6 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void } = {}) {
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
           
-          {isSupported && !subscription && permission !== 'denied' && (
-            <button
-              onClick={subscribe}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-orange-700 bg-orange-100 rounded-full hover:bg-orange-200 transition-colors"
-            >
-              <BellRing className="w-3.5 h-3.5" />
-              Enable Notifications
-            </button>
-          )}
-
           {/* Notification Bell Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button 
@@ -276,13 +271,13 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void } = {}) {
             <button type="button" className="-m-1.5 flex items-center p-1.5">
               <span className="sr-only">Open user menu</span>
               <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center border border-orange-200 shrink-0 shadow-sm">
-                <span className="text-sm font-bold text-orange-600">KS</span>
+                <span className="text-sm font-bold text-orange-600">AD</span>
               </div>
               <span className="hidden lg:flex lg:flex-col lg:items-start lg:ml-3">
                 <span className="text-sm font-semibold leading-6 text-gray-900" aria-hidden="true">
-                  K Srinivasa Rao
+                  Admin User
                 </span>
-                <span className="text-xs font-medium text-gray-500 leading-4">Proprietor</span>
+                <span className="text-xs font-medium text-gray-500 leading-4">Manager</span>
               </span>
             </button>
           </div>
