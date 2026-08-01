@@ -110,7 +110,7 @@ router.post('/quotations', apiLimiter, async (req, res) => {
         combinedNotes = `Shipment Type: ${parsed.shipment_type}\n${combinedNotes}`.trim();
       }
       
-      const dataToSave = parsed;
+      const { shipment_type, ...dataToSave } = parsed;
 
       const newQuote = await tx.quotationRequest.create({
         data: {
