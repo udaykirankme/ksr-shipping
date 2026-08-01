@@ -202,8 +202,24 @@ model AdminUser {
   
   shipment_history ShipmentStatusHistory[]
   quote_history    QuoteStatusHistory[]
+  push_subscriptions PushSubscription[]
 
   @@map("admin_users")
+}
+
+model PushSubscription {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  admin_id  String?  @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  admin_user AdminUser? @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_id])
+
+  @@map("push_subscriptions")
 }
 
 model SystemSetting {

@@ -1,30 +1,8 @@
 "use client";
 
 import { ShieldCheck, Zap, ThumbsUp, PackageCheck, Home, MapPin, Globe2, Box, HeartPulse, Building2, HeadphonesIcon, Network } from "lucide-react";
-import { useRef, useEffect } from "react";
-import { useInView, animate, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
-
-function AnimatedCounter({ from, to, suffix = "", duration = 2 }: { from: number, to: number, suffix?: string, duration?: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-50px" });
-  useEffect(() => {
-    if (inView) {
-      const controls = animate(from, to, {
-        duration,
-        ease: "easeOut",
-        onUpdate(value) {
-          if (ref.current) {
-            const formatted = value >= 1000 ? Math.round(value).toLocaleString() : Math.round(value);
-            ref.current.textContent = `${formatted}${suffix}`;
-          }
-        }
-      });
-      return () => controls.stop();
-    }
-  }, [from, to, inView, duration, suffix]);
-  return <span ref={ref}>{from}{suffix}</span>;
-}
 
 export default function WhyChooseUsPage() {
   const reasons = [
@@ -49,7 +27,7 @@ export default function WhyChooseUsPage() {
       <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
       {/* Hero */}
-      <div className="py-24 px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      <div className="pt-10 pb-8 lg:pt-12 lg:pb-12 px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <div className="max-w-3xl mx-auto">
            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight">Why Choose <span className="text-orange-600">KSR Shipping?</span></h1>
            <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
@@ -59,7 +37,7 @@ export default function WhyChooseUsPage() {
       </div>
 
       {/* Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-4 lg:pt-8 bg-gray-50">
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {reasons.map((reason, idx) => (
                <motion.div 
@@ -81,33 +59,33 @@ export default function WhyChooseUsPage() {
       </div>
 
       {/* Stats CTA */}
-      <div className="bg-gray-900 text-white py-20">
+      <div className="bg-orange-50 text-gray-900 py-20 border-t border-orange-100">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl font-bold mb-12">Numbers That Speak For Themselves</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16 divide-x divide-gray-800">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16 divide-x divide-orange-200">
                <div className="flex flex-col items-center">
                   <div className="text-4xl md:text-5xl font-black text-orange-500 mb-2">
-                    <AnimatedCounter from={0} to={15} suffix="+" duration={1.5} />
+                    15+
                   </div>
-                  <div className="text-gray-400 font-medium">Years Experience</div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Years Experience</div>
                </div>
                <div className="flex flex-col items-center">
                   <div className="text-4xl md:text-5xl font-black text-orange-500 mb-2">
-                    <AnimatedCounter from={0} to={50} suffix="K+" duration={2} />
+                    50K+
                   </div>
-                  <div className="text-gray-400 font-medium">Happy Customers</div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Happy Customers</div>
                </div>
                <div className="flex flex-col items-center">
                   <div className="text-4xl md:text-5xl font-black text-orange-500 mb-2">
-                    <AnimatedCounter from={0} to={150} suffix="+" duration={2.5} />
+                    150+
                   </div>
-                  <div className="text-gray-400 font-medium">Countries Covered</div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Countries Covered</div>
                </div>
                <div className="flex flex-col items-center">
                   <div className="text-4xl md:text-5xl font-black text-orange-500 mb-2">
-                    <AnimatedCounter from={0} to={99} suffix=".5%" duration={2} />
+                    99.5%
                   </div>
-                  <div className="text-gray-400 font-medium">On-Time Delivery</div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">On-Time Delivery</div>
                </div>
             </div>
             

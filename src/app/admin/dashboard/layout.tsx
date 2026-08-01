@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 
@@ -6,11 +9,13 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden bg-[linear-gradient(135deg,#FFF7F0_0%,#FFF3E8_50%,#FFE8D6_100%)] text-[#1A1A1A]">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
+        <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
           <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.02] z-0 pointer-events-none" />
           <div className="relative z-10 w-full h-full">

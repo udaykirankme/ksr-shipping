@@ -74,7 +74,7 @@ export function Footer() {
                 </div>
               </li>
               <li>
-                <a href={`mailto:${business.email}`} className="flex items-center gap-3 group hover:text-orange-500 transition-colors">
+                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${business.email}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group hover:text-orange-500 transition-colors">
                   <Mail className="w-5 h-5 text-orange-500 shrink-0 group-hover:scale-110 transition-transform" />
                   <span>{business.email}</span>
                 </a>

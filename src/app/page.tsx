@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useInView, animate } from "framer-motion";
+import { motion } from "framer-motion";
 import { TrackingWidget } from "@/components/TrackingWidget";
 import { WhyChooseCarousel } from "@/components/WhyChooseCarousel";
 import { business } from "@/lib/config";
@@ -9,29 +9,6 @@ import Link from "next/link";
 import { ShieldCheck, Globe2, Truck, Plane, HeartPulse, Box, Building2, FileText, ArrowUpRight } from "lucide-react";
 import { InfiniteCarousel } from "@/components/ui/InfiniteCarousel";
 import { TestimonialSocialProof } from "@/components/ui/testimonial-social-proof";
-import { useRef, useEffect } from "react";
-
-function AnimatedCounter({ from, to, suffix = "", duration = 2 }: { from: number, to: number, suffix?: string, duration?: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-50px" });
-  useEffect(() => {
-    if (inView) {
-      const controls = animate(from, to, {
-        duration,
-        ease: "easeOut",
-        onUpdate(value) {
-          if (ref.current) {
-            // Format with commas if large number
-            const formatted = value >= 1000 ? Math.round(value).toLocaleString() : Math.round(value);
-            ref.current.textContent = `${formatted}${suffix}`;
-          }
-        }
-      });
-      return () => controls.stop();
-    }
-  }, [from, to, inView, duration, suffix]);
-  return <span ref={ref}>{from}{suffix}</span>;
-}
 
 const PARTNERS = [
   { src: "/delhivery logo.jpg", alt: "Delhivery" },
@@ -206,16 +183,16 @@ export default function Home() {
                 <Link
                   href={`/services#${service.id}`}
                   key={`s1-${i}`}
-                  className="relative w-[280px] sm:w-[320px] h-[190px] shrink-0 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all duration-300 ease-in-out hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:-translate-y-2 hover:border-orange-200 animate-glow group"
+                  className="w-[280px] sm:w-[320px] h-[220px] shrink-0 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all duration-300 ease-in-out hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:-translate-y-2 hover:border-orange-200 animate-glow group"
                 >
-                  <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gradient-to-tr from-orange-500 to-orange-400 flex items-center justify-center opacity-80 group-hover:opacity-100 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] transition-all duration-300 backdrop-blur-sm shadow-sm">
-                    <ArrowUpRight className="w-4 h-4 text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
-                  </div>
-                  <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-4 text-orange-500 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+                  <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-3 text-orange-500 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] shrink-0">
                     <service.icon className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-gray-900 mb-2">{service.title}</h4>
-                  <p className="text-sm text-gray-500 line-clamp-3">{service.desc}</p>
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-3">{service.desc}</p>
+                  <div className="mt-auto inline-flex h-9 w-full items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-bold rounded-full transition-all duration-300 shadow-sm group-hover:shadow-[0_4px_14px_rgba(249,115,22,0.35)] group-hover:from-orange-600 group-hover:to-orange-700">
+                    Learn More <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -232,7 +209,7 @@ export default function Home() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">
-                <AnimatedCounter from={0} to={15} suffix="+" duration={1.5} />
+                15+
               </div>
               <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Years Experience</div>
             </div>
@@ -241,7 +218,7 @@ export default function Home() {
                 <Box className="w-5 h-5" />
               </div>
               <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">
-                <AnimatedCounter from={0} to={50} suffix="K+" duration={2} />
+                50K+
               </div>
               <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Happy Customers</div>
             </div>
@@ -250,7 +227,7 @@ export default function Home() {
                 <Globe2 className="w-5 h-5" />
               </div>
               <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">
-                <AnimatedCounter from={0} to={150} suffix="+" duration={2.5} />
+                150+
               </div>
               <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Countries Covered</div>
             </div>
@@ -259,7 +236,7 @@ export default function Home() {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">
-                <AnimatedCounter from={0} to={99} suffix=".5%" duration={2} />
+                99.5%
               </div>
               <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">On-Time Delivery</div>
             </div>

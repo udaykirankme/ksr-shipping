@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { business } from "@/lib/config";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { LocationMap } from "@/components/LocationMap";
@@ -9,6 +9,12 @@ export default function ContactPage() {
    const [loading, setLoading] = useState(false);
    const [success, setSuccess] = useState(false);
    const [error, setError] = useState("");
+
+   useEffect(() => {
+     if (success) {
+       window.scrollTo({ top: 0, behavior: 'smooth' });
+     }
+   }, [success]);
 
    const [formData, setFormData] = useState({
       name: "",
@@ -33,7 +39,14 @@ export default function ContactPage() {
             setSuccess(true);
             setFormData({ name: "", phone: "", email: "", message: "" });
          } else {
-            setError("Failed to send message. Please try again.");
+            const data = await res.json().catch(() => null);
+            if (data?.errors && data.errors.length > 0) {
+              const field = data.errors[0].path[0];
+              const msg = data.errors[0].message;
+              setError(`Please check your ${field}: ${msg}`);
+            } else {
+              setError(data?.message || "Failed to send message. Please try again.");
+            }
          }
       } catch (err) {
          console.error(err);
@@ -50,7 +63,7 @@ export default function ContactPage() {
          <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
          {/* Header */}
-         <div className="py-24 px-4 sm:px-6 lg:px-8 text-center relative z-10">
+         <div className="pt-4 pb-4 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="max-w-3xl mx-auto">
                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
                <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
@@ -74,7 +87,7 @@ export default function ContactPage() {
             </div>
          </div>
 
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-0 lg:pt-2 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
 
                {/* Contact Info */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, User, MapPin, Package, ArrowRight, Truck } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,12 @@ export default function GetQuotationPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (success) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [success]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -43,7 +49,14 @@ export default function GetQuotationPage() {
       if (res.ok) {
         setSuccess(true);
       } else {
-        setError("Failed to submit quotation request. Please try again or contact us directly.");
+        const data = await res.json().catch(() => null);
+        if (data?.errors && data.errors.length > 0) {
+          const field = data.errors[0].path[0];
+          const msg = data.errors[0].message;
+          setError(`Please check your ${field}: ${msg}`);
+        } else {
+          setError(data?.message || "Failed to submit quotation request. Please try again or contact us directly.");
+        }
       }
     } catch (err) {
       console.error(err);

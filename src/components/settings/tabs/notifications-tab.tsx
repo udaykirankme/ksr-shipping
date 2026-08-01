@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { SettingsService } from "@/lib/settings-service";
 import { toast } from "sonner";
+import { usePushNotifications } from "@/lib/use-push-notifications";
 
 export default function NotificationsTab() {
+  const { isSupported, permission, subscription, subscribe, unsubscribe } = usePushNotifications();
   const [localSettings, setLocalSettings] = useState({
     notifyQuoteRequest: true,
     notifyContactMessage: true,
@@ -96,6 +98,58 @@ export default function NotificationsTab() {
           </Button>
         </div>
       </form>
+
+      {/* Push Notifications Section */}
+      <div className="pt-8 border-t border-gray-200">
+        <h2 className="text-lg font-medium text-gray-900 mb-2">Web Push Notifications</h2>
+        <p className="text-sm text-gray-700 mb-4">
+          Enable browser push notifications to get real-time alerts even when the dashboard is closed.
+        </p>
+
+        {!isSupported ? (
+          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            Push notifications are not supported in this browser.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium text-gray-700">Current Status:</span>
+              {subscription ? (
+                <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded">Enabled & Subscribed</span>
+              ) : permission === 'denied' ? (
+                <span className="text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded">Blocked by Browser</span>
+              ) : (
+                <span className="text-gray-600 font-semibold bg-gray-100 px-2 py-0.5 rounded">Not Enabled</span>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              {!subscription && permission !== 'denied' && (
+                <Button onClick={subscribe} type="button" className="bg-orange-600 hover:bg-orange-700">
+                  Enable Push Notifications
+                </Button>
+              )}
+              {subscription && (
+                <Button onClick={unsubscribe} type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
+                  Disable Push Notifications
+                </Button>
+              )}
+              {permission === 'denied' && (
+                <p className="text-sm text-gray-500">
+                  You have blocked notifications in your browser settings. Please allow them to enable this feature.
+                </p>
+              )}
+            </div>
+            
+            {/* Debug utility to force re-sync if subscription is stale */}
+            {subscription && (
+              <p className="text-xs text-gray-500 mt-2">
+                Not receiving notifications? Try disabling and re-enabling them to sync your device.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -132,7 +132,7 @@ router.get('/dashboard-stats', async (req, res) => {
 router.get('/shipments/export', async (req, res) => {
   try {
     const { search, status, courier, startDate, endDate, isActive } = req.query;
-    let where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {};
     if (isActive !== undefined) {
       where.is_active = isActive === 'true';
     } else {
@@ -586,7 +586,7 @@ router.get('/quotations', async (req, res) => {
     const { search, status, isStarred, dateFilter, startDate, endDate, page = '1', limit = '10' } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    let where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {};
     
     if (status === 'Needs Attention') {
       where.OR = [
@@ -681,7 +681,7 @@ router.post('/quotations', async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    let duplicateWarnings = [];
+    const duplicateWarnings = [];
     if (data.phone) {
       const recentPhone = await prisma.quotationRequest.findFirst({
         where: { phone: data.phone, created_at: { gte: thirtyDaysAgo } }
@@ -888,7 +888,7 @@ router.get('/contact-messages', async (req, res) => {
     const { search, status, isStarred, dateFilter, startDate, endDate, page = '1', limit = '10' } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
     
-    let where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {};
 
     if (status === 'Needs Attention') {
       where.OR = [
@@ -1045,7 +1045,7 @@ router.get('/notifications', async (req, res) => {
     const { search, status, type, dateFilter, startDate, endDate, page = '1', limit = '20' } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    let where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {};
 
     if (status === 'Needs Attention') {
       where.OR = [
@@ -1818,5 +1818,61 @@ router.post('/account/username-update', async (req, res) => {
   }
 });
 
+
+// --- Push Notifications ---
+
+router.post('/push/subscribe', async (req, res) => {
+  try {
+    const { endpoint, keys } = req.body;
+    const userId = (req as any).user?.userId;
+
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      return res.status(400).json({ success: false, message: 'Invalid subscription' });
+    }
+
+    const existing = await prisma.pushSubscription.findUnique({
+      where: { endpoint }
+    });
+
+    if (!existing) {
+      await prisma.pushSubscription.create({
+        data: {
+          endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          admin_id: userId
+        }
+      });
+    } else if (existing.admin_id !== userId) {
+      await prisma.pushSubscription.update({
+        where: { endpoint },
+        data: { admin_id: userId }
+      });
+    }
+
+    res.json({ success: true, message: 'Subscribed' });
+  } catch (error) {
+    console.error('Push subscribe error:', error);
+    res.status(500).json({ success: false, message: 'Failed to subscribe' });
+  }
+});
+
+router.post('/push/unsubscribe', async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (!endpoint) {
+      return res.status(400).json({ success: false, message: 'Endpoint required' });
+    }
+
+    await prisma.pushSubscription.deleteMany({
+      where: { endpoint }
+    });
+
+    res.json({ success: true, message: 'Unsubscribed' });
+  } catch (error) {
+    console.error('Push unsubscribe error:', error);
+    res.status(500).json({ success: false, message: 'Failed to unsubscribe' });
+  }
+});
 
 export default router;

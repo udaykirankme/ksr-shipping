@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { pushService } from '../push-service';
 
 const router = Router();
 
@@ -66,7 +67,7 @@ router.post('/track', apiLimiter, async (req, res) => {
 
 const quoteSchema = z.object({
   name: z.string().min(1).max(100),
-  phone: z.string().min(10).max(20),
+  phone: z.string().min(7).max(20),
   email: z.string().email().max(150).optional().or(z.literal('')),
   pickup_location: z.string().max(255).optional(),
   drop_location: z.string().max(255).optional(),
@@ -108,7 +109,7 @@ router.post('/quotations', apiLimiter, async (req, res) => {
         combinedNotes = `Shipment Type: ${parsed.shipment_type}\n${combinedNotes}`.trim();
       }
       
-      const { shipment_type, ...dataToSave } = parsed;
+      const dataToSave = parsed;
 
       const newQuote = await tx.quotationRequest.create({
         data: {
@@ -138,6 +139,13 @@ router.post('/quotations', apiLimiter, async (req, res) => {
 
       return newQuote;
     });
+
+    // Broadcast push notification
+    pushService.broadcastToAdmins({
+      title: 'New Quote Request',
+      message: `New request received from ${quote.name}.`,
+      url: `/admin/dashboard/quotations/${quote.id}`
+    }).catch(console.error);
 
     res.json({ success: true, data: quote });
   } catch (error) {
@@ -194,6 +202,13 @@ router.post('/contact', apiLimiter, async (req, res) => {
 
       return newContact;
     });
+
+    // Broadcast push notification
+    pushService.broadcastToAdmins({
+      title: 'New Contact Message',
+      message: `New enquiry received from ${contact.name}.`,
+      url: `/admin/dashboard/messages/${contact.id}`
+    }).catch(console.error);
 
     res.json({ success: true, data: contact });
   } catch (error) {

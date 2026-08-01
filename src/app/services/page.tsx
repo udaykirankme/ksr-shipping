@@ -131,7 +131,7 @@ export default function ServicesPage() {
       <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
       {/* 1. Hero Section */}
-      <section className="py-24 relative z-10 text-center">
+      <section className="pt-4 pb-4 lg:pt-6 lg:pb-6 relative z-10 text-center">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
                initial={{ opacity: 0, y: 20 }}
@@ -147,9 +147,9 @@ export default function ServicesPage() {
       </section>
 
       {/* 2. Service Navigation Cards */}
-      <section className="py-16 relative z-10">
+      <section className="pb-16 pt-0 lg:pt-2 relative z-10">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                {SERVICES.map((service, i) => (
                  <Link 
                    href={`#${service.id}`} 
