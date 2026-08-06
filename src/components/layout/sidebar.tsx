@@ -6,6 +6,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { business } from "@/lib/config";
 import { authService } from "@/lib/auth-service";
+import { notificationService } from "@/lib/notification-service";
 import {
   LayoutDashboard,
   Package,
@@ -18,7 +19,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -50,15 +51,21 @@ function SidebarContent({
   onLogout,
   showCloseButton,
   onClose,
+  counts
 }: {
   pathname: string;
   onNavigate: () => void;
   onLogout: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
+  counts?: { unreadQuotes: number; unreadContacts: number; };
 }) {
   const renderLink = (item: NavItem) => {
     const isActive = pathname === item.href;
+    
+    let badgeCount = 0;
+    if (item.name === "Quote Requests") badgeCount = counts?.unreadQuotes || 0;
+    if (item.name === "Contact Messages") badgeCount = counts?.unreadContacts || 0;
 
     return (
       <Link
@@ -79,7 +86,12 @@ function SidebarContent({
           )}
           aria-hidden="true"
         />
-        <span className="relative z-10">{item.name}</span>
+        <span className="relative z-10 flex-1">{item.name}</span>
+        {badgeCount > 0 && (
+          <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
       </Link>
     );
   };
@@ -135,8 +147,47 @@ function SidebarContent({
 export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const isMounted = useRef(false);
+  const [counts, setCounts] = useState({ unreadQuotes: 0, unreadContacts: 0 });
+
+  const fetchCounts = async () => {
+    try {
+      const res = await notificationService.getUnreadCounts();
+      if (isMounted.current) {
+        setCounts(res);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
+    isMounted.current = true;
+    fetchCounts();
+    
+    // poll every 15 seconds to keep it updated quickly
+    const intervalId = setInterval(() => {
+      if (isMounted.current) fetchCounts();
+    }, 15000);
+    
+    return () => {
+      isMounted.current = false;
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // When pathname changes (user navigated), immediately refresh counts to feel fast
+  useEffect(() => {
+    if (pathname === '/admin/dashboard/quotations') {
+      setCounts(prev => ({ ...prev, unreadQuotes: 0 }));
+    }
+    if (pathname === '/admin/dashboard/messages') {
+      setCounts(prev => ({ ...prev, unreadContacts: 0 }));
+    }
+    if (pathname === '/admin/dashboard/notifications') {
+      setCounts(prev => ({ ...prev, unreadCount: 0 }));
+    }
+    fetchCounts();
     onMobileClose?.();
   }, [pathname, onMobileClose]);
 
@@ -162,6 +213,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           pathname={pathname}
           onNavigate={handleNavigate}
           onLogout={handleLogout}
+          counts={counts}
         />
       </aside>
 
@@ -196,6 +248,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             onLogout={handleLogout}
             showCloseButton
             onClose={onMobileClose}
+            counts={counts}
           />
         </aside>
       </div>

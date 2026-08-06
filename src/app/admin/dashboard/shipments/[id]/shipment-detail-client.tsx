@@ -9,6 +9,7 @@ import {
   getCurrentBusinessDateTimeInput,
   toBusinessDateTimeFields,
   toBusinessTimeInput,
+  toBusinessDateInput,
 } from '@/lib/datetime';
 import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, CheckCircle2, RefreshCw, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +98,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const [shipment, setShipment] = useState(initialData);
   const [formData, setFormData] = useState({ 
     ...initialData,
+    estimated_delivery: initialData.estimated_delivery ? toBusinessDateInput(initialData.estimated_delivery) : '',
     booked_time: initialData.booked_date ? toBusinessTimeInput(initialData.booked_date) : ''
   });
   const [loading, setLoading] = useState(false);
@@ -126,7 +128,14 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   }, [shipment.current_status]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
+    let value = e.target.value;
+    if (e.target.type === 'number') {
+      if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
+        value = value.replace(/^0+/, '');
+        if (value === '') value = '0';
+      }
+    }
+    setFormData((prev: any) => ({ ...prev, [e.target.name]: value }));
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -173,7 +182,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         paid_amount: parseFloat(formData.paid_amount) || 0,
         received_amount: parseFloat(formData.received_amount) || 0,
         version: shipment.version // OCC
-      });
+      }) as any;
       
       setShipment(updated);
       setFormData({
@@ -182,9 +191,9 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       });
       setSuccess('Shipment details updated successfully');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update shipment');
-      if (err.message?.includes('refresh')) {
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to update shipment');
+      if ((err as Error).message?.includes('refresh')) {
         // Automatically fetch latest if OCC conflict? We can just ask them to refresh manually or we can trigger it.
       }
     } finally {
@@ -211,11 +220,12 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         version: shipment.version // OCC
       });
       
-      setShipment({ ...res.shipment, history: [res.history, ...(shipment.history || [])] });
+      const resData = res as any;
+      setShipment({ ...resData.shipment, history: [resData.history, ...(shipment.history || [])] });
       setSuccess('Status updated successfully. You can now share this update with the sender or receiver.');
       
       // Reset status input with next status and current date/time
-      const nextUpdate = getNextStatusUpdate(res.shipment.current_status);
+      const nextUpdate = getNextStatusUpdate(resData.shipment.current_status);
       setStatusUpdate({
         status: nextUpdate.status,
         location: '',
@@ -223,8 +233,8 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         occurred_at: nextUpdate.occurred_at,
       });
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update status');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to update status');
     } finally {
       setLoading(false);
     }
@@ -238,10 +248,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     setLoading(true);
     try {
       const updated = await shipmentService.archiveShipment(shipmentId, !shipment.is_active);
-      setShipment((prev: any) => ({ ...prev, is_active: updated.is_active }));
-      setSuccess(`Shipment ${updated.is_active ? 'unarchived' : 'archived'} successfully`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to archive shipment');
+      const updatedData = updated as any;
+      setShipment((prev: any) => ({ ...prev, is_active: updatedData.is_active }));
+      setSuccess(`Shipment ${updatedData.is_active ? 'unarchived' : 'archived'} successfully`);
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to archive shipment');
     } finally {
       setLoading(false);
     }
@@ -253,8 +264,8 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setLoading(true);
       await shipmentService.deleteShipment(shipmentId);
       router.push('/admin/dashboard/shipments');
-    } catch(err: any) {
-      alert(err.message || 'Failed to delete shipment');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete shipment');
       setLoading(false);
     }
   };
@@ -265,9 +276,10 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setLoading(true);
       const data = await shipmentService.getShipment(shipmentId);
       setShipment(data);
+      const dataToSpread = data as any;
       setFormData({
-        ...data,
-        booked_time: data.booked_date ? toBusinessTimeInput(data.booked_date) : '',
+        ...dataToSpread,
+        booked_time: dataToSpread.booked_date ? toBusinessTimeInput(dataToSpread.booked_date) : '',
       });
       
       const [s, st] = await Promise.all([
@@ -398,7 +410,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery Date</label>
                   <PremiumDatePicker 
                     value={formData.estimated_delivery} 
                     onChange={(date) => setFormData((prev: any) => ({ ...prev, estimated_delivery: formatDateToYYYYMMDD(date) }))} 
@@ -491,11 +503,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Received (₹)</label>
-                    <input required type="number" name="received_amount" value={formData.received_amount || 0} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
+                    <input required type="number" name="received_amount" value={formData.received_amount ?? ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Paid (₹)</label>
-                    <input required type="number" name="paid_amount" value={formData.paid_amount || 0} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
+                    <input required type="number" name="paid_amount" value={formData.paid_amount ?? ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100 mt-6">

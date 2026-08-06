@@ -49,6 +49,10 @@ export function NotificationListClient() {
   }, [page, limit, search, statusFilter, typeFilter, dateFilter]);
 
   useEffect(() => {
+    notificationService.markAllAsRead().catch(console.error);
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, [fetchData]);
 

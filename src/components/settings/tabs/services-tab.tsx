@@ -15,13 +15,13 @@ export default function ServicesTab() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  async function loadData() {
     try {
       setLoading(true);
       const data = await ServicesApi.getServices();
       setItems(data.sort((a, b) => a.display_order - b.display_order));
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -49,8 +49,8 @@ export default function ServicesTab() {
       setIsCreating(false);
       setFormData({ name: "", is_enabled: true });
       loadData();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 
@@ -60,8 +60,8 @@ export default function ServicesTab() {
       await ServicesApi.deleteService(id);
       toast.success("Service deleted");
       loadData();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 
@@ -81,7 +81,7 @@ export default function ServicesTab() {
 
     try {
       await ServicesApi.reorderServices(updates);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error("Failed to save new order");
       loadData(); // revert
     }
@@ -91,8 +91,8 @@ export default function ServicesTab() {
     try {
       await ServicesApi.updateService(item.id, { is_enabled: !item.is_enabled });
       setItems(items.map(i => i.id === item.id ? { ...i, is_enabled: !i.is_enabled } : i));
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 

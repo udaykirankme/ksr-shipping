@@ -7,18 +7,20 @@ export interface SettingsMap {
 
 export const SettingsService = {
   getSettings: async (): Promise<SettingsMap> => {
-    return apiFetch(`${API_BASE}/settings`, {
+    const res = await apiFetch(`${API_BASE}/settings`, {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include'
     });
+    return res as SettingsMap;
   },
 
   updateSettings: async (updates: SettingsMap): Promise<{ success: boolean; message: string }> => {
-    return apiFetch(`${API_BASE}/settings`, {
+    const res = await apiFetch(`${API_BASE}/settings`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(updates)
     });
+    return res as { success: boolean; message: string };
   }
 };

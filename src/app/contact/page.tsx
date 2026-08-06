@@ -42,10 +42,10 @@ export default function ContactPage() {
             const data = await res.json().catch(() => null);
             if (data?.errors && data.errors.length > 0) {
               const field = data.errors[0].path[0];
-              const msg = data.errors[0].message;
-              setError(`Please check your ${field}: ${msg}`);
+              const msg = (data as any).errors[0].message;
+              setError(msg || "Failed to send message. Please try again.");
             } else {
-              setError(data?.message || "Failed to send message. Please try again.");
+              setError((data as any)?.message || "Failed to send message. Please try again.");
             }
          }
       } catch (err) {

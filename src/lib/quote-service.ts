@@ -57,14 +57,16 @@ export async function getQuotes(params: Record<string, string | number | boolean
       }
     }
   });
-  return apiFetch(`${API_URL}/quotations?${searchParams.toString()}`);
+  const res = await apiFetch(`${API_URL}/quotations?${searchParams.toString()}`);
+  return res as GetQuotesResponse;
 }
 
 export async function getQuote(id: string): Promise<QuotationRequest> {
-  return apiFetch(`${API_URL}/quotations/${id}`);
+  const res = await apiFetch(`${API_URL}/quotations/${id}`);
+  return res as QuotationRequest;
 }
 
-export async function createQuote(data: Partial<QuotationRequest>): Promise<any> {
+export async function createQuote(data: Partial<QuotationRequest>): Promise<unknown> {
   return apiFetch(`${API_URL}/quotations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -72,7 +74,7 @@ export async function createQuote(data: Partial<QuotationRequest>): Promise<any>
   });
 }
 
-export async function updateQuote(id: string, data: Partial<QuotationRequest>): Promise<any> {
+export async function updateQuote(id: string, data: Partial<QuotationRequest>): Promise<unknown> {
   return apiFetch(`${API_URL}/quotations/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -81,22 +83,23 @@ export async function updateQuote(id: string, data: Partial<QuotationRequest>): 
 }
 
 export async function updateQuoteStatus(id: string, data: { status: string; note?: string; internal_notes?: string; version?: number }): Promise<QuotationRequest> {
-  return apiFetch(`${API_URL}/quotations/${id}/status`, {
+  const res = await apiFetch(`${API_URL}/quotations/${id}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
+  return res as QuotationRequest;
 }
 
 
 export async function deleteQuote(id: string): Promise<void> {
-  return apiFetch(`${API_URL}/quotations/${id}`, {
+  await apiFetch(`${API_URL}/quotations/${id}`, {
     method: 'DELETE'
   });
 }
 
 export async function deleteBulk(ids: string[]): Promise<void> {
-  return apiFetch(`${API_URL}/quotations/delete-bulk`, {
+  await apiFetch(`${API_URL}/quotations/delete-bulk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids })
@@ -104,9 +107,16 @@ export async function deleteBulk(ids: string[]): Promise<void> {
 }
 
 export async function toggleStar(id: string, is_starred?: boolean): Promise<{ success: boolean; is_starred: boolean }> {
-  return apiFetch(`${API_URL}/quotations/${id}/star`, {
+  const res = await apiFetch(`${API_URL}/quotations/${id}/star`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ is_starred })
+  });
+  return res as { success: boolean; is_starred: boolean };
+}
+
+export async function markAllQuotesAsRead(): Promise<void> {
+  await apiFetch(`${API_URL}/quotations/read-all`, {
+    method: 'PATCH',
   });
 }

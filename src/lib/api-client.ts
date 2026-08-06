@@ -4,7 +4,7 @@ export interface ApiFetchOptions extends RequestInit {
   skipAuthRedirect?: boolean;
 }
 
-export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions): Promise<any> {
+export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions): Promise<unknown> {
   const mergedInit: RequestInit = {
     ...init,
     credentials: init?.credentials || 'include',
@@ -14,8 +14,8 @@ export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions)
   let res: Response;
   try {
     res = await fetch(input, mergedInit);
-  } catch (err: any) {
-    throw new Error(err.message || 'Network error occurred. Please check your connection.');
+  } catch (err: unknown) {
+    throw new Error((err as Error).message || 'Network error occurred. Please check your connection.');
   }
   
   if (res.status === 401 && !init?.skipAuthRedirect) {
@@ -32,7 +32,7 @@ export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions)
   const contentType = res.headers.get('content-type');
   const isJson = contentType && contentType.includes('application/json');
   
-  let data: any = null;
+  let data: unknown = null;
   let textData: string = '';
   
   if (isJson) {
@@ -49,10 +49,11 @@ export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions)
     let errorMessage = '';
     
     // 1. Try to extract business validation message from JSON
-    if (data && data.message) {
-      errorMessage = data.message;
-    } else if (data && data.error) {
-      errorMessage = data.error;
+    const resData = data as any;
+    if (resData && resData.message) {
+      errorMessage = resData.message;
+    } else if (resData && resData.error) {
+      errorMessage = resData.error;
     } 
     // 2. Try to use plain text if it's meaningful and not HTML
     else if (!isJson && textData && !textData.startsWith('<')) {
@@ -77,9 +78,9 @@ export async function apiFetch(input: RequestInfo | URL, init?: ApiFetchOptions)
     // If wrapped in standard success envelope, unwrap it
     if (data && typeof data === 'object' && 'success' in data) {
       if (data.success === true) {
-        return data.data;
+        return (data as any).data;
       } else {
-        throw new Error(data.message || 'An error occurred.');
+        throw new Error((data as any).message || 'An error occurred.');
       }
     }
     return data;

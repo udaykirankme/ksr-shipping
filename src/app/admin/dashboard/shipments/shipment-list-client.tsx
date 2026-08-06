@@ -88,8 +88,9 @@ export function ShipmentListClient({
           isActive: isActiveFilter
         });
         if (mounted) {
-          setShipments(data.shipments);
-          setTotalPages(Math.max(1, Math.ceil(data.total / limit)));
+          const resData = data as any;
+          setShipments(resData.shipments);
+          setTotalPages(Math.max(1, Math.ceil(resData.total / limit)));
         }
       } catch (err) {
         console.error(err);
@@ -114,8 +115,9 @@ export function ShipmentListClient({
         status: statusFilter,
         isActive: isActiveFilter
       });
-      setShipments(data.shipments);
-      setTotalPages(Math.ceil(data.total / limit));
+      const resData = data as any;
+      setShipments(resData.shipments);
+      setTotalPages(Math.ceil(resData.total / limit));
     } catch (err) {
       console.error(err);
     } finally {
@@ -130,8 +132,8 @@ export function ShipmentListClient({
       await shipmentService.deleteShipment(id);
       await handleRefresh();
       router.refresh();
-    } catch(err: any) {
-      alert(err.message || 'Failed to delete');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete');
     }
   };
 

@@ -33,6 +33,7 @@ export function PremiumDatePicker({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+     
     setMounted(true);
   }, []);
 
@@ -77,6 +78,7 @@ export function PremiumDatePicker({
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
+     
   }, [isOpen]);
 
   useEffect(() => {
@@ -131,7 +133,7 @@ export function PremiumDatePicker({
         )}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
-        <span className={cn("truncate", !selectedDate && "text-gray-400")}>
+        <span suppressHydrationWarning className={cn("truncate", !selectedDate && "text-gray-400")}>
           {selectedDate ? format(selectedDate, "dd MMM yyyy") : placeholder}
         </span>
         <CalendarIcon className={cn("w-5 h-5", disabled ? "text-gray-400" : "text-orange-500")} />

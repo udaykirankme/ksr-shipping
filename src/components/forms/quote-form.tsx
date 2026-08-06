@@ -67,11 +67,12 @@ export function QuoteForm({ source = "ADMIN", onSuccess, onCancel }: QuoteFormPr
 
     try {
       const res = await createQuote(validation.data);
-      if (res.warnings && res.warnings.length > 0) {
-        setWarnings(res.warnings);
+      const resData = res as any;
+      if (resData.warnings && resData.warnings.length > 0) {
+        setWarnings(resData.warnings);
       }
-      if (onSuccess && res.quote?.id) {
-        onSuccess(res.quote.id);
+      if (onSuccess && resData.quote?.id) {
+        onSuccess(resData.quote.id);
       }
     } catch (err: unknown) {
       const errorMsg = (err as { response?: { data?: { error?: string } } }).response?.data?.error;

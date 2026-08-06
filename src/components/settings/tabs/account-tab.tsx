@@ -26,8 +26,8 @@ export default function AccountTab() {
         email: data.data?.email || "",
         mobile_number: data.data?.mobile_number || ""
       });
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -47,8 +47,8 @@ export default function AccountTab() {
         throw new Error(err.error || "Unable to update your profile. Please check your inputs.");
       }
       toast.success("Profile updated successfully");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 
@@ -73,8 +73,8 @@ export default function AccountTab() {
       }
       toast.success("Password updated successfully");
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 
@@ -105,8 +105,8 @@ export default function AccountTab() {
       setProfile(prev => ({ ...prev, username: usernames.newUsername }));
       // Optional: dispatch event if header listens for it
       window.dispatchEvent(new Event('profileUpdated'));
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 

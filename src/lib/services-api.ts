@@ -12,7 +12,8 @@ export interface ServiceItem {
 
 export const ServicesApi = {
   getServices: async (): Promise<ServiceItem[]> => {
-    return apiFetch(`${API_BASE}/services`, { credentials: 'include' });
+    const res = await apiFetch(`${API_BASE}/services`, { credentials: 'include' });
+    return res as ServiceItem[];
   },
   createService: async (data: Partial<ServiceItem>) => {
     return apiFetch(`${API_BASE}/services`, {
@@ -48,7 +49,8 @@ export const ServicesApi = {
 
 export const ServiceThroughApi = {
   getItems: async (): Promise<ServiceItem[]> => {
-    return apiFetch(`${API_BASE}/service-through`, { credentials: 'include' });
+    const res = await apiFetch(`${API_BASE}/service-through`, { credentials: 'include' });
+    return res as ServiceItem[];
   },
   createItem: async (data: Partial<ServiceItem>) => {
     return apiFetch(`${API_BASE}/service-through`, {

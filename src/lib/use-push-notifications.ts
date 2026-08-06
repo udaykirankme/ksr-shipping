@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { apiFetch, API_HOST } from './api-client';
 
 export function usePushNotifications() {
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported] = useState(() => {
+    return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
+  });
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [permission, setPermission] = useState<NotificationPermission>(() => {
+    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
+  });
 
   useEffect(() => {
     let mounted = true;
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true);
-      setPermission(Notification.permission);
+    if (isSupported) {
       
       const initSW = async () => {
         try {
@@ -25,7 +27,7 @@ export function usePushNotifications() {
       initSW();
     }
     return () => { mounted = false; };
-  }, []);
+  }, [isSupported]);
 
   const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);

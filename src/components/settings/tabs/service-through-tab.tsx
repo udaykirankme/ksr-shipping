@@ -15,13 +15,13 @@ export default function ServiceThroughTab() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  async function loadData() {
     try {
       setLoading(true);
       const data = await ServiceThroughApi.getItems();
       setItems(data.sort((a, b) => a.display_order - b.display_order));
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -49,8 +49,8 @@ export default function ServiceThroughTab() {
       setIsCreating(false);
       setFormData({ name: "", is_enabled: true });
       loadData();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 
@@ -60,8 +60,8 @@ export default function ServiceThroughTab() {
       await ServiceThroughApi.deleteItem(id);
       toast.success("Transport method deleted");
       loadData();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 
@@ -80,7 +80,7 @@ export default function ServiceThroughTab() {
 
     try {
       await ServiceThroughApi.reorderItems(updates);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error("Failed to save new order");
       loadData(); // revert
     }
@@ -90,8 +90,8 @@ export default function ServiceThroughTab() {
     try {
       await ServiceThroughApi.updateItem(item.id, { is_enabled: !item.is_enabled });
       setItems(items.map(i => i.id === item.id ? { ...i, is_enabled: !i.is_enabled } : i));
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
     }
   };
 

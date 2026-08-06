@@ -19,7 +19,7 @@ export interface ContactMessage {
 }
 
 export const contactService = {
-  async getMessages(params?: Record<string, string | number | boolean>) {
+  async getMessages(params?: Record<string, string | number | boolean>): Promise<{ items: ContactMessage[], totalPages: number }> {
     const query = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -29,31 +29,35 @@ export const contactService = {
       });
     }
 
-    return apiFetch(`${API_BASE}/contact-messages?${query.toString()}`, {
+    const res = await apiFetch(`${API_BASE}/contact-messages?${query.toString()}`, {
       headers: { 'Content-Type': 'application/json' },
     });
+    return res as { items: ContactMessage[]; totalPages: number; };
   },
 
-  async getMessage(id: string) {
-    return apiFetch(`${API_BASE}/contact-messages/${id}`, {
+  async getMessage(id: string): Promise<ContactMessage> {
+    const res = await apiFetch(`${API_BASE}/contact-messages/${id}`, {
       headers: { 'Content-Type': 'application/json' },
     });
+    return res as ContactMessage;
   },
 
-  async markResponded(id: string, responded: boolean) {
-    return apiFetch(`${API_BASE}/contact-messages/${id}/respond`, {
+  async markResponded(id: string, responded: boolean): Promise<ContactMessage> {
+    const res = await apiFetch(`${API_BASE}/contact-messages/${id}/respond`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ responded })
     });
+    return res as ContactMessage;
   },
 
-  async toggleStar(id: string, is_starred?: boolean) {
-    return apiFetch(`${API_BASE}/contact-messages/${id}/star`, {
+  async toggleStar(id: string, is_starred?: boolean): Promise<ContactMessage> {
+    const res = await apiFetch(`${API_BASE}/contact-messages/${id}/star`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_starred })
     });
+    return res as ContactMessage;
   },
 
   async deleteMessage(id: string) {
@@ -67,6 +71,12 @@ export const contactService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids })
+    });
+  },
+
+  async markAllContactsAsRead() {
+    return apiFetch(`${API_BASE}/contact-messages/read-all`, {
+      method: 'PATCH'
     });
   }
 };

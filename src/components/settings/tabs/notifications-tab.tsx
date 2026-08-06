@@ -17,7 +17,7 @@ export default function NotificationsTab() {
     loadSettings();
   }, []);
 
-  const loadSettings = async () => {
+  async function loadSettings() {
     try {
       setLoading(true);
       const data = await SettingsService.getSettings();
@@ -25,7 +25,7 @@ export default function NotificationsTab() {
         notifyQuoteRequest: data.notify_quote_request !== 'false',
         notifyContactMessage: data.notify_contact_message !== 'false',
       });
-    } catch (error) {
+    } catch {
       toast.error("Unable to load notification settings.");
     } finally {
       setLoading(false);
@@ -41,7 +41,7 @@ export default function NotificationsTab() {
         notify_contact_message: localSettings.notifyContactMessage.toString(),
       });
       toast.success("Notification preferences saved");
-    } catch (error) {
+    } catch {
       toast.error("Failed to save settings");
     } finally {
       setSaving(false);

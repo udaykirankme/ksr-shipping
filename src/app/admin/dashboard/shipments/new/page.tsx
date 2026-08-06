@@ -68,8 +68,8 @@ export default function NewShipmentPage() {
     num_packages: '1',
     description: '',
     
-    paid_amount: '0',
-    received_amount: '0',
+    paid_amount: '',
+    received_amount: '',
     
     internal_notes: '',
     source_quote_id: ''
@@ -114,7 +114,14 @@ export default function NewShipmentPage() {
   }, [quoteId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    let value = e.target.value;
+    if (e.target.type === 'number') {
+      if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
+        value = value.replace(/^0+/, '');
+        if (value === '') value = '0';
+      }
+    }
+    setFormData(prev => ({ ...prev, [e.target.name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +138,8 @@ export default function NewShipmentPage() {
         received_amount: parseFloat(formData.received_amount) || 0,
         source_quote_id: formData.source_quote_id || null
       });
-      setCreatedId(res.tracking_id);
+      const resData = res as any;
+      setCreatedId(resData.tracking_id);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create shipment');
@@ -297,7 +305,7 @@ export default function NewShipmentPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery Date <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery Date</label>
               <PremiumDatePicker 
                 value={formData.estimated_delivery} 
                 onChange={(date) => setFormData((prev: any) => ({ ...prev, estimated_delivery: formatDateToYYYYMMDD(date) }))} 

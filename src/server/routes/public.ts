@@ -19,13 +19,13 @@ router.get('/db-health', async (_req, res) => {
         admin_users: adminCount,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database health check failed:', error);
     res.status(500).json({
       success: false,
       message: 'Database connection failed',
       hint: 'Set DATABASE_URL on the server, run npm run db:push, then npm run db:seed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
     });
   }
 });

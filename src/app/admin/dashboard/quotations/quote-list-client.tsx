@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getQuotes, QuotationRequest, toggleStar, deleteBulk, deleteQuote } from "@/lib/quote-service";
+import { getQuotes, QuotationRequest, toggleStar, deleteBulk, deleteQuote, markAllQuotesAsRead } from "@/lib/quote-service";
 import { formatDate } from "@/lib/format";
 import { DateFilter } from "@/components/dashboard/date-filter";
 
@@ -22,6 +22,10 @@ export function QuoteListClient() {
   const limit = 10;
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    markAllQuotesAsRead().catch(console.error);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -71,8 +75,8 @@ export function QuoteListClient() {
     try {
       await deleteQuote(id);
       await handleRefresh();
-    } catch(err: any) {
-      alert(err.message || 'Failed to delete');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete');
     }
   };
 

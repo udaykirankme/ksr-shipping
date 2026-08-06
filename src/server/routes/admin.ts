@@ -738,6 +738,19 @@ router.post('/quotations', async (req, res) => {
   }
 });
 
+router.patch('/quotations/read-all', async (_req, res) => {
+  try {
+    await prisma.quotationRequest.updateMany({
+      where: { opened_at: null },
+      data: { opened_at: new Date() }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
 router.put('/quotations/:id', async (req, res) => {
   try {
     const { version, internal_notes, status, ...forbidden } = req.body;
@@ -982,10 +995,23 @@ router.patch('/contact-messages/:id/star', async (req, res) => {
       where: { id: req.params.id },
       data: { is_starred }
     });
-    res.json({ success: true, data: item });
+    res.json({ success: true, data: { item } });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Database error'  });
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
+router.patch('/contact-messages/read-all', async (_req, res) => {
+  try {
+    await prisma.contactSubmission.updateMany({
+      where: { opened_at: null },
+      data: { opened_at: new Date() }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Database error' });
   }
 });
 
@@ -1035,8 +1061,12 @@ router.delete('/contact-messages/:id', async (req, res) => {
 
 router.get('/notifications/unread-count', async (_req, res) => {
   try {
-    const unreadCount = await prisma.notification.count({ where: { read_at: null } });
-    res.json({ success: true, data: { unreadCount } });
+    const [unreadCount, unreadQuotes, unreadContacts] = await Promise.all([
+      prisma.notification.count({ where: { read_at: null } }),
+      prisma.quotationRequest.count({ where: { opened_at: null } }),
+      prisma.contactSubmission.count({ where: { opened_at: null } })
+    ]);
+    res.json({ success: true, data: { unreadCount, unreadQuotes, unreadContacts } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Database error' });

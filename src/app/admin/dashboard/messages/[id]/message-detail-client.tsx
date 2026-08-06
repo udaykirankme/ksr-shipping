@@ -20,7 +20,7 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
     const fetchMessage = async () => {
       try {
         const data = await contactService.getMessage(messageId);
-        if (mounted) setMessage(data);
+        if (mounted) setMessage(data as ContactMessage);
       } catch (err) {
         console.error(err);
       } finally {
@@ -36,7 +36,7 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
     setActionLoading(true);
     try {
       const updated = await contactService.markResponded(messageId, true);
-      setMessage(updated);
+      setMessage(updated as ContactMessage);
     } catch (err) {
       console.error(err);
     } finally {
@@ -50,8 +50,8 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
     try {
       await contactService.deleteMessage(messageId);
       router.push('/admin/dashboard/messages');
-    } catch(err: any) {
-      alert(err.message || 'Failed to delete message');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete message');
       setActionLoading(false);
     }
   };

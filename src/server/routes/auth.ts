@@ -16,7 +16,7 @@ const loginLimiter = rateLimit({
 
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, rememberMe } = req.body;
     const identifier = username || email;
 
     if (!identifier || !password) {
@@ -41,13 +41,17 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+    const isRememberMe = rememberMe === true || rememberMe === 'true';
+    const expiresIn = isRememberMe ? '30d' : '1d';
+    const maxAge = isRememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn });
 
     res.cookie('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 1 day
+      maxAge
     });
 
     await prisma.adminUser.update({

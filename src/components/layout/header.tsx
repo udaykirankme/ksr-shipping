@@ -47,9 +47,9 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
 
   const fetchUnreadCount = async () => {
     try {
-      const count = await notificationService.getUnreadCount();
+      const counts = await notificationService.getUnreadCounts();
       if (isMounted.current) {
-        setUnreadCount(count);
+        setUnreadCount(counts.unreadCount);
       }
     } catch (err) {
       console.error(err);
@@ -64,9 +64,22 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
     const nextOpen = !isDropdownOpen;
     setIsDropdownOpen(nextOpen);
     if (nextOpen) {
+      if (unreadCount > 0) {
+        // Optimistic update for fast response
+        setUnreadCount(0);
+        await notificationService.markAllAsRead();
+      }
       await fetchNotifications();
     }
   };
+
+  // Poll unread count periodically for fast response
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isMounted.current) fetchUnreadCount();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -271,13 +284,13 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
             <button type="button" className="-m-1.5 flex items-center p-1.5">
               <span className="sr-only">Open user menu</span>
               <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center border border-orange-200 shrink-0 shadow-sm">
-                <span className="text-sm font-bold text-orange-600">AD</span>
+                <span className="text-sm font-bold text-orange-600">KS</span>
               </div>
               <span className="hidden lg:flex lg:flex-col lg:items-start lg:ml-3">
                 <span className="text-sm font-semibold leading-6 text-gray-900" aria-hidden="true">
-                  Admin User
+                  K Srinivasa Rao
                 </span>
-                <span className="text-xs font-medium text-gray-500 leading-4">Manager</span>
+                <span className="text-xs font-medium text-gray-500 leading-4">Proprietor</span>
               </span>
             </button>
           </div>

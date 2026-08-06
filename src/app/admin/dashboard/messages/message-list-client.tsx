@@ -42,6 +42,10 @@ export function MessageListClient() {
   };
 
   useEffect(() => {
+    contactService.markAllContactsAsRead().catch(console.error);
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       fetchMessages();
     }, 300);
@@ -70,8 +74,8 @@ export function MessageListClient() {
     try {
       await contactService.deleteMessage(id);
       await fetchMessages();
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete');
     }
   };
 

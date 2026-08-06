@@ -40,9 +40,9 @@ export const pushService = {
               auth: sub.auth
             }
           }, pushPayload);
-        } catch (err: any) {
+        } catch (err: unknown) {
           // If subscription is invalid/gone, remove it
-          if (err.statusCode === 410 || err.statusCode === 404) {
+          if ((err as any).statusCode === 410 || (err as any).statusCode === 404) {
             await prisma.pushSubscription.delete({ where: { id: sub.id } });
           } else {
             console.error('Error sending push notification:', err);

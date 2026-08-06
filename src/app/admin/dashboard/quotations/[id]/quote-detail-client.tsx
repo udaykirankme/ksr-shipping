@@ -97,8 +97,8 @@ export function QuoteDetailClient({ id }: { id: string }) {
     try {
       await deleteQuote(id);
       router.push('/admin/dashboard/quotations');
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete quote');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete quote');
       setSaving(false);
     }
   };

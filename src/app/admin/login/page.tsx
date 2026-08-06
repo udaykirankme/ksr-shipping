@@ -58,8 +58,8 @@ export default function LoginPage() {
       toast.success('Successfully logged in');
       router.push('/admin/dashboard');
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to sign in');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to sign in');
       setErrors({ password: ' ' }); // visually mark error but rely on toast for message
       passwordRef.current?.focus();
     } finally {

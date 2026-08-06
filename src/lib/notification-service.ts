@@ -33,14 +33,19 @@ export interface NotificationFilters {
 }
 
 export const notificationService = {
-  async getUnreadCount(): Promise<number> {
+  async getUnreadCounts(): Promise<{ unreadCount: number, unreadQuotes: number, unreadContacts: number }> {
     try {
       const data = await apiFetch(`${API_BASE}/notifications/unread-count`, {
         credentials: 'include',
       });
-      return data?.unreadCount ?? 0;
+      const resData = data as any;
+      return {
+        unreadCount: resData?.unreadCount ?? 0,
+        unreadQuotes: resData?.unreadQuotes ?? 0,
+        unreadContacts: resData?.unreadContacts ?? 0,
+      };
     } catch {
-      return 0;
+      return { unreadCount: 0, unreadQuotes: 0, unreadContacts: 0 };
     }
   },
 
@@ -55,19 +60,21 @@ export const notificationService = {
     }
 
     try {
-      return await apiFetch(`${API_BASE}/notifications?${params.toString()}`, {
+      const res = await apiFetch(`${API_BASE}/notifications?${params.toString()}`, {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       });
-    } catch (err) {
+      return res as NotificationResponse;
+    } catch {
       return { items: [], total: 0, page: 1, totalPages: 1, unreadCount: 0 };
     }
   },
 
   async getNotification(id: string): Promise<NotificationItem> {
-    return apiFetch(`${API_BASE}/notifications/${id}`, {
+    const res = await apiFetch(`${API_BASE}/notifications/${id}`, {
       credentials: 'include'
     });
+    return res as NotificationItem;
   },
 
   async markAsRead(id: string) {

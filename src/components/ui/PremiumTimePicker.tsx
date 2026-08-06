@@ -27,6 +27,7 @@ export function PremiumTimePicker({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+     
     setMounted(true);
   }, []);
 
@@ -51,6 +52,7 @@ export function PremiumTimePicker({
 
   // Sync state if value changes externally
   useEffect(() => {
+     
     setHour(initialHour);
     setMinute(initialMin);
     setAmpm(initialAmPm);
@@ -95,6 +97,7 @@ export function PremiumTimePicker({
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
+     
   }, [isOpen]);
 
   useEffect(() => {
@@ -160,7 +163,7 @@ export function PremiumTimePicker({
         )}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
-        <span className={cn("truncate", !value && "text-gray-400")}>
+        <span suppressHydrationWarning className={cn("truncate", !value && "text-gray-400")}>
           {value ? formatDisplayTime(value) : placeholder}
         </span>
         <Clock className={cn("w-5 h-5", disabled ? "text-gray-400" : "text-orange-500")} />
