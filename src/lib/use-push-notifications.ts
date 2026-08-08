@@ -57,7 +57,7 @@ export function usePushNotifications() {
       
       if (!vapidPublicKey) {
         try {
-          const res = await apiFetch(`${API_HOST}/api/admin/push/vapid-public-key`, {
+          const res = await window.fetch(`${API_HOST}/api/admin/push/vapid-public-key`, {
             credentials: 'include'
           });
           if (res.ok) {
