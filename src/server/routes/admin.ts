@@ -1854,6 +1854,14 @@ router.post('/account/username-update', async (req, res) => {
 
 // --- Push Notifications ---
 
+router.get('/push/vapid-public-key', (req, res) => {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!publicKey) {
+    return res.status(500).json({ success: false, message: 'VAPID public key not configured on server' });
+  }
+  res.json({ success: true, publicKey });
+});
+
 router.post('/push/subscribe', async (req, res) => {
   try {
     const { endpoint, keys } = req.body;

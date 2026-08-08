@@ -17,6 +17,11 @@ export default async function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   const isDashboard = request.nextUrl.pathname.startsWith('/admin/dashboard');
   const isLogin = request.nextUrl.pathname === '/admin/login';
+  const isAdminRoot = request.nextUrl.pathname === '/admin';
+
+  if (isAdminRoot) {
+    return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+  }
 
   if (isDashboard) {
     if (!token || !(await isValidToken(token))) {
@@ -42,5 +47,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/dashboard/:path*', '/admin/login'],
+  matcher: ['/admin', '/admin/dashboard/:path*', '/admin/login'],
 };

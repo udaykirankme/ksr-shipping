@@ -53,7 +53,24 @@ export function usePushNotifications() {
       
       if (result !== 'granted') return false;
 
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      let vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      
+      if (!vapidPublicKey) {
+        try {
+          const res = await apiFetch(`${API_HOST}/api/admin/push/vapid-public-key`, {
+            credentials: 'include'
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.publicKey) {
+              vapidPublicKey = data.publicKey;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch VAPID public key from backend:', e);
+        }
+      }
+
       if (!vapidPublicKey) {
         console.error("VAPID public key is missing. Ensure NEXT_PUBLIC_VAPID_PUBLIC_KEY is set in .env and the server is restarted.");
         alert("Push notifications are not fully configured yet. Please restart your dev server.");
