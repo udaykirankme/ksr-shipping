@@ -480,9 +480,6 @@ router.patch('/shipments/:id/status', async (req, res) => {
     if (newIndex <= currentIndex) {
       return res.status(400).json({ error: `Cannot move status backwards from ${current.current_status} to ${status}` });
     }
-    if (newIndex !== currentIndex + 1) {
-      return res.status(400).json({ error: `Must move to next sequential status. Next is ${STATUS_WORKFLOW[currentIndex + 1]}` });
-    }
 
     const updateData: Record<string, unknown> = {
       current_status: status,
@@ -1855,7 +1852,7 @@ router.post('/account/username-update', async (req, res) => {
 // --- Push Notifications ---
 
 router.get('/push/vapid-public-key', (req, res) => {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BNAqPXzCPoBqtz9vsXbnZq5zdFcF_9ddDGmUx5KHQCzgO2ru0p2VMw7LgS3oS8UxHVEon0PJIvws1lYiWHNIrg4';
   if (!publicKey) {
     return res.status(500).json({ success: false, message: 'VAPID public key not configured on server' });
   }

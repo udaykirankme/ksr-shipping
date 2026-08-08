@@ -1,8 +1,8 @@
 import webpush from 'web-push';
 import { prisma } from '../lib/db';
 
-const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-const privateVapidKey = process.env.VAPID_PRIVATE_KEY;
+const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BNAqPXzCPoBqtz9vsXbnZq5zdFcF_9ddDGmUx5KHQCzgO2ru0p2VMw7LgS3oS8UxHVEon0PJIvws1lYiWHNIrg4';
+const privateVapidKey = process.env.VAPID_PRIVATE_KEY || 'guvp9PwTa4M5TkwaAys7yZ0vhZGp9FLWecVXNxrOOI8';
 const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:ksrshippingservice@gmail.com';
 
 if (publicVapidKey && privateVapidKey) {

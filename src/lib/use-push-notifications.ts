@@ -53,7 +53,7 @@ export function usePushNotifications() {
       
       if (result !== 'granted') return false;
 
-      let vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      let vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BNAqPXzCPoBqtz9vsXbnZq5zdFcF_9ddDGmUx5KHQCzgO2ru0p2VMw7LgS3oS8UxHVEon0PJIvws1lYiWHNIrg4';
       
       if (!vapidPublicKey) {
         try {
