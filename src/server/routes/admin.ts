@@ -279,7 +279,7 @@ router.post('/shipments', async (req, res) => {
       return res.status(400).json({ success: false, message: `Field received_amount is required` });
     }
 
-    if (data.estimated_delivery) data.estimated_delivery = parseBusinessDateTime(data.estimated_delivery);
+    if (data.estimated_delivery) data.estimated_delivery = new Date(data.estimated_delivery);
     if (data.booked_date) {
       if (data.booked_time) {
         data.booked_date = parseBusinessDateTime(`${data.booked_date}T${data.booked_time}:00`);
@@ -425,7 +425,7 @@ router.put('/shipments/:id', async (req, res) => {
       updateData.profit = received - paid;
     }
 
-    if (updateData.estimated_delivery) updateData.estimated_delivery = parseBusinessDateTime(updateData.estimated_delivery);
+    if (updateData.estimated_delivery) updateData.estimated_delivery = new Date(updateData.estimated_delivery as string);
     
     // Ensure booked_date and booked_time cannot be changed after creation
     delete updateData.booked_date;
