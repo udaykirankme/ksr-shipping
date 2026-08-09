@@ -56,6 +56,7 @@ export async function handleExpressRequest(
 
   for (const [key, value] of req.headers.entries()) {
     if (SKIP_REQUEST_HEADERS.has(key.toLowerCase())) continue;
+    // console.log(`[Adapter] Setting header ${key}:`, value);
     agent = agent.set(key, value);
   }
 

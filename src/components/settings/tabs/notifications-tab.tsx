@@ -124,7 +124,7 @@ export default function NotificationsTab() {
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               {!subscription && permission !== 'denied' && (
                 <Button onClick={subscribe} type="button" className="bg-orange-600 hover:bg-orange-700">
                   Enable Push Notifications
@@ -137,11 +137,10 @@ export default function NotificationsTab() {
                   </Button>
                   <Button onClick={async () => {
                     try {
-                      const res = await apiFetch(`${API_HOST}/api/admin/push/test`, { method: 'POST', credentials: 'include' });
-                      if ((res as any).success) toast.success("Test notification triggered");
-                      else toast.error("Failed to trigger test notification");
-                    } catch (e) {
-                      toast.error("Failed to connect to server");
+                      await apiFetch(`${API_HOST}/api/admin/push/test`, { method: 'POST', credentials: 'include' });
+                      toast.success("Test notification triggered");
+                    } catch (e: any) {
+                      toast.error(e.message || "Failed to connect to server");
                     }
                   }} type="button" variant="outline">
                     Send Test Notification

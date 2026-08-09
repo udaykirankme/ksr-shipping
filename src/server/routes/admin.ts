@@ -34,7 +34,7 @@ router.use((req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     (req as any).user = decoded;
     next();
-  } catch (err) {
+  } catch (err: any) {
     return res.status(401).json({ success: false, message: 'Unauthorized'  });
   }
 });
@@ -1898,7 +1898,7 @@ router.post('/push/subscribe', async (req, res) => {
 
 router.post('/push/test', async (req, res) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = (req as any).user?.id || (req as any).user?.userId;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     console.log(`[WebPush] Test notification requested by admin ${userId}`);
