@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { SettingsService } from "@/lib/settings-service";
 import { toast } from "sonner";
 import { usePushNotifications } from "@/lib/use-push-notifications";
+import { apiFetch, API_HOST } from "@/lib/api-client";
 
 export default function NotificationsTab() {
   const { isSupported, permission, subscription, subscribe, unsubscribe } = usePushNotifications();
@@ -130,9 +131,22 @@ export default function NotificationsTab() {
                 </Button>
               )}
               {subscription && (
-                <Button onClick={unsubscribe} type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
-                  Disable Push Notifications
-                </Button>
+                <>
+                  <Button onClick={unsubscribe} type="button" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
+                    Disable Push Notifications
+                  </Button>
+                  <Button onClick={async () => {
+                    try {
+                      const res = await apiFetch(`${API_HOST}/api/admin/push/test`, { method: 'POST', credentials: 'include' });
+                      if ((res as any).success) toast.success("Test notification triggered");
+                      else toast.error("Failed to trigger test notification");
+                    } catch (e) {
+                      toast.error("Failed to connect to server");
+                    }
+                  }} type="button" variant="outline">
+                    Send Test Notification
+                  </Button>
+                </>
               )}
               {permission === 'denied' && (
                 <p className="text-sm text-gray-500">

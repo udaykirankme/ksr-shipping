@@ -142,11 +142,14 @@ router.post('/quotations', apiLimiter, async (req, res) => {
     });
 
     // Broadcast push notification
-    pushService.broadcastToAdmins({
+    console.log(`[Submission] Quote request ${quote.quote_id} saved. Triggering background push...`);
+    pushService.scheduleBackgroundPush(req, {
       title: 'New Quote Request',
       message: `New request received from ${quote.name}.`,
-      url: `/admin/dashboard/quotations/${quote.id}`
-    }).catch(console.error);
+      url: `/admin/dashboard/quotations/${quote.id}`,
+      submissionId: quote.quote_id || quote.id,
+      type: 'quote'
+    });
 
     res.json({ success: true, data: quote });
   } catch (error) {
@@ -205,11 +208,14 @@ router.post('/contact', apiLimiter, async (req, res) => {
     });
 
     // Broadcast push notification
-    pushService.broadcastToAdmins({
+    console.log(`[Submission] Contact request ${contact.contact_id} saved. Triggering background push...`);
+    pushService.scheduleBackgroundPush(req, {
       title: 'New Contact Message',
       message: `New enquiry received from ${contact.name}.`,
-      url: `/admin/dashboard/messages/${contact.id}`
-    }).catch(console.error);
+      url: `/admin/dashboard/messages/${contact.id}`,
+      submissionId: contact.contact_id || contact.id,
+      type: 'contact'
+    });
 
     res.json({ success: true, data: contact });
   } catch (error) {

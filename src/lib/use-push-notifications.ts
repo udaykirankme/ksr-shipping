@@ -87,15 +87,13 @@ export function usePushNotifications() {
       setSubscription(sub);
       
       // Send to backend
+      const subJson = sub.toJSON();
       await apiFetch(`${API_HOST}/api/admin/push/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint: sub.endpoint,
-          keys: {
-            p256dh: arrayBufferToBase64(sub.getKey('p256dh')),
-            auth: arrayBufferToBase64(sub.getKey('auth'))
-          }
+          keys: subJson.keys
         }),
         credentials: 'include'
       });

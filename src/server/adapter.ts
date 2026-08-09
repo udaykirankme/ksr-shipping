@@ -45,6 +45,7 @@ export async function handleExpressRequest(
   app: Express,
   req: NextRequest,
   pathname: string,
+  requestId?: string
 ): Promise<Response> {
   const url = new URL(req.url);
   const fullPath = `${pathname}${url.search}`;
@@ -56,6 +57,10 @@ export async function handleExpressRequest(
   for (const [key, value] of req.headers.entries()) {
     if (SKIP_REQUEST_HEADERS.has(key.toLowerCase())) continue;
     agent = agent.set(key, value);
+  }
+
+  if (requestId) {
+    agent = agent.set('x-internal-request-id', requestId);
   }
 
   if (body) {

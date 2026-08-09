@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { getDashboardStats } from '@/lib/dashboard-stats';
 import { getShipmentsList } from '@/lib/shipments-query';
 import { parseBusinessDateTime, toBusinessDateInput, toBusinessTimeInput } from '@/lib/datetime';
+import { pushService } from '../push-service';
 
 
 const router = Router();
@@ -1892,6 +1893,29 @@ router.post('/push/subscribe', async (req, res) => {
   } catch (error) {
     console.error('Push subscribe error:', error);
     res.status(500).json({ success: false, message: 'Failed to subscribe' });
+  }
+});
+
+router.post('/push/test', async (req, res) => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    console.log(`[WebPush] Test notification requested by admin ${userId}`);
+    
+    // We await it here so the admin gets an immediate confirmation of delivery success/failure
+    await pushService.broadcastToAdmins({
+      title: '🔔 Test Notification',
+      message: 'Push notifications are working correctly on Vercel.',
+      url: '/admin/dashboard',
+      submissionId: 'test-' + Date.now(),
+      type: 'test'
+    });
+
+    res.json({ success: true, message: 'Test notification triggered' });
+  } catch (error) {
+    console.error('Test push error:', error);
+    res.status(500).json({ success: false, message: 'Failed to send test notification' });
   }
 });
 
