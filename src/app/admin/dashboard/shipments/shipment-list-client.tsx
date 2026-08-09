@@ -50,6 +50,7 @@ export function ShipmentListClient({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isActiveFilter, setIsActiveFilter] = useState(true);
+  const [olderThan31Days, setOlderThan31Days] = useState(false);
   
   const limit = 10;
   const [page, setPage] = useState(1);
@@ -85,7 +86,8 @@ export function ShipmentListClient({
           limit,
           search: debouncedSearch,
           status: statusFilter,
-          isActive: isActiveFilter
+          isActive: isActiveFilter,
+          olderThan31Days
         });
         if (mounted) {
           const resData = data as any;
@@ -101,7 +103,7 @@ export function ShipmentListClient({
     
     fetchData();
     return () => { mounted = false; };
-  }, [page, statusFilter, isActiveFilter, debouncedSearch]);
+  }, [page, statusFilter, isActiveFilter, olderThan31Days, debouncedSearch]);
 
   // Provide manual refresh
   const handleRefresh = async () => {
@@ -113,7 +115,8 @@ export function ShipmentListClient({
         limit,
         search: debouncedSearch,
         status: statusFilter,
-        isActive: isActiveFilter
+        isActive: isActiveFilter,
+        olderThan31Days
       });
       const resData = data as any;
       setShipments(resData.shipments);
@@ -194,10 +197,17 @@ export function ShipmentListClient({
           <h1 className="text-2xl font-bold text-gray-900">Shipments</h1>
           <p className="text-sm text-gray-500 mt-1">Manage and track all logistics operations</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button variant="outline" onClick={() => setIsActiveFilter(!isActiveFilter)} className="gap-2">
             {isActiveFilter ? <ArchiveRestore className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
             {isActiveFilter ? 'View Inactive' : 'View Active'}
+          </Button>
+          <Button 
+            variant={olderThan31Days ? "default" : "outline"}
+            onClick={() => { setOlderThan31Days(!olderThan31Days); setPage(1); }} 
+            className={`gap-2 ${olderThan31Days ? 'bg-orange-500 hover:bg-orange-600 text-white border-transparent' : ''}`}
+          >
+            Older than 31 days
           </Button>
           <Button variant="outline" onClick={handleRefresh}>
             <RefreshCw className="w-4 h-4" />
@@ -295,13 +305,13 @@ export function ShipmentListClient({
                     onChange={toggleAll}
                   />
                 </TableHead>
-                <TableHead className="font-semibold text-gray-900">Tracking Info</TableHead>
-                <TableHead className="font-semibold text-gray-900">Sender</TableHead>
-                <TableHead className="font-semibold text-gray-900">Receiver</TableHead>
-                <TableHead className="font-semibold text-gray-900">Service</TableHead>
-                <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                <TableHead className="font-semibold text-gray-900">Booked Date</TableHead>
-                <TableHead className="font-semibold text-gray-900 text-right">Profit</TableHead>
+                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Tracking Info</TableHead>
+                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Sender</TableHead>
+                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Receiver</TableHead>
+                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Service</TableHead>
+                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Status</TableHead>
+                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Booked Date</TableHead>
+                <TableHead className="font-semibold text-gray-900 text-right whitespace-nowrap">Profit</TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
@@ -336,28 +346,28 @@ export function ShipmentListClient({
                       }}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-900">{shipment.tracking_id}</span>
                       <span className="text-xs text-gray-500">{shipment.official_tracking_id}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{shipment.sender_name || 'N/A'}</span>
                       <span className="text-xs text-gray-500">{shipment.sender_city || 'N/A'}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{shipment.receiver_name || 'N/A'}</span>
                       <span className="text-xs text-gray-500">{shipment.receiver_city || 'N/A'}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <span className="text-sm">{shipment.service || shipment.courier || 'N/A'}</span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge variant={shipment.current_status === 'Delivered' ? 'success' : shipment.current_status === 'Shipment Created' ? 'default' : 'warning'}>
                       {shipment.current_status}
                     </Badge>
@@ -368,7 +378,7 @@ export function ShipmentListClient({
                   <TableCell className="text-right font-medium text-gray-900">
                     {formatCurrency(shipment.profit || 0)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDelete(shipment.id, e)}>
                         <Trash2 className="w-4 h-4" />

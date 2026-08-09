@@ -25,6 +25,7 @@ export type ShipmentListFilters = {
   startDate?: string;
   endDate?: string;
   isActive?: boolean;
+  olderThan31Days?: boolean;
   page?: number;
   limit?: number;
 };
@@ -46,6 +47,12 @@ function buildShipmentListWhere(filters: ShipmentListFilters): Prisma.ShipmentWh
     where.booked_date = {
       gte: new Date(filters.startDate),
       lte: new Date(filters.endDate),
+    };
+  } else if (filters.olderThan31Days) {
+    const thirtyOneDaysAgo = new Date();
+    thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31);
+    where.booked_date = {
+      lt: thirtyOneDaysAgo,
     };
   }
 

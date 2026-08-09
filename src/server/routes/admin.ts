@@ -214,7 +214,7 @@ router.get('/shipments/export', async (req, res) => {
 
 router.get('/shipments', async (req, res) => {
   try {
-    const { search, status, courier, startDate, endDate, isActive, page = '1', limit = '10' } = req.query;
+    const { search, status, courier, startDate, endDate, isActive, olderThan31Days, page = '1', limit = '10' } = req.query;
 
     const data = await getShipmentsList({
       search: search as string | undefined,
@@ -223,6 +223,7 @@ router.get('/shipments', async (req, res) => {
       startDate: startDate as string | undefined,
       endDate: endDate as string | undefined,
       isActive: isActive !== undefined ? isActive === 'true' : true,
+      olderThan31Days: olderThan31Days === 'true',
       page: Number(page),
       limit: Number(limit),
     });
