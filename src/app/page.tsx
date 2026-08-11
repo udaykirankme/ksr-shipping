@@ -87,7 +87,7 @@ export default function Home() {
               >
                 <div className="inline-block relative overflow-hidden px-6 py-4 rounded-2xl bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_4px_24px_-8px_rgba(249,115,22,0.15)]">
                   <p className="text-base lg:text-lg text-gray-700 font-semibold relative z-10 leading-snug">
-                    Reliable. Fast. Secure.<br />Across India and Beyond.
+                    100% Free Pickup & Food-Grade Packing.<br />Affordable International & Domestic Courier.
                   </p>
                   <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent pointer-events-none" />
                 </div>

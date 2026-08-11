@@ -4,11 +4,14 @@ export const pageSeo: Record<string, PageSeoConfig> = {
   home: {
     title: "KSR Shipping Services - Best Courier Services Hyderabad",
     description:
-      "Reliable and fast courier services in Hyderabad. We offer domestic and international shipping.",
+      "Reliable and fast courier services in Hyderabad. 100% Free Pickup & Packing. High-quality food-grade materials used. Affordable domestic and international shipping.",
     path: "/",
     keywords: [
       "courier service hyderabad",
       "international shipping hyderabad",
+      "free pickup courier hyderabad",
+      "food grade packing courier",
+      "affordable international courier",
       "domestic courier hyderabad",
       "courier service begumpet",
       "ksr shipping services",
@@ -17,15 +20,17 @@ export const pageSeo: Record<string, PageSeoConfig> = {
   services: {
     title: "Courier Services — International & Domestic Shipping",
     description:
-      "Explore KSR Shipping Services: international courier, domestic courier, medicine shipping, fragile shipping, document delivery, and commercial shipping in Hyderabad, India.",
+      "Explore KSR Shipping Services: 100% Free Pickup, food-grade packing for medicines & pickles, international courier, domestic delivery, and commercial shipping.",
     path: "/services",
     keywords: [
       "international courier hyderabad",
-      "domestic courier india",
+      "food grade packing courier",
+      "free pickup courier services",
       "medicine shipping",
       "fragile shipping",
       "document courier",
       "commercial shipping",
+      "domestic courier india",
     ],
   },
   getQuotation: {
@@ -43,11 +48,18 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     keywords: ["track shipment", "courier tracking hyderabad", "parcel tracking"],
   },
   whyChooseUs: {
-    title: "Why Choose Us",
+    title: "Why Choose Us - Free Pickup & Food-Grade Packing",
     description:
-      "Discover why customers trust KSR Shipping Services for reliable domestic and international courier delivery from Hyderabad, India.",
+      "Discover why customers trust KSR Shipping Services. We offer 100% free doorstep pickup, premium food-grade packing, affordable international delivery, and real-time tracking.",
     path: "/why-choose-us",
-    keywords: ["best courier hyderabad", "reliable shipping", "ksr shipping"],
+    keywords: [
+      "free pickup courier", 
+      "food grade packing courier", 
+      "affordable shipping hyderabad", 
+      "best courier hyderabad", 
+      "reliable shipping",
+      "ksr shipping",
+    ],
   },
   contact: {
     title: "Contact Us",
