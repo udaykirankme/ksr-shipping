@@ -11,7 +11,7 @@ import {
   toBusinessTimeInput,
   toBusinessDateInput,
 } from '@/lib/datetime';
-import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, CheckCircle2, RefreshCw, Share2 } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, CheckCircle2, RefreshCw, Share2, Edit3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
@@ -105,6 +105,8 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  const [isEditing, setIsEditing] = useState(false);
+  
   // Status Update state
   const [statusUpdate, setStatusUpdate] = useState(() => ({
     status: getNextStatusUpdate(initialData.current_status).status,
@@ -181,8 +183,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
     try {
       const { booked_date, booked_time, ...submitData } = formData as any;
+      let finalBookedDate = shipment.booked_date;
+      if (booked_date && booked_time) {
+        const dateStr = booked_date.split('T')[0];
+        finalBookedDate = new Date(`${dateStr}T${booked_time}:00`).toISOString();
+      }
+
       const updated = await shipmentService.updateShipment(shipmentId, {
         ...submitData,
+        booked_date: finalBookedDate,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         num_packages: parseInt(formData.num_packages) || 1,
         paid_amount: parseFloat(formData.paid_amount) || 0,
@@ -381,8 +390,20 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
             {/* Basic Info */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
               <div className="flex justify-between items-center mb-6">
-                 <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
-                 {!isDelivered && (
+                 <div className="flex items-center gap-2">
+                   <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
+                   {!isDelivered && (
+                     <button
+                       type="button"
+                       onClick={() => setIsEditing(!isEditing)}
+                       className={`p-1.5 rounded-lg transition-colors ${isEditing ? 'bg-orange-100 text-orange-600' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50'}`}
+                       title={isEditing ? "Lock Editing" : "Unlock Editing"}
+                     >
+                       <Edit3 className="w-4 h-4" />
+                     </button>
+                   )}
+                 </div>
+                 {!isDelivered && isEditing && (
                    <button 
                      type="submit"
                      disabled={loading}
@@ -395,12 +416,20 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Booked Date</label>
-                  <PremiumDatePicker value={formData.booked_date} onChange={() => {}} disabled={true} />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Booked Date <span className="text-red-500">*</span></label>
+                  <PremiumDatePicker 
+                    value={formData.booked_date ? formData.booked_date.split('T')[0] : ''} 
+                    onChange={(date) => setFormData((prev: any) => ({ ...prev, booked_date: formatDateToYYYYMMDD(date) }))} 
+                    disabled={isDelivered || !isEditing} 
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Booked Time</label>
-                  <PremiumTimePicker value={formData.booked_time} onChange={() => {}} disabled={true} />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Booked Time <span className="text-red-500">*</span></label>
+                  <PremiumTimePicker 
+                    value={formData.booked_time} 
+                    onChange={(timeStr) => setFormData((prev: any) => ({ ...prev, booked_time: timeStr }))} 
+                    disabled={isDelivered || !isEditing} 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Type <span className="text-red-500">*</span></label>
@@ -411,7 +440,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                       { label: "Domestic", value: "Domestic" },
                       { label: "International", value: "International" }
                     ]}
-                    disabled={isDelivered}
+                    disabled={isDelivered || !isEditing}
                     required
                   />
                 </div>
@@ -420,7 +449,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                   <PremiumDatePicker 
                     value={formData.estimated_delivery} 
                     onChange={(date) => setFormData((prev: any) => ({ ...prev, estimated_delivery: formatDateToYYYYMMDD(date) }))} 
-                    disabled={isDelivered} 
+                    disabled={isDelivered || !isEditing} 
                   />
                 </div>
                 <div>
@@ -433,7 +462,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                       ...(formData.service && !dbServices.find(s => s.slug === formData.service) ? [{ label: formData.service, value: formData.service }] : [])
                     ]}
                     placeholder="Select Service..."
-                    disabled={isDelivered}
+                    disabled={isDelivered || !isEditing}
                     required
                   />
                 </div>
@@ -447,17 +476,17 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                       ...(formData.service_through && !dbServiceThrough.find(st => st.slug === formData.service_through) ? [{ label: formData.service_through, value: formData.service_through }] : [])
                     ]}
                     placeholder="Select Vendor..."
-                    disabled={isDelivered}
+                    disabled={isDelivered || !isEditing}
                     required
                   />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Update (Visible to Customer - to be added for Delays or Emergencies)</label>
-                  <textarea name="customer_update" value={formData.customer_update || ''} onChange={handleChange} rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" placeholder="E.g. Customs clearance is taking longer than expected."></textarea>
+                  <textarea name="customer_update" value={formData.customer_update || ''} onChange={handleChange} rows={3} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" placeholder="E.g. Customs clearance is taking longer than expected."></textarea>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Internal Notes</label>
-                  <textarea name="internal_notes" value={formData.internal_notes || ''} onChange={handleChange} rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all"></textarea>
+                  <textarea name="internal_notes" value={formData.internal_notes || ''} onChange={handleChange} rows={3} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500"></textarea>
                 </div>
               </div>
             </div>
@@ -469,15 +498,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
-                    <input required name="sender_name" value={formData.sender_name || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required name="sender_name" value={formData.sender_name || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
-                    <input required name="sender_phone" value={formData.sender_phone || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required name="sender_phone" value={formData.sender_phone || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">City <span className="text-red-500">*</span></label>
-                    <input required name="sender_city" value={formData.sender_city || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required name="sender_city" value={formData.sender_city || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                 </div>
               </div>
@@ -488,15 +517,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
-                    <input required name="receiver_name" value={formData.receiver_name || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required name="receiver_name" value={formData.receiver_name || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
-                    <input required name="receiver_phone" value={formData.receiver_phone || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required name="receiver_phone" value={formData.receiver_phone || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">City <span className="text-red-500">*</span></label>
-                    <input required name="receiver_city" value={formData.receiver_city || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required name="receiver_city" value={formData.receiver_city || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                 </div>
               </div>
@@ -509,11 +538,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Received (₹) <span className="text-red-500">*</span></label>
-                    <input required type="number" name="received_amount" value={formData.received_amount ?? ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
+                    <input required type="number" name="received_amount" value={formData.received_amount ?? ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Paid (₹) <span className="text-red-500">*</span></label>
-                    <input required type="number" name="paid_amount" value={formData.paid_amount ?? ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
+                    <input required type="number" name="paid_amount" value={formData.paid_amount ?? ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100 mt-6">
@@ -527,16 +556,16 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg) <span className="text-red-500">*</span></label>
-                    <input required type="number" step="0.01" name="weight" value={formData.weight || ''} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required type="number" step="0.01" name="weight" value={formData.weight || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Packages</label>
-                    <input required type="number" name="num_packages" value={formData.num_packages || 1} onChange={handleChange} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                    <input required type="number" name="num_packages" value={formData.num_packages || 1} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                  <textarea name="description" value={formData.description || ''} onChange={handleChange} disabled={isDelivered} rows={2} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                  <textarea name="description" value={formData.description || ''} onChange={handleChange} disabled={isDelivered || !isEditing} rows={2} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
                 </div>
               </div>
             </div>
@@ -558,13 +587,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                     <label className="block text-sm font-medium text-gray-700 mb-2">New Status <span className="text-red-500">*</span></label>
                     <PremiumSelect
                       value={statusUpdate.status}
-                      onChange={(value) =>
+                      onChange={(value) => {
+                        const newLoc = value === 'Delivered' ? (formData.receiver_city || '') : statusUpdate.location;
                         setStatusUpdate((prev) => ({
                           ...prev,
                           status: value,
+                          location: newLoc,
                           occurred_at: getCurrentOccurredAt(),
                         }))
-                      }
+                      }}
                       options={STATUS_WORKFLOW.map(s => ({ label: s, value: s }))}
                       placeholder="Select status..."
                     />

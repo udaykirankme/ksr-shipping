@@ -185,6 +185,11 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
           
+          <Link href="/admin/dashboard/shipments/new" className="hidden sm:flex items-center gap-2 bg-green-600 hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm">
+            <Package className="w-4 h-4" />
+            <span>Create Shipment</span>
+          </Link>
+
           {/* Notification Bell Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button 

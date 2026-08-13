@@ -429,8 +429,19 @@ router.put('/shipments/:id', async (req, res) => {
 
     if (updateData.estimated_delivery) updateData.estimated_delivery = new Date(updateData.estimated_delivery as string);
     
-    // Ensure booked_date and booked_time cannot be changed after creation
-    delete updateData.booked_date;
+    if (updateData.booked_date) {
+      updateData.booked_date = new Date(updateData.booked_date as string);
+      const firstHistory = await prisma.shipmentStatusHistory.findFirst({
+        where: { shipment_id: req.params.id, status: 'Shipment Created' },
+        orderBy: { occurred_at: 'asc' }
+      });
+      if (firstHistory) {
+        await prisma.shipmentStatusHistory.update({
+          where: { id: firstHistory.id },
+          data: { occurred_at: updateData.booked_date }
+        });
+      }
+    }
     delete updateData.booked_time;
     delete updateData.id;
     delete updateData.created_at;
