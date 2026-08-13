@@ -25,6 +25,8 @@ import {
 const STATUS_WORKFLOW = [
   'Shipment Created',
   'Picked Up',
+  'Shipment Bagged',
+  'Shipment Received',
   'Dispatched',
   'In Transit',
   'Out For Delivery',

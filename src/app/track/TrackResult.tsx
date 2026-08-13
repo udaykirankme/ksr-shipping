@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrackingWidget } from "@/components/TrackingWidget";
-import { CheckCircle2, Clock, MapPin, Box, Hand, Truck, Plane, User, XCircle, RotateCcw, Headset, ArrowRight, PackageSearch } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Box, Hand, Truck, Plane, User, XCircle, RotateCcw, Headset, ArrowRight, PackageSearch, Package, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
@@ -12,6 +12,8 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'Shipment Created': return 'bg-gray-100 text-gray-800 border-gray-200';
     case 'Picked Up': return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'Shipment Bagged': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'Shipment Received': return 'bg-teal-100 text-teal-800 border-teal-200';
     case 'Dispatched': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'In Transit': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'Out For Delivery': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -26,6 +28,8 @@ const getStatusIcon = (status: string, className = "w-5 h-5") => {
   switch (status) {
     case 'Shipment Created': return <Box className={className} />;
     case 'Picked Up': return <Hand className={className} />;
+    case 'Shipment Bagged': return <Package className={className} />;
+    case 'Shipment Received': return <Inbox className={className} />;
     case 'Dispatched': return <Truck className={className} />;
     case 'In Transit': return <Plane className={className} />;
     case 'Out For Delivery': return <User className={className} />;
@@ -44,6 +48,8 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
   switch(status) {
     case 'Shipment Created': return <>Your shipment has been registered successfully and is awaiting pickup.</>;
     case 'Picked Up': return <>Great news! Your shipment from {fromName} to {toName} has been picked up successfully.</>;
+    case 'Shipment Bagged': return <>Your shipment from {fromName} to {toName} has been bagged and is being prepared for dispatch.</>;
+    case 'Shipment Received': return <>Your shipment from {fromName} to {toName} has been received at our facility and is being processed.</>;
     case 'Dispatched': return <>Your shipment from {fromName} to {toName} has been dispatched and is on its way.</>;
     case 'In Transit': return <>Your shipment from {fromName} to {toName} is currently in transit. Thank you for your patience.</>;
     case 'Out For Delivery': return <>Exciting news! Your shipment is out for delivery and will reach {toName} soon.</>;

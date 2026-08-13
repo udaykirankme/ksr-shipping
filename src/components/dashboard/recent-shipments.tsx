@@ -31,6 +31,8 @@ export function RecentShipments({ initialData = [] }: { initialData?: any[] }) {
       case "Out For Delivery": return "success";
       case "Shipment Created": return "default";
       case "Picked Up": return "outline";
+      case "Shipment Bagged": return "outline";
+      case "Shipment Received": return "outline";
       default: return "default";
     }
   };

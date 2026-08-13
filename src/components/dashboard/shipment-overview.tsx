@@ -1,11 +1,13 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { FilePlus2, Box, Truck, Map, MapPin, CheckCircle } from "lucide-react";
+import { FilePlus2, Box, Truck, Map, MapPin, CheckCircle, Package, Archive } from "lucide-react";
 
 export function ShipmentOverview({ statusCounts = {} }: { statusCounts?: Record<string, number> }) {
   const data = [
     { label: "Shipment Created", value: statusCounts["Shipment Created"] || 0, icon: FilePlus2, color: "text-gray-500", bg: "bg-gray-100" },
     { label: "Picked Up", value: statusCounts["Picked Up"] || 0, icon: Box, color: "text-blue-500", bg: "bg-blue-100" },
+    { label: "Shipment Bagged", value: statusCounts["Shipment Bagged"] || 0, icon: Package, color: "text-yellow-600", bg: "bg-yellow-100" },
+    { label: "Shipment Received", value: statusCounts["Shipment Received"] || 0, icon: Archive, color: "text-teal-600", bg: "bg-teal-100" },
     { label: "Dispatched", value: statusCounts["Dispatched"] || 0, icon: Truck, color: "text-indigo-500", bg: "bg-indigo-100" },
     { label: "In Transit", value: statusCounts["In Transit"] || 0, icon: Map, color: "text-orange-500", bg: "bg-orange-100" },
     { label: "Out For Delivery", value: statusCounts["Out For Delivery"] || 0, icon: MapPin, color: "text-emerald-500", bg: "bg-emerald-100" },
@@ -19,10 +21,10 @@ export function ShipmentOverview({ statusCounts = {} }: { statusCounts?: Record<
         <p className="text-sm text-gray-500 mt-1">Active shipments by current status</p>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="grid grid-cols-2 md:grid-cols-3 divide-x divide-y divide-gray-50">
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y divide-gray-50">
           {data.map((item, index) => {
-            const isTopRow = index < 3;
-            const isLeftColumn = index % 3 === 0;
+            const isTopRow = index < 4;
+            const isLeftColumn = index % 4 === 0;
             return (
               <div 
                 key={item.label} 
