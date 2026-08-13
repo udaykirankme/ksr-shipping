@@ -1,19 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Search, Package } from "lucide-react";
 import Link from "next/link";
 
 export function TrackingWidget({ compact = false, centered = false }: { compact?: boolean, centered?: boolean }) {
   const [trackingId, setTrackingId] = useState("");
-  const router = useRouter();
-
-  const handleTrack = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackingId.trim()) return;
-    router.push(`/track?id=${encodeURIComponent(trackingId.trim())}`);
-  };
+  // Generate a unique ID for this widget instance to avoid duplicate ID issues
+  const inputId = `tracking-id-input-${compact ? 'compact' : 'full'}-${Math.random().toString(36).substr(2, 9)}`;
 
   return (
     <div 
@@ -32,16 +26,16 @@ export function TrackingWidget({ compact = false, centered = false }: { compact?
         </h3>
       </div>
       
-      <form onSubmit={handleTrack} aria-label="Track your shipment">
+      <form action="/track" method="GET" aria-label="Track your shipment">
         <div className="relative mb-4">
-          <label htmlFor="tracking-id-input" className="sr-only">
+          <label htmlFor={inputId} className="sr-only">
             Tracking ID or AWB Number
           </label>
           <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400" aria-hidden="true" />
           <input
-            id="tracking-id-input"
+            id={inputId}
             type="text"
-            name="trackingId"
+            name="id"
             autoComplete="off"
             aria-required="true"
             className="w-full pl-12 pr-4 py-3.5 bg-white/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow text-gray-900 placeholder-gray-400"

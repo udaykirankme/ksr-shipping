@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,13 +25,19 @@ export function PremiumTimePicker({
   const popupRef = useRef<HTMLDivElement>(null);
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
   const [mounted, setMounted] = useState(false);
+  
+  const [viewMode, setViewMode] = useState<'hour' | 'minute'>('hour');
 
   useEffect(() => {
-     
     setMounted(true);
   }, []);
 
-  // Parse initial value (e.g., "14:30")
+  useEffect(() => {
+    if (isOpen) {
+      setViewMode('hour');
+    }
+  }, [isOpen]);
+
   const { initialHour, initialMin, initialAmPm } = useMemo(() => {
     if (!value) return { initialHour: "12", initialMin: "00", initialAmPm: "PM" };
     const [h, m] = value.split(':');
@@ -50,9 +56,7 @@ export function PremiumTimePicker({
   const [minute, setMinute] = useState(initialMin);
   const [ampm, setAmpm] = useState(initialAmPm);
 
-  // Sync state if value changes externally
   useEffect(() => {
-     
     setHour(initialHour);
     setMinute(initialMin);
     setAmpm(initialAmPm);
@@ -67,17 +71,18 @@ export function PremiumTimePicker({
       const spaceAbove = rect.top;
       const spaceRight = window.innerWidth - rect.left;
       
+      const estimatedHeight = 400;
+      const estimatedWidth = 320;
+      
       let top = rect.bottom + window.scrollY + 8;
       let left = rect.left + window.scrollX;
       
-      // Open above if not enough space below
-      if (spaceBelow < popupRect.height + 16 && spaceAbove > spaceBelow) {
-        top = rect.top + window.scrollY - popupRect.height - 8;
+      if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+        top = rect.top + window.scrollY - estimatedHeight - 8;
       }
       
-      // Align right if not enough space right
-      if (spaceRight < popupRect.width + 16) {
-        left = rect.right + window.scrollX - popupRect.width;
+      if (spaceRight < estimatedWidth) {
+        left = rect.right + window.scrollX - estimatedWidth;
       }
       
       setPopupStyle({
@@ -97,7 +102,6 @@ export function PremiumTimePicker({
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
-     
   }, [isOpen]);
 
   useEffect(() => {
@@ -111,9 +115,11 @@ export function PremiumTimePicker({
         setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const handleUpdate = (newHour: string, newMin: string, newAmPm: string) => {
     let h24 = parseInt(newHour, 10);
@@ -149,8 +155,127 @@ export function PremiumTimePicker({
     return `${hr.toString().padStart(2, '0')}:${m} ${ap}`;
   };
 
-  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+  const clockRef = useRef<HTMLDivElement>(null);
+  
+  const handleClockInteraction = useCallback((e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent, isMouseUp = false) => {
+    if (!clockRef.current) return;
+    const rect = clockRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    
+    let clientX, clientY;
+    if ('touches' in e) {
+      clientX = e.touches[0]?.clientX || (e as TouchEvent).changedTouches?.[0]?.clientX;
+      clientY = e.touches[0]?.clientY || (e as TouchEvent).changedTouches?.[0]?.clientY;
+    } else {
+      clientX = (e as MouseEvent).clientX;
+      clientY = (e as MouseEvent).clientY;
+    }
+
+    if (clientX === undefined || clientY === undefined) return;
+
+    let angle = Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI) + 90;
+    if (angle < 0) angle += 360;
+
+    if (viewMode === 'hour') {
+      let h = Math.round(angle / 30);
+      if (h === 0) h = 12;
+      const hStr = h.toString().padStart(2, '0');
+      if (hour !== hStr) {
+        handleHourChange(hStr);
+      }
+      if (isMouseUp) {
+        setViewMode('minute');
+      }
+    } else {
+      let m = Math.round(angle / 6);
+      if (m === 60) m = 0;
+      const mStr = m.toString().padStart(2, '0');
+      if (minute !== mStr) {
+        handleMinuteChange(mStr);
+      }
+    }
+  }, [viewMode, hour, minute, ampm]);
+
+  const isDragging = useRef(false);
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging.current) {
+        e.preventDefault();
+        handleClockInteraction(e);
+      }
+    };
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        handleClockInteraction(e, true);
+      }
+    };
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDragging.current) {
+        e.preventDefault();
+        handleClockInteraction(e);
+      }
+    };
+    const handleGlobalTouchEnd = (e: TouchEvent) => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        handleClockInteraction(e, true);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+      document.addEventListener('touchend', handleGlobalTouchEnd);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [isOpen, handleClockInteraction]);
+
+  const onClockMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    isDragging.current = true;
+    handleClockInteraction(e);
+  };
+
+  const clockNumbers = useMemo(() => {
+    const numbers = [];
+    const count = 12;
+    for (let i = 1; i <= count; i++) {
+      const angle = (i * 30 - 90) * (Math.PI / 180);
+      const radius = 95;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      let valStr = "";
+      if (viewMode === 'hour') {
+        valStr = i.toString();
+      } else {
+        valStr = (i === 12 ? 0 : i * 5).toString().padStart(2, '0');
+      }
+      
+      let isSelected = false;
+      if (viewMode === 'hour') {
+        isSelected = parseInt(hour, 10) === i || (i === 12 && parseInt(hour, 10) === 0);
+      } else {
+        isSelected = parseInt(minute, 10) === (i === 12 ? 0 : i * 5);
+      }
+
+      numbers.push({ value: valStr, x, y, isSelected });
+    }
+    return numbers;
+  }, [viewMode, hour, minute]);
+
+  const handAngle = viewMode === 'hour' 
+    ? (parseInt(hour, 10) * 30 - 90)
+    : (parseInt(minute, 10) * 6 - 90);
 
   return (
     <>
@@ -170,63 +295,97 @@ export function PremiumTimePicker({
       </div>
 
       {mounted && isOpen && createPortal(
-        <div ref={popupRef} style={popupStyle} className="p-3 bg-white border border-gray-100 rounded-2xl shadow-xl w-64 animate-fade-in flex gap-2 justify-between h-64 z-[99999]">
-          {/* Hours Column */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-1">
-            <div className="sticky top-0 bg-white pb-1 mb-1 text-xs font-bold text-gray-400 text-center uppercase">Hour</div>
-            {hours.map((h) => (
-              <button
-                key={h}
-                type="button"
-                onClick={() => handleHourChange(h)}
-                className={cn(
-                  "py-2 rounded-lg text-sm transition-colors text-center font-medium w-full",
-                  hour === h ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "text-gray-700 hover:bg-orange-100 hover:text-orange-600"
-                )}
-              >
-                {h}
-              </button>
-            ))}
+        <div ref={popupRef} style={popupStyle} className="bg-white rounded-[24px] shadow-2xl border border-gray-100 overflow-hidden w-[310px] animate-fade-in z-[99999] select-none">
+          <div className="pt-8 pb-6 flex flex-col items-center">
+            <div className="flex items-center justify-center gap-1">
+              <div className="flex items-baseline text-6xl font-light tracking-tight text-gray-900">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('hour')}
+                  className={cn(
+                    "rounded-xl transition-colors min-w-[70px] text-right",
+                    viewMode === 'hour' ? "text-orange-500" : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  {parseInt(hour, 10)}
+                </button>
+                <span className="text-gray-400 -mt-2 mx-1">:</span>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('minute')}
+                  className={cn(
+                    "rounded-xl transition-colors min-w-[70px] text-left",
+                    viewMode === 'minute' ? "text-orange-500" : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  {minute}
+                </button>
+              </div>
+              
+              <div className="flex flex-col ml-3 text-sm font-bold gap-1.5 justify-center">
+                <button
+                  type="button"
+                  onClick={() => handleAmpmChange('AM')}
+                  className={cn(
+                    "transition-colors leading-none tracking-widest",
+                    ampm === 'AM' ? "text-orange-500" : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  AM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAmpmChange('PM')}
+                  className={cn(
+                    "transition-colors leading-none tracking-widest",
+                    ampm === 'PM' ? "text-orange-500" : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  PM
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <div className="w-px bg-gray-100 my-2"></div>
 
-          {/* Minutes Column */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col gap-1">
-            <div className="sticky top-0 bg-white pb-1 mb-1 text-xs font-bold text-gray-400 text-center uppercase">Min</div>
-            {minutes.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleMinuteChange(m)}
-                className={cn(
-                  "py-2 rounded-lg text-sm transition-colors text-center font-medium w-full",
-                  minute === m ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "text-gray-700 hover:bg-orange-100 hover:text-orange-600"
-                )}
+          <div className="pb-8 pt-2 flex justify-center items-center bg-white relative">
+            <div 
+              ref={clockRef}
+              className="relative w-[260px] h-[260px] bg-gray-100 rounded-full cursor-pointer touch-none shadow-inner"
+              onMouseDown={onClockMouseDown}
+              onTouchStart={onClockMouseDown}
+            >
+              <div className="absolute top-1/2 left-1/2 w-2 h-2 -ml-1 -mt-1 bg-orange-500 rounded-full z-20" />
+              
+              <div 
+                className="absolute top-1/2 left-1/2 h-[105px] w-0.5 bg-orange-500 origin-bottom z-10 rounded-t-full transition-transform duration-75 ease-out"
+                style={{
+                  transform: `translate(-50%, -100%) rotate(${handAngle + 90}deg)`,
+                }}
               >
-                {m}
-              </button>
-            ))}
-          </div>
+                <div className="absolute -top-4 -left-[15px] w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm shadow-md">
+                   {viewMode === 'minute' && parseInt(minute, 10) % 5 !== 0 && (
+                     minute
+                   )}
+                </div>
+              </div>
 
-          <div className="w-px bg-gray-100 my-2"></div>
-
-          {/* AM/PM Column */}
-          <div className="flex-1 flex flex-col gap-2 pl-1">
-            <div className="text-xs font-bold text-gray-400 text-center uppercase pb-1">AM/PM</div>
-            {['AM', 'PM'].map((a) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => handleAmpmChange(a)}
-                className={cn(
-                  "py-3 rounded-lg text-sm transition-colors text-center font-bold w-full",
-                  ampm === a ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "text-gray-700 hover:bg-orange-100 hover:text-orange-600 bg-gray-50"
-                )}
-              >
-                {a}
-              </button>
-            ))}
+              {clockNumbers.map((num, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "absolute top-1/2 left-1/2 w-10 h-10 -ml-5 -mt-5 rounded-full flex items-center justify-center text-[15px] transition-colors z-20",
+                    num.isSelected 
+                      ? "text-white font-bold" 
+                      : "text-gray-700 hover:bg-gray-200/50"
+                  )}
+                  style={{
+                    transform: `translate(${num.x * (105/95)}px, ${num.y * (105/95)}px)`,
+                  }}
+                >
+                  <span className="pointer-events-none">{num.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>,
         document.body

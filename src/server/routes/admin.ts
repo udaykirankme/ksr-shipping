@@ -490,10 +490,6 @@ router.patch('/shipments/:id/status', async (req, res) => {
     const currentIndex = STATUS_WORKFLOW.indexOf(current.current_status);
     const newIndex = STATUS_WORKFLOW.indexOf(status);
 
-    if (newIndex <= currentIndex) {
-      return res.status(400).json({ error: `Cannot move status backwards from ${current.current_status} to ${status}` });
-    }
-
     const updateData: Record<string, unknown> = {
       current_status: status,
       current_location: location,

@@ -236,7 +236,9 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       });
       
       const resData = res as any;
-      setShipment({ ...resData.shipment, history: [resData.history, ...(shipment.history || [])] });
+      const newShipment = { ...resData.shipment, history: [resData.history, ...(shipment.history || [])] };
+      setShipment(newShipment);
+      setFormData((prev: any) => ({ ...prev, ...newShipment }));
       setSuccess('Status updated successfully. You can now share this update with the sender or receiver.');
       
       // Reset status input with next status and current date/time
