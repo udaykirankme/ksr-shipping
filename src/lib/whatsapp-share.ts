@@ -46,7 +46,7 @@ Thank you for choosing ${business.name}. We appreciate your trust in us.
 export type StatusUpdateShareDetails = {
   trackingId: string;
   status: string;
-  location: string;
+  location?: string;
   occurredAt: string;
   note?: string;
   recipientName?: string;
@@ -61,6 +61,9 @@ export function buildStatusUpdateShareMessage(details: StatusUpdateShareDetails)
   const noteBlock = details.note?.trim()
     ? `\nNote: ${details.note.trim()}\n`
     : '\n';
+  const locationLine = details.location?.trim()
+    ? `Location: ${details.location.trim()}\n`
+    : '';
 
   return `${greeting}
 
@@ -69,10 +72,8 @@ We have an update on your shipment with ${business.name}.
 Tracking Number: ${details.trackingId}
 
 Current Status: ${details.status}
-Location: ${details.location}
-Updated On: ${updatedOn}
-${noteBlock}
-You can track your shipment and view further status updates here:
+${locationLine}Updated On: ${updatedOn}
+${noteBlock}You can track your shipment and view further status updates here:
 ${trackUrl}
 
 Thank you for choosing ${business.name}.

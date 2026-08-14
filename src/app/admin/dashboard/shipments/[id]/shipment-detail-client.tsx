@@ -78,8 +78,6 @@ function getShareableStatus(shipment: {
     shipment.current_location?.trim() ||
     '';
 
-  if (!location) return null;
-
   const occurredAt =
     typeof latest.occurred_at === 'string'
       ? latest.occurred_at
@@ -643,11 +641,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     Update Status
                   </button>
-                  {!canShareStatusUpdate && (
-                    <p className="text-xs text-center text-gray-500">
-                      WhatsApp sharing becomes available once the shipment has a saved status with location.
-                    </p>
-                  )}
                 </form>
               ) : (
                 shareableStatus && (
