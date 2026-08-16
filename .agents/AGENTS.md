@@ -1,10 +1,11 @@
 # Agent Rules for KSR Shipping Services
 
 ## Security Rules
-- **NEVER** push `.env` files or files containing secrets/passwords to GitHub or any remote repository. Always ensure they are properly added to `.gitignore` and do not use `git add .` without carefully verifying what is being staged.
+- **NEVER** push .env files or files containing secrets/passwords to GitHub or any remote repository. Always ensure they are properly added to .gitignore and do not use git add . without carefully verifying what is being staged.
 
 ## Restricted Commands
-You **MUST** explicitly ask the USER for permission before running any of the following commands in the terminal. Do not run them automatically:
+You **MUST** explicitly ask the USER for permission before running any of the following commands in the terminal. Do not run them automatically.
+Every single time you want to run a command, you MUST check if that command is in this list. If it is in the list, you MUST ask for my permission first, even if I explicitly asked you to run the command in my prompt.
 
 - **Git & GitHub CLI**: `git`, `gh`, `git push`, `git push --force`, `git push -f`, `git reset --hard`, `git clean -fd`, `git clean -fdx`, `git add`, `git commit`, `git pull`, `git fetch`, `git clone`, `git merge`, `git rebase`, `git branch`, `git checkout`, `git switch`, `git reset`, `git remote`, `git tag`, `git stash`, `git cherry-pick`, `git revert`, `git rm`, `git mv`, `gh repo`, `gh pr`, `gh issue`, `gh release`
 - **File & Disk Deletion/Modification**: `Remove-Item`, `rmdir`, `del`, `erase`, `format`, `diskpart`
