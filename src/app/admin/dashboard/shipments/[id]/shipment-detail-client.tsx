@@ -386,7 +386,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column: Form */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6 order-2 xl:order-1">
           
           <form onSubmit={handleUpdate} className="space-y-6 opacity-100 transition-opacity">
             {/* Basic Info */}
@@ -405,7 +405,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                      </button>
                    )}
                  </div>
-                 {!isDelivered && isEditing && (
+                 {!isDelivered && (isEditing || formData.customer_update !== shipment.customer_update) && (
                    <button 
                      type="submit"
                      disabled={loading}
@@ -484,7 +484,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Update (Visible to Customer - to be added for Delays or Emergencies)</label>
-                  <textarea name="customer_update" value={formData.customer_update || ''} onChange={handleChange} rows={3} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" placeholder="E.g. Customs clearance is taking longer than expected."></textarea>
+                  <textarea name="customer_update" value={formData.customer_update || ''} onChange={handleChange} rows={3} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" placeholder="E.g. Customs clearance is taking longer than expected."></textarea>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Internal Notes</label>
@@ -576,7 +576,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         </div>
 
         {/* Right Column: Timeline & Status Update */}
-        <div className="space-y-6">
+        <div className="space-y-6 order-1 xl:order-2">
           {(shareableStatus || !isDelivered) && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-orange-200 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10 opacity-50"></div>

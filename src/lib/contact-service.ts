@@ -74,6 +74,14 @@ export const contactService = {
     });
   },
 
+  async respondBulk(ids: string[], responded: boolean) {
+    return apiFetch(`${API_BASE}/contact-messages/respond-bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, responded })
+    });
+  },
+
   async markAllContactsAsRead() {
     return apiFetch(`${API_BASE}/contact-messages/read-all`, {
       method: 'PATCH'

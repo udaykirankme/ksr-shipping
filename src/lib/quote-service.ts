@@ -106,6 +106,14 @@ export async function deleteBulk(ids: string[]): Promise<void> {
   });
 }
 
+export async function respondBulk(ids: string[]): Promise<void> {
+  await apiFetch(`${API_URL}/quotations/respond-bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+}
+
 export async function toggleStar(id: string, is_starred?: boolean): Promise<{ success: boolean; is_starred: boolean }> {
   const res = await apiFetch(`${API_URL}/quotations/${id}/star`, {
     method: 'PATCH',

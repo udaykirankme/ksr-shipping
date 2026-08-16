@@ -296,7 +296,16 @@ export function PremiumTimePicker({
 
       {mounted && isOpen && createPortal(
         <div ref={popupRef} style={popupStyle} className="bg-white rounded-[24px] shadow-2xl border border-gray-100 overflow-hidden w-[310px] animate-fade-in z-[99999] select-none">
-          <div className="pt-8 pb-6 flex flex-col items-center">
+          <div className="flex justify-end pt-4 pr-4">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm rounded-full transition-colors shadow-sm"
+            >
+              Done
+            </button>
+          </div>
+          <div className="pt-2 pb-6 flex flex-col items-center">
             <div className="flex items-center justify-center gap-1">
               <div className="flex items-baseline text-6xl font-light tracking-tight text-gray-900">
                 <button
@@ -347,7 +356,7 @@ export function PremiumTimePicker({
             </div>
           </div>
 
-          <div className="pb-8 pt-2 flex justify-center items-center bg-white relative">
+          <div className="pb-6 pt-2 flex justify-center items-center bg-white relative">
             <div 
               ref={clockRef}
               className="relative w-[260px] h-[260px] bg-gray-100 rounded-full cursor-pointer touch-none shadow-inner"

@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getQuotes, QuotationRequest, toggleStar, deleteBulk, deleteQuote, markAllQuotesAsRead } from "@/lib/quote-service";
+import { getQuotes, QuotationRequest, toggleStar, deleteBulk, deleteQuote, markAllQuotesAsRead, respondBulk, updateQuoteStatus } from "@/lib/quote-service";
 import { formatDate } from "@/lib/format";
 import { DateFilter } from "@/components/dashboard/date-filter";
 
@@ -103,6 +103,31 @@ export function QuoteListClient() {
     }
   };
 
+  const handleBulkRespond = async () => {
+    if (selectedIds.size === 0) return;
+    setLoading(true);
+    try {
+      await respondBulk(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      await handleRefresh();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark selected as responded.");
+      setLoading(false);
+    }
+  };
+
+  const handleRespond = async (e: React.MouseEvent, quoteId: string, version: number) => {
+    e.stopPropagation();
+    try {
+      await updateQuoteStatus(quoteId, { status: 'Contacted', version });
+      await handleRefresh();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark as responded");
+    }
+  };
+
   const handleRefresh = async () => {
     setPage(1);
     setLoading(true);
@@ -183,6 +208,9 @@ export function QuoteListClient() {
             <Button size="sm" onClick={() => setSelectedIds(new Set())} className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
               Cancel Selection
             </Button>
+            <Button size="sm" onClick={handleBulkRespond} className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">
+              Mark as Responded
+            </Button>
             <Button size="sm" onClick={handleBulkDelete} className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
               Delete Selected
             </Button>
@@ -229,7 +257,7 @@ export function QuoteListClient() {
                 quotes.map((quote) => (
                   <TableRow 
                     key={quote.id} 
-                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    className="group hover:bg-gray-50/50 transition-colors cursor-pointer"
                     onClick={() => window.location.href = `/admin/dashboard/quotations/${quote.id}`}
                   >
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
@@ -293,9 +321,16 @@ export function QuoteListClient() {
                       {formatDate(quote.created_at)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDelete(quote.id, e)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        {quote.status === 'New' && (
+                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={(e) => handleRespond(e, quote.id, quote.version)} title="Mark as Responded">
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDelete(quote.id, e)} title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

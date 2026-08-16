@@ -891,6 +891,39 @@ router.post('/quotations/delete-bulk', async (req, res) => {
   }
 });
 
+router.post('/quotations/respond-bulk', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ success: false, message: 'Invalid ids provided' });
+
+    const quotes = await prisma.quotationRequest.findMany({
+      where: { id: { in: ids }, status: 'New' }
+    });
+
+    if (quotes.length > 0) {
+      await prisma.$transaction([
+        prisma.quotationRequest.updateMany({
+          where: { id: { in: quotes.map(q => q.id) } },
+          data: { status: 'Contacted', version: { increment: 1 } }
+        }),
+        prisma.quoteStatusHistory.createMany({
+          data: quotes.map(q => ({
+            quote_request_id: q.id,
+            status: 'Contacted',
+            occurred_at: new Date(),
+            updated_by: (req as any).user.id,
+            note: 'Marked as responded'
+          }))
+        })
+      ]);
+    }
+    res.json({ success: true, data: { success: true } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Internal error' });
+  }
+});
+
 router.delete('/quotations/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1044,6 +1077,25 @@ router.post('/contact-messages/delete-bulk', async (req, res) => {
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ success: false, message: 'Invalid ids provided' });
 
     await deleteContactMessages(ids);
+    res.json({ success: true, data: { success: true } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Internal error' });
+  }
+});
+
+router.post('/contact-messages/respond-bulk', async (req, res) => {
+  try {
+    const { ids, responded } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ success: false, message: 'Invalid ids provided' });
+
+    await prisma.contactSubmission.updateMany({
+      where: { id: { in: ids } },
+      data: { 
+        responded,
+        responded_at: responded ? new Date() : null
+      }
+    });
     res.json({ success: true, data: { success: true } });
   } catch (error) {
     console.error(error);

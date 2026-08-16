@@ -102,6 +102,31 @@ export function MessageListClient() {
     }
   };
 
+  const handleBulkRespond = async () => {
+    if (selectedIds.size === 0) return;
+    setLoading(true);
+    try {
+      await contactService.respondBulk(Array.from(selectedIds), true);
+      setSelectedIds(new Set());
+      await fetchMessages();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark selected as responded.");
+      setLoading(false);
+    }
+  };
+
+  const handleRespond = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await contactService.markResponded(id, true);
+      await fetchMessages();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark as responded");
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -125,6 +150,9 @@ export function MessageListClient() {
           <div className="flex gap-2">
             <Button size="sm" onClick={() => setSelectedIds(new Set())} className="bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
               Cancel Selection
+            </Button>
+            <Button size="sm" onClick={handleBulkRespond} className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">
+              Mark as Responded
             </Button>
             <Button size="sm" onClick={handleBulkDelete} className="bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
               Delete Selected
@@ -257,9 +285,16 @@ export function MessageListClient() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDelete(msg.id, e)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        {!msg.responded && (
+                          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={(e) => handleRespond(msg.id, e)} title="Mark as Responded">
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDelete(msg.id, e)} title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
