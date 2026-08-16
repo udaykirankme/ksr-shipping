@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Search, Package } from "lucide-react";
 import Link from "next/link";
 
 export function TrackingWidget({ compact = false, centered = false }: { compact?: boolean, centered?: boolean }) {
   const [trackingId, setTrackingId] = useState("");
   // Generate a unique ID for this widget instance to avoid duplicate ID issues
-  const inputId = `tracking-id-input-${compact ? 'compact' : 'full'}-${Math.random().toString(36).substr(2, 9)}`;
+  const baseId = useId();
+  const inputId = `tracking-id-input-${compact ? 'compact' : 'full'}-${baseId}`;
 
   return (
     <div 
