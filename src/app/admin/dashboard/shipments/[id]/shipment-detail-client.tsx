@@ -370,14 +370,14 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/dashboard/shipments" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <Link href="/admin/dashboard/shipments" className="shrink-0 mt-1 sm:mt-0 p-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Shipment</h1>
-              <span className="text-2xl font-mono text-orange-500 font-bold tracking-wider cursor-pointer hover:text-orange-600 transition-colors flex items-center gap-2" onClick={() => handleCopy(shipment.tracking_id, 'KSR Tracking Number')} title="Click to copy KSR Tracking Number">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Shipment</h1>
+              <span className="text-lg sm:text-2xl font-mono text-orange-500 font-bold tracking-wider cursor-pointer hover:text-orange-600 transition-colors flex items-center gap-2 break-all" onClick={() => handleCopy(shipment.tracking_id, 'KSR Tracking Number')} title="Click to copy KSR Tracking Number">
                 {shipment.tracking_id}
                 <Copy className="w-4 h-4 text-gray-400 hover:text-orange-500" />
               </span>
@@ -395,10 +395,10 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
               )}
             </div>
             {shipment.official_tracking_id && (
-              <div className="flex items-center gap-3 mt-1">
-                <p className="text-sm text-gray-500 flex items-center gap-2 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')} title="Click to copy Official Tracking Number">
-                  Official Tracking: {shipment.official_tracking_id}
-                  <Copy className="w-3 h-3 text-gray-400 hover:text-gray-600" />
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 sm:mt-2">
+                <p className="text-sm text-gray-500 flex items-center gap-2 cursor-pointer hover:text-gray-700 transition-colors break-all" onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')} title="Click to copy Official Tracking Number">
+                  <span className="shrink-0">Official Tracking:</span> <span className="font-medium">{shipment.official_tracking_id}</span>
+                  <Copy className="w-3 h-3 text-gray-400 hover:text-gray-600 shrink-0" />
                 </p>
                 {(() => {
                   const info = getOfficialTrackingInfo(shipment.service, shipment.official_tracking_id);
@@ -419,7 +419,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
           <button onClick={refreshData} className="p-2 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200" title="Refresh">
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
