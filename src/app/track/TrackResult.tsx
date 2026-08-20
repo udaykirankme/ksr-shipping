@@ -16,6 +16,7 @@ const getStatusColor = (status: string) => {
     case 'Shipment Received': return 'bg-teal-100 text-teal-800 border-teal-200';
     case 'Dispatched': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'In Transit': return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'At Hub': return 'bg-purple-100 text-purple-800 border-purple-200';
     case 'Out For Delivery': return 'bg-blue-100 text-blue-800 border-blue-200';
     case 'Delivered': return 'bg-green-100 text-green-800 border-green-200';
     case 'Cancelled': return 'bg-red-100 text-red-800 border-red-200';
@@ -32,6 +33,7 @@ const getStatusIcon = (status: string, className = "w-5 h-5") => {
     case 'Shipment Received': return <Inbox className={className} />;
     case 'Dispatched': return <Truck className={className} />;
     case 'In Transit': return <Plane className={className} />;
+    case 'At Hub': return <MapPin className={className} />;
     case 'Out For Delivery': return <User className={className} />;
     case 'Delivered': return <CheckCircle2 className={className} />;
     case 'Cancelled': return <XCircle className={className} />;
@@ -52,6 +54,7 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
     case 'Shipment Received': return <>Your shipment from {fromName} to {toName} has been received at our facility and is being processed.</>;
     case 'Dispatched': return <>Your shipment from {fromName} to {toName} has been dispatched and is on its way.</>;
     case 'In Transit': return <>Your shipment from {fromName} to {toName} is currently in transit. Thank you for your patience.</>;
+    case 'At Hub': return <>Your shipment from {fromName} to {toName} has arrived at our hub and is being processed for the next leg of its journey.</>;
     case 'Out For Delivery': return <>Exciting news! Your shipment is out for delivery and will reach {toName} soon.</>;
     case 'Delivered': return <>Your shipment from {fromName} to {toName} has been successfully delivered.</>;
     case 'Cancelled': return <>This shipment has been cancelled. Please contact KSR Shipping Services if you require assistance.</>;
@@ -214,6 +217,16 @@ export default function TrackResult() {
                      </p>
                   </div>
 
+                  {/* IST Timing Note */}
+                  <div className="mt-4 bg-gradient-to-r from-orange-50 to-orange-100/50 border border-orange-200/60 rounded-xl p-3 sm:p-4 flex gap-3 items-center shadow-[0_0_15px_rgba(255,106,0,0.15)] text-orange-800">
+                     <div className="bg-orange-500/10 p-1.5 rounded-lg shrink-0 text-orange-600">
+                        <Clock className="w-5 h-5" />
+                     </div>
+                     <p className="font-medium text-sm sm:text-base">
+                        Please note: All timings displayed are in <span className="font-bold">Indian Standard Time (IST)</span>.
+                     </p>
+                  </div>
+
                   {/* Delay / Customer Update Card */}
                   {data.customer_update && data.customer_update.trim() !== '' && (
                      <div className="mt-4 bg-gray-50 border border-gray-200 rounded-2xl p-5 sm:p-6 flex gap-4 items-start shadow-sm text-gray-800">
@@ -260,25 +273,27 @@ export default function TrackResult() {
                                  {getStatusIcon(event.status, "w-5 h-5")}
                                </span>
                              </div>
-                             <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5 flex-col sm:flex-row gap-2 sm:gap-0">
-                               <div>
-                                 <p className={cn("text-lg font-bold", isFirst ? "text-gray-900" : "text-gray-600")}>
-                                   {event.status}
-                                 </p>
-                                 <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
-                                   <MapPin className="w-3.5 h-3.5" /> {event.location || "System Update"}
-                                 </p>
-                                 {event.note && (
-                                   <p className="mt-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                     {event.note}
-                                   </p>
-                                 )}
-                               </div>
-                               <div className="whitespace-nowrap text-left sm:text-right text-sm font-medium text-gray-500">
-                                 <time dateTime={event.occurred_at}>
-                                   {formatDateTime(event.occurred_at)}
+                             <div className="flex min-w-0 flex-1 pt-1.5 flex-col">
+                               <p className={cn("text-lg font-bold", isFirst ? "text-gray-900" : "text-gray-600")}>
+                                 {event.status}
+                               </p>
+                               <div className="mt-1">
+                                 <time dateTime={event.occurred_at} className="text-sm text-gray-500 font-medium">
+                                   {formatDateTime(event.occurred_at)} IST
                                  </time>
                                </div>
+                               <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-orange-700 bg-orange-50/60 px-2.5 py-1 rounded-md w-fit border border-orange-100/50">
+                                 <MapPin className="w-3 h-3 text-orange-400" />
+                                 {event.location || "System Update"}
+                               </div>
+                               {event.note && (
+                                 <div className="mt-3 p-3.5 bg-blue-50/40 border border-blue-100/60 rounded-xl text-sm text-blue-900/80 leading-relaxed shadow-sm flex items-start gap-2.5">
+                                   <svg className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                   </svg>
+                                   <p>{event.note}</p>
+                                 </div>
+                               )}
                              </div>
                            </div>
                          </div>
@@ -291,25 +306,7 @@ export default function TrackResult() {
          </div>
       )}
 
-      {/* Support Section */}
-      {data && (
-        <div className="bg-white border border-gray-100 shadow-sm rounded-3xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="bg-orange-50 p-4 rounded-full text-orange-500">
-              <Headset className="w-8 h-8" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">Need help with your shipment?</h3>
-              <p className="text-gray-500 text-sm mt-1 max-w-sm">
-                If you're experiencing any issues tracking your shipment or need further assistance, our team is here to help.
-              </p>
-            </div>
-          </div>
-          <Link href="/contact" className="shrink-0 w-full sm:w-auto px-6 py-3 bg-white border-2 border-orange-100 hover:border-orange-500 hover:bg-orange-50 text-orange-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
-            Contact Support <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
+
 
     </div>
   );

@@ -131,6 +131,41 @@ router.get('/dashboard-stats', async (req, res) => {
   }
 });
 
+router.patch('/shipments/:id/customer-update', async (req, res) => {
+  try {
+    const { customer_update, version } = req.body;
+    
+    if (version === undefined) {
+      return res.status(400).json({ success: false, message: 'Version is required for optimistic concurrency control'  });
+    }
+
+    const current = await prisma.shipment.findUnique({ where: { id: req.params.id } });
+    if (!current) return res.status(404).json({ success: false, message: 'Not found'  });
+    
+    if (current.current_status === 'Delivered') {
+      return res.status(403).json({ success: false, message: 'Cannot edit a delivered shipment (Read Only)'  });
+    }
+
+    if (current.version !== version) {
+      return res.status(409).json({ success: false, message: 'Conflict: This record has been updated by another user. Please refresh.'  });
+    }
+
+    const updated = await prisma.shipment.update({
+      where: { id: req.params.id, version },
+      data: { 
+        customer_update,
+        version: { increment: 1 }
+      },
+      include: { history: { orderBy: { occurred_at: 'desc' } } }
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Database error' });
+  }
+});
+
 router.get('/shipments/export', async (req, res) => {
   try {
     const { search, status, courier, startDate, endDate, isActive } = req.query;

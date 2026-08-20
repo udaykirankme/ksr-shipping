@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import TrackResult from "./TrackResult";
 import Link from "next/link";
-import { MessageSquare } from "lucide-react";
+import { Headset } from "lucide-react";
 
 export default function TrackPage() {
   return (
@@ -27,7 +27,7 @@ export default function TrackPage() {
         {/* Contact Support CTA */}
         <div className="mt-auto bg-white p-8 md:p-10 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 text-center flex flex-col items-center max-w-2xl mx-auto transition-all hover:shadow-[0_10px_30px_-15px_rgba(249,115,22,0.2)] hover:border-orange-200">
            <div className="w-14 h-14 bg-orange-50 rounded-full flex items-center justify-center mb-5 text-orange-500 shadow-inner">
-              <MessageSquare className="w-7 h-7" />
+              <Headset className="w-7 h-7" />
            </div>
            <h3 className="text-2xl font-bold text-gray-900 mb-3 tracking-tight">Facing Issues with Tracking?</h3>
            <p className="text-gray-600 mb-8 leading-relaxed max-w-lg">

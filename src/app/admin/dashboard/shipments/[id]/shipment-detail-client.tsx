@@ -29,9 +29,33 @@ const STATUS_WORKFLOW = [
   'Shipment Received',
   'Dispatched',
   'In Transit',
+  'At Hub',
   'Out For Delivery',
   'Delivered'
 ];
+
+function getOfficialTrackingInfo(service: string, trackingId: string) {
+  if (!service || !trackingId) return null;
+  const s = service.toLowerCase();
+  
+  if (s.includes('dhl')) {
+    return { name: 'DHL', url: `https://www.dhl.com/in-en/home/tracking.html?tracking-id=${trackingId}&submit=1` };
+  }
+  if (s.includes('ups')) {
+    return { name: 'UPS', url: `https://www.ups.com/track?loc=en_IN&requester=ST/&tracknum=${trackingId}` };
+  }
+  if (s.includes('fedex')) {
+    return { name: 'FedEx', url: `https://www.fedex.com/en-in/tracking.html?trackingnumber=${trackingId}` };
+  }
+  if (s.includes('delhivery')) {
+    return { name: 'Delhivery', url: `https://www.delhivery.com/tracking?id=${trackingId}` };
+  }
+  if (s.includes('dtdc')) {
+    return { name: 'DTDC', url: `https://www.dtdc.com/track-your-shipment/?trkNo=${trackingId}` };
+  }
+  
+  return null;
+}
 
 function getCurrentOccurredAt(): string {
   return getCurrentBusinessDateTimeInput();
@@ -257,6 +281,27 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     }
   };
 
+  const handleCustomerUpdateSave = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      const res = await shipmentService.updateCustomerUpdate(shipmentId, {
+        customer_update: formData.customer_update,
+        version: shipment.version
+      });
+      const resData = res as any;
+      setShipment(resData);
+      setFormData((prev: any) => ({ ...prev, ...resData }));
+      setSuccess('Customer update saved successfully');
+      router.refresh();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to save customer update');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleArchiveToggle = async () => {
     if (!confirm(`Are you sure you want to ${shipment.is_active ? 'archive' : 'unarchive'} this shipment?`)) return;
     
@@ -336,15 +381,41 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 {shipment.tracking_id}
                 <Copy className="w-4 h-4 text-gray-400 hover:text-orange-500" />
               </span>
+              <a 
+                href={`/track?id=${shipment.tracking_id}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-2 inline-flex items-center gap-1.5 px-3 py-1 text-sm font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 hover:text-orange-700 transition-colors"
+                title="Open KSR tracking page in a new tab"
+              >
+                Track on KSR
+              </a>
               {!shipment.is_active && (
                 <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">Archived</Badge>
               )}
             </div>
             {shipment.official_tracking_id && (
-              <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')} title="Click to copy Official Tracking Number">
-                Official Tracking: {shipment.official_tracking_id}
-                <Copy className="w-3 h-3 text-gray-400 hover:text-gray-600" />
-              </p>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-sm text-gray-500 flex items-center gap-2 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')} title="Click to copy Official Tracking Number">
+                  Official Tracking: {shipment.official_tracking_id}
+                  <Copy className="w-3 h-3 text-gray-400 hover:text-gray-600" />
+                </p>
+                {(() => {
+                  const info = getOfficialTrackingInfo(shipment.service, shipment.official_tracking_id);
+                  if (!info) return null;
+                  return (
+                    <a 
+                      href={info.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                      title={`Track on ${info.name} in a new tab`}
+                    >
+                      Track on {info.name}
+                    </a>
+                  );
+                })()}
+              </div>
             )}
           </div>
         </div>
@@ -395,17 +466,18 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                  <div className="flex items-center gap-2">
                    <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
                    {!isDelivered && (
-                     <button
-                       type="button"
-                       onClick={() => setIsEditing(!isEditing)}
-                       className={`p-1.5 rounded-lg transition-colors ${isEditing ? 'bg-orange-100 text-orange-600' : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50'}`}
-                       title={isEditing ? "Lock Editing" : "Unlock Editing"}
-                     >
-                       <Edit3 className="w-4 h-4" />
-                     </button>
-                   )}
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(!isEditing)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isEditing ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600 hover:text-orange-500 hover:bg-orange-50'}`}
+                        title={isEditing ? "Lock Editing" : "Unlock Editing"}
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        {isEditing ? "Lock Edit" : "Unlock Edit"}
+                      </button>
+                    )}
                  </div>
-                 {!isDelivered && (isEditing || formData.customer_update !== shipment.customer_update) && (
+                 {!isDelivered && isEditing && (
                    <button 
                      type="submit"
                      disabled={loading}
@@ -484,7 +556,17 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Update (Visible to Customer - to be added for Delays or Emergencies)</label>
-                  <textarea name="customer_update" value={formData.customer_update || ''} onChange={handleChange} rows={3} disabled={isDelivered} className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" placeholder="E.g. Customs clearance is taking longer than expected."></textarea>
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <textarea name="customer_update" value={formData.customer_update || ''} onChange={handleChange} rows={3} disabled={isDelivered} className="flex-1 w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" placeholder="E.g. Customs clearance is taking longer than expected."></textarea>
+                    <button 
+                      type="button" 
+                      onClick={handleCustomerUpdateSave}
+                      disabled={isDelivered || loading || formData.customer_update === shipment.customer_update}
+                      className="px-5 py-3 bg-green-600 hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] text-white font-semibold rounded-xl transition-all flex items-center gap-2 disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:shadow-none disabled:cursor-not-allowed whitespace-nowrap self-end sm:self-auto"
+                    >
+                      <Save className="w-5 h-5" /> Save Note
+                    </button>
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Internal Notes</label>

@@ -58,6 +58,15 @@ export const shipmentService = {
     });
   },
 
+  async updateCustomerUpdate(id: string, data: { customer_update: string; version: number }) {
+    return apiFetch(`${API_BASE}/shipments/${id}/customer-update`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(data)
+    });
+  },
+
   async updateStatus(id: string, data: { status: string, location?: string, occurred_at?: string, note?: string, version: number }) {
     return apiFetch(`${API_BASE}/shipments/${id}/status`, {
       method: 'PATCH',
