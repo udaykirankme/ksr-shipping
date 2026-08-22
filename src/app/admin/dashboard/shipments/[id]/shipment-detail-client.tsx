@@ -53,6 +53,9 @@ function getOfficialTrackingInfo(service: string, trackingId: string) {
   if (s.includes('dtdc')) {
     return { name: 'DTDC', url: `https://www.dtdc.com/track-your-shipment/?trkNo=${trackingId}` };
   }
+  if (s.includes('united')) {
+    return { name: 'United', url: `https://unitedexpress.in/track` };
+  }
   
   return null;
 }

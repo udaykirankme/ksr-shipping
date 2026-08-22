@@ -258,6 +258,7 @@ export function ShipmentListClient({
             }}
             options={[
               { label: 'All Statuses', value: '' },
+              { label: 'Non-delivered', value: 'Non-delivered' },
               { label: 'Shipment Created', value: 'Shipment Created' },
               { label: 'Picked Up', value: 'Picked Up' },
               { label: 'Dispatched', value: 'Dispatched' },

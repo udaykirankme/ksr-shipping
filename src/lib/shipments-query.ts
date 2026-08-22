@@ -36,7 +36,11 @@ function buildShipmentListWhere(filters: ShipmentListFilters): Prisma.ShipmentWh
   };
 
   if (filters.status) {
-    where.current_status = filters.status;
+    if (filters.status === 'Non-delivered') {
+      where.current_status = { not: 'Delivered' };
+    } else {
+      where.current_status = filters.status;
+    }
   }
 
   if (filters.courier) {

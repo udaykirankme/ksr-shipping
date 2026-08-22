@@ -176,7 +176,13 @@ router.get('/shipments/export', async (req, res) => {
       where.is_active = true;
     }
 
-    if (status) where.current_status = status;
+    if (status) {
+      if (status === 'Non-delivered') {
+        where.current_status = { not: 'Delivered' };
+      } else {
+        where.current_status = status;
+      }
+    }
     if (courier) where.courier = courier;
     
     if (startDate && endDate) {

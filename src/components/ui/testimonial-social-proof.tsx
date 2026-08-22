@@ -17,7 +17,7 @@ type TestimonialSocialProofProps = {
 
 export function TestimonialSocialProof({
   className,
-  rating = 4.9,
+  rating = 5,
   userCount = "50,000+",
 }: TestimonialSocialProofProps) {
   return (

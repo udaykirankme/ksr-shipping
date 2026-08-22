@@ -35,6 +35,14 @@ export default async function DashboardPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-6">
         <CircularKpi 
+          title="Profit This Month" 
+          value={formatRupee(stats.monthlyProfit || 0)} 
+          subtitle="Total profit booked"
+          icon={TrendingUp} 
+          progress={100}
+          colorClass="text-emerald-500"
+        />
+        <CircularKpi 
           title="Shipments Created" 
           value={stats.createdShipments?.toString() || "0"} 
           subtitle="New shipments this month"
@@ -49,14 +57,6 @@ export default async function DashboardPage() {
           icon={Truck} 
           progress={100}
           colorClass="text-orange-500"
-        />
-        <CircularKpi 
-          title="Profit This Month" 
-          value={formatRupee(stats.monthlyProfit || 0)} 
-          subtitle="Total profit booked"
-          icon={TrendingUp} 
-          progress={100}
-          colorClass="text-emerald-500"
         />
       </div>
 
