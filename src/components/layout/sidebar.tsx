@@ -65,6 +65,7 @@ function SidebarContent({
   onClose?: () => void;
   counts?: { unreadQuotes: number; unreadContacts: number; };
   collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   const renderLink = (item: NavItem) => {
     const isActive = item.href === '/admin/dashboard' 
