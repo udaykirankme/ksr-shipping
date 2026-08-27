@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 import { getQuote, updateQuote, updateQuoteStatus, QuotationRequest, deleteQuote } from "@/lib/quote-service";
 import { formatDateTime } from "@/lib/format";
 import { openWhatsAppShare, buildQuoteReplyMessage } from "@/lib/whatsapp-share";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 
 
 export function QuoteDetailClient({ id }: { id: string }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [quote, setQuote] = useState<QuotationRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,7 +94,7 @@ export function QuoteDetailClient({ id }: { id: string }) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this quote request?")) return;
+    if (!(await confirm("Are you sure you want to permanently delete this quote request?"))) return;
     setSaving(true);
     try {
       await deleteQuote(id);

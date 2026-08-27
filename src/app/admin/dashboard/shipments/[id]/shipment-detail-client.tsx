@@ -21,6 +21,7 @@ import {
   buildStatusUpdateShareMessage,
   openWhatsAppShare,
 } from '@/lib/whatsapp-share';
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 const STATUS_WORKFLOW = [
   'Shipment Created',
@@ -69,10 +70,10 @@ function getNextStatusUpdate(currentStatus: string) {
   if (currentIndex > -1 && currentIndex < STATUS_WORKFLOW.length - 1) {
     return {
       status: STATUS_WORKFLOW[currentIndex + 1],
-      occurred_at: getCurrentOccurredAt(),
+      occurred_at: '',
     };
   }
-  return { status: '', occurred_at: getCurrentOccurredAt() };
+  return { status: '', occurred_at: '' };
 }
 
 type SavedStatusShare = {
@@ -122,6 +123,7 @@ function getShareableStatus(shipment: {
 
 export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: string, initialData: any }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [shipment, setShipment] = useState(initialData);
   const [formData, setFormData] = useState({ 
     ...initialData,
@@ -139,7 +141,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     status: getNextStatusUpdate(initialData.current_status).status,
     location: '',
     note: '',
-    occurred_at: getCurrentOccurredAt(),
+    occurred_at: '',
   }));
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
@@ -306,7 +308,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   };
 
   const handleArchiveToggle = async () => {
-    if (!confirm(`Are you sure you want to ${shipment.is_active ? 'archive' : 'unarchive'} this shipment?`)) return;
+    if (!(await confirm(`Are you sure you want to ${shipment.is_active ? 'archive' : 'unarchive'} this shipment?`))) return;
     
     setError('');
     setSuccess('');
@@ -324,7 +326,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this shipment? This action cannot be undone.")) return;
+    if (!(await confirm("Are you sure you want to permanently delete this shipment? This action cannot be undone."))) return;
     try {
       setLoading(true);
       await shipmentService.deleteShipment(shipmentId);
@@ -680,7 +682,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                           ...prev,
                           status: value,
                           location: newLoc,
-                          occurred_at: getCurrentOccurredAt(),
                         }))
                       }}
                       options={STATUS_WORKFLOW.map(s => ({ label: s, value: s }))}
@@ -695,21 +696,25 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Update Date <span className="text-red-500">*</span></label>
                       <PremiumDatePicker 
-                        value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : ''} 
+                        value={statusUpdate.occurred_at && statusUpdate.occurred_at.includes('T') ? statusUpdate.occurred_at.split('T')[0] : ''} 
                         onChange={(date) => {
-                          const dateStr = formatDateToYYYYMMDD(date);
-                          const timeStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : '12:00';
-                          setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
+                          const dateStr = date ? formatDateToYYYYMMDD(date) : '';
+                          setStatusUpdate(prev => {
+                            const timeStr = prev.occurred_at && prev.occurred_at.includes('T') ? prev.occurred_at.split('T')[1].substring(0, 5) : '';
+                            return { ...prev, occurred_at: dateStr || timeStr ? `${dateStr}T${timeStr ? timeStr + ':00' : ''}` : '' };
+                          });
                         }} 
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Update Time <span className="text-red-500">*</span></label>
                       <PremiumTimePicker 
-                        value={statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : ''} 
+                        value={statusUpdate.occurred_at && statusUpdate.occurred_at.includes('T') ? statusUpdate.occurred_at.split('T')[1].substring(0, 5) : ''} 
                         onChange={(timeStr) => {
-                          const dateStr = statusUpdate.occurred_at ? statusUpdate.occurred_at.split('T')[0] : formatDateToYYYYMMDD(new Date());
-                          setStatusUpdate(prev => ({ ...prev, occurred_at: `${dateStr}T${timeStr}:00` }));
+                          setStatusUpdate(prev => {
+                            const dateStr = prev.occurred_at && prev.occurred_at.includes('T') ? prev.occurred_at.split('T')[0] : '';
+                            return { ...prev, occurred_at: dateStr || timeStr ? `${dateStr}T${timeStr ? timeStr + ':00' : ''}` : '' };
+                          });
                         }} 
                       />
                     </div>

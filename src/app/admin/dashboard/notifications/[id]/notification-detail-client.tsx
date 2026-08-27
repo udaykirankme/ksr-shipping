@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { notificationService, NotificationItem } from "@/lib/notification-service";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function NotificationDetailClient({ id }: { id: string }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [notification, setNotification] = useState<NotificationItem | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -103,7 +105,7 @@ export function NotificationDetailClient({ id }: { id: string }) {
           <Button 
             variant="outline" 
             onClick={async () => {
-              if (!window.confirm("Are you sure you want to delete this notification?")) return;
+              if (!(await confirm("Are you sure you want to delete this notification?"))) return;
               try {
                 await notificationService.deleteNotification(notification.id);
                 router.push("/admin/dashboard/notifications");

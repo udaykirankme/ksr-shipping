@@ -10,9 +10,11 @@ import { formatDate } from "@/lib/format";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function NotificationListClient() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -113,7 +115,7 @@ export function NotificationListClient() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} notifications?`)) return;
+    if (!(await confirm(`Are you sure you want to delete ${selectedIds.size} notifications?`))) return;
     setLoading(true);
     try {
       await notificationService.deleteBulk(Array.from(selectedIds));
@@ -126,7 +128,7 @@ export function NotificationListClient() {
   };
 
   const handleDeleteAllRead = async () => {
-    if (!window.confirm("Are you sure you want to delete all read notifications?")) return;
+    if (!(await confirm("Are you sure you want to delete all read notifications?"))) return;
     setLoading(true);
     try {
       await notificationService.deleteAllRead();
@@ -138,7 +140,7 @@ export function NotificationListClient() {
   };
 
   const handleCleanup = async () => {
-    if (!window.confirm("Are you sure you want to delete all notifications older than 90 days?")) return;
+    if (!(await confirm("Are you sure you want to delete all notifications older than 90 days?"))) return;
     setLoading(true);
     try {
       await notificationService.cleanupOld();

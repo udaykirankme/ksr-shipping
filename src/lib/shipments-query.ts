@@ -69,6 +69,7 @@ function buildShipmentListWhere(filters: ShipmentListFilters): Prisma.ShipmentWh
       { receiver_name: { contains: search, mode: 'insensitive' } },
       { sender_phone: { contains: search, mode: 'insensitive' } },
       { receiver_phone: { contains: search, mode: 'insensitive' } },
+      { service: { contains: search, mode: 'insensitive' } },
     ];
   }
 

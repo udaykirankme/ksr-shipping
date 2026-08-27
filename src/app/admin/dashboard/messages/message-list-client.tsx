@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { contactService, ContactMessage } from "@/lib/contact-service";
 import { formatDate } from "@/lib/format";
 import { DateFilter } from "@/components/dashboard/date-filter";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function MessageListClient() {
+  const confirm = useConfirm();
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -70,7 +72,7 @@ export function MessageListClient() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this message?")) return;
+    if (!(await confirm("Are you sure you want to permanently delete this message?"))) return;
     try {
       await contactService.deleteMessage(id);
       await fetchMessages();
@@ -89,7 +91,7 @@ export function MessageListClient() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} messages permanently?\n\nThis action cannot be undone.`)) return;
+    if (!(await confirm(`Delete ${selectedIds.size} messages permanently?\n\nThis action cannot be undone.`))) return;
     setLoading(true);
     try {
       await contactService.deleteBulk(Array.from(selectedIds));

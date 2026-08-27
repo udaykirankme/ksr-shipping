@@ -12,17 +12,19 @@ import { Star } from "lucide-react";
 type HeaderProps = {
   onMenuClick?: () => void;
   mobileSidebarOpen?: boolean;
+  onDesktopMenuClick?: () => void;
+  desktopCollapsed?: boolean;
 };
 
-export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) {
+export function Header({ onMenuClick, mobileSidebarOpen = false, onDesktopMenuClick, desktopCollapsed }: HeaderProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -30,6 +32,7 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
 
   const isMounted = useRef(true);
   useEffect(() => {
+    isMounted.current = true;
     return () => { isMounted.current = false; };
   }, []);
 
@@ -150,9 +153,10 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
 
   return (
     <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-x-4 glass-panel border-b-0 px-4 sm:gap-x-6 sm:px-6 lg:px-8">
+      {/* Mobile Menu Button */}
       <button
         type="button"
-        className="-m-2.5 p-2.5 text-gray-700 md:hidden rounded-lg hover:bg-orange-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+        className="p-2 text-gray-600 md:hidden rounded-xl hover:bg-orange-100 hover:text-orange-600 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
         onClick={onMenuClick}
         aria-expanded={mobileSidebarOpen}
         aria-controls="admin-mobile-sidebar"
@@ -161,13 +165,31 @@ export function Header({ onMenuClick, mobileSidebarOpen = false }: HeaderProps) 
         <Menu className="h-6 w-6" aria-hidden="true" />
       </button>
 
-      <div className="h-6 w-px bg-gray-200 md:hidden" aria-hidden="true" />
+      {/* Desktop Menu Button */}
+      {onDesktopMenuClick && (
+        <button
+          type="button"
+          className="p-2 text-gray-600 hidden md:flex items-center justify-center rounded-xl hover:bg-orange-100 hover:text-orange-600 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 mr-2"
+          onClick={onDesktopMenuClick}
+          aria-expanded={!desktopCollapsed}
+          aria-controls="admin-desktop-sidebar"
+          title={desktopCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <span className="sr-only">Toggle sidebar</span>
+          <Menu className="h-6 w-6" aria-hidden="true" />
+        </button>
+      )}
+
+      <div className="h-6 w-px bg-gray-200 md:hidden ml-2" aria-hidden="true" />
 
       <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         <div className="flex flex-1 items-center gap-x-4">
           <div className="hidden sm:block">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
-            <p className="text-sm text-gray-500 font-medium">{currentDate}</p>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight leading-tight">Dashboard</h1>
+            <div className="text-sm text-gray-500 font-medium flex flex-col leading-tight mt-1">
+              <span>{currentDay},</span>
+              <span>{currentDate}</span>
+            </div>
           </div>
           
           <div className="relative w-full max-w-md ml-auto group">

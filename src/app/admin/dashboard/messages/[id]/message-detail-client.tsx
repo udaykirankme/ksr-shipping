@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { contactService, ContactMessage } from "@/lib/contact-service";
 import { formatDate } from "@/lib/format";
 import { openWhatsAppShare, buildContactReplyMessage } from "@/lib/whatsapp-share";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function MessageDetailClient({ messageId }: { messageId: string }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [message, setMessage] = useState<ContactMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -45,7 +47,7 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this message?")) return;
+    if (!(await confirm("Are you sure you want to permanently delete this message?"))) return;
     setActionLoading(true);
     try {
       await contactService.deleteMessage(messageId);

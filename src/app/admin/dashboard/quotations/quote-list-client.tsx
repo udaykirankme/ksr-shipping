@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { getQuotes, QuotationRequest, toggleStar, deleteBulk, deleteQuote, markAllQuotesAsRead, respondBulk, updateQuoteStatus } from "@/lib/quote-service";
 import { formatDate } from "@/lib/format";
 import { DateFilter } from "@/components/dashboard/date-filter";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function QuoteListClient() {
+  const confirm = useConfirm();
   const [quotes, setQuotes] = useState<QuotationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -71,7 +73,7 @@ export function QuoteListClient() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this quote request?")) return;
+    if (!(await confirm("Are you sure you want to permanently delete this quote request?"))) return;
     try {
       await deleteQuote(id);
       await handleRefresh();
@@ -90,7 +92,7 @@ export function QuoteListClient() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} quote requests permanently?\n\nThis action cannot be undone.`)) return;
+    if (!(await confirm(`Delete ${selectedIds.size} quote requests permanently?\n\nThis action cannot be undone.`))) return;
     setLoading(true);
     try {
       await deleteBulk(Array.from(selectedIds));

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { shipmentService } from "@/lib/shipment-service";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { useConfirm } from "@/components/ui/confirm-modal";
 
 interface ShipmentData {
   id: string;
@@ -43,6 +44,7 @@ export function ShipmentListClient({
   initialTotal?: number;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const hasInitialData = initialShipments.length > 0 || initialTotal > 0;
   const [shipments, setShipments] = useState<ShipmentData[]>(initialShipments);
   const [loading, setLoading] = useState(!hasInitialData);
@@ -130,7 +132,7 @@ export function ShipmentListClient({
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this shipment? This action cannot be undone.")) return;
+    if (!(await confirm("Are you sure you want to permanently delete this shipment? This action cannot be undone."))) return;
     try {
       await shipmentService.deleteShipment(id);
       await handleRefresh();
@@ -150,7 +152,7 @@ export function ShipmentListClient({
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.size} shipments permanently?\n\nThis action cannot be undone.`)) return;
+    if (!(await confirm(`Delete ${selectedIds.size} shipments permanently?\n\nThis action cannot be undone.`))) return;
     setLoading(true);
     try {
       await shipmentService.deleteBulk(Array.from(selectedIds));
@@ -197,26 +199,29 @@ export function ShipmentListClient({
           <h1 className="text-2xl font-bold text-gray-900">Shipments</h1>
           <p className="text-sm text-gray-500 mt-1">Manage and track all logistics operations</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => setIsActiveFilter(!isActiveFilter)} className="gap-2">
-            {isActiveFilter ? <ArchiveRestore className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
-            {isActiveFilter ? 'View Inactive' : 'View Active'}
+        <div className="flex flex-wrap lg:flex-nowrap items-center justify-end gap-2 sm:gap-3 w-full sm:w-auto flex-1">
+          <Button variant="outline" onClick={() => setIsActiveFilter(!isActiveFilter)} className="gap-2 shrink-0 px-3 sm:px-4">
+            {isActiveFilter ? <ArchiveRestore className="w-4 h-4 shrink-0" /> : <Filter className="w-4 h-4 shrink-0" />}
+            <span className="hidden xl:inline">{isActiveFilter ? 'View Inactive' : 'View Active'}</span>
+            <span className="hidden md:inline xl:hidden">{isActiveFilter ? 'Inactive' : 'Active'}</span>
           </Button>
           <Button 
             variant={olderThan31Days ? "default" : "outline"}
             onClick={() => { setOlderThan31Days(!olderThan31Days); setPage(1); }} 
-            className={`gap-2 ${olderThan31Days ? 'bg-orange-500 hover:bg-orange-600 text-white border-transparent' : ''}`}
+            className={`gap-2 shrink-0 px-3 sm:px-4 ${olderThan31Days ? 'bg-orange-500 hover:bg-orange-600 text-white border-transparent' : ''}`}
           >
-            Older than 31 days
+            <span className="hidden xl:inline">Older than 31 days</span>
+            <span className="hidden md:inline xl:hidden">&gt; 31d</span>
           </Button>
-          <Button variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4" />
+          <Button variant="outline" onClick={handleRefresh} className="shrink-0 px-3">
+            <RefreshCw className="w-4 h-4 shrink-0" />
           </Button>
 
-          <div className="relative group">
-            <Button variant="outline" className="gap-2 border-orange-200 text-orange-600 hover:bg-orange-50">
-              <Download className="w-4 h-4" />
-              Export ▼
+          <div className="relative group shrink-0 z-20">
+            <Button variant="outline" className="gap-1.5 sm:gap-2 px-3 sm:px-4 border-orange-200 text-orange-600 hover:bg-orange-50">
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Export</span>
+              <span className="text-[10px] sm:text-xs">▼</span>
             </Button>
             <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
               <button onClick={() => handleExport('current_month')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-50 text-gray-700 transition-colors">
@@ -228,10 +233,11 @@ export function ShipmentListClient({
             </div>
           </div>
 
-          <Link href="/admin/dashboard/shipments/new">
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
-              <Plus className="w-4 h-4" />
-              Create Shipment
+          <Link href="/admin/dashboard/shipments/new" className="shrink-0">
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white gap-2 px-3 sm:px-4 w-full">
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Create Shipment</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </Link>
         </div>
@@ -242,7 +248,7 @@ export function ShipmentListClient({
         <div className="relative flex-1 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-orange-500 transition-colors" />
           <Input 
-            placeholder="Search tracking, names, phones..." 
+            placeholder="Search tracking, names, phones, service..." 
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -313,7 +319,7 @@ export function ShipmentListClient({
                 <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Status</TableHead>
                 <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Booked Date</TableHead>
                 <TableHead className="font-semibold text-gray-900 text-right whitespace-nowrap">Profit</TableHead>
-                <TableHead className="w-24"></TableHead>
+                <TableHead className="w-24 font-semibold text-gray-900 text-center whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -380,16 +386,16 @@ export function ShipmentListClient({
                     {formatCurrency(shipment.profit || 0)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDelete(shipment.id, e)}>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors" onClick={(e) => handleDelete(shipment.id, e)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" asChild>
+                      <Button variant="ghost" size="icon" className="transition-colors" asChild>
                         <Link href={`/admin/dashboard/shipments/${shipment.id}`}>
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit text-gray-500"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" asChild>
+                      <Button variant="ghost" size="icon" className="transition-colors" asChild>
                         <Link href={`/admin/dashboard/shipments/${shipment.id}`}>
                           <ArrowRight className="w-4 h-4 text-gray-400" />
                         </Link>

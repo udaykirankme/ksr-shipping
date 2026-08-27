@@ -35,8 +35,19 @@ export function PremiumTimePicker({
   useEffect(() => {
     if (isOpen) {
       setViewMode('hour');
+      if (!value) {
+        const now = new Date();
+        let hourNum = now.getHours();
+        const m = now.getMinutes().toString().padStart(2, '0');
+        const isPm = hourNum >= 12;
+        if (hourNum === 0) hourNum = 12;
+        if (hourNum > 12) hourNum -= 12;
+        setHour(hourNum.toString().padStart(2, '0'));
+        setMinute(m);
+        setAmpm(isPm ? "PM" : "AM");
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, value]);
 
   const { initialHour, initialMin, initialAmPm } = useMemo(() => {
     if (!value) return { initialHour: "12", initialMin: "00", initialAmPm: "PM" };
@@ -299,7 +310,15 @@ export function PremiumTimePicker({
           <div className="flex justify-end pt-4 pr-4">
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                if (!value) {
+                  let h24 = parseInt(hour, 10);
+                  if (ampm === "PM" && h24 !== 12) h24 += 12;
+                  if (ampm === "AM" && h24 === 12) h24 = 0;
+                  onChange(`${h24.toString().padStart(2, '0')}:${minute}`);
+                }
+                setIsOpen(false);
+              }}
               className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm rounded-full transition-colors shadow-sm"
             >
               Done
