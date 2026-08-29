@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Bomb, FlaskConical, Skull, Radiation, Banknote, Bug, Ban, AlertTriangle } from "lucide-react";
+import { Flame, Bomb, FlaskConical, Skull, Radiation, Banknote, Bug, Ban, AlertTriangle, Gem, Settings, Snowflake, Fuel } from "lucide-react";
 import { motion } from "framer-motion";
 
 const RESTRICTED_ITEMS = [
@@ -59,6 +59,34 @@ const RESTRICTED_ITEMS = [
     name: "Illegal Narcotics",
     desc: "Banned substances and unlicensed medicines.",
     reason: "Strict legal prohibition under domestic and international law.",
+  },
+  {
+    id: "fuels",
+    icon: Fuel,
+    name: "Fuels",
+    desc: "Fuel for camp stoves, lanterns, torches, or heating elements.",
+    reason: "Combustible hazard that is strictly prohibited on flights and standard transport.",
+  },
+  {
+    id: "machinery",
+    icon: Settings,
+    name: "Certain Types of Machinery",
+    desc: "Chainsaws, mining equipment, military or defence equipment.",
+    reason: "Can contain residual fuel or pose structural risks during loading.",
+  },
+  {
+    id: "jewelry",
+    icon: Gem,
+    name: "Jewelry",
+    desc: "Precious stones, ornaments, and gems.",
+    reason: "High value items requiring specialized insured transit outside standard networks.",
+  },
+  {
+    id: "dry-ice",
+    icon: Snowflake,
+    name: "Dry Ice",
+    desc: "Carbon dioxide in its solid state.",
+    reason: "Sublimates into gas causing pressure buildup, requires dangerous goods declaration.",
   },
 ];
 

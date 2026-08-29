@@ -65,33 +65,18 @@ export default function ContactPage() {
          {/* Header */}
          <div className="pt-4 pb-4 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="max-w-3xl mx-auto">
-               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
-               <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
+               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 lg:mb-6 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
+               <p className="text-base md:text-xl text-gray-600 leading-relaxed">
                   Have a question, feedback, or need help with a shipment? We&apos;re here for you.
                </p>
-               {/* Mobile CTA – visible only on smaller displays */}
-               <button
-                  type="button"
-                  className="mt-8 w-full sm:w-auto lg:hidden inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold text-white shadow-[0_4px_14px_rgba(249,115,22,0.35)] hover:shadow-[0_6px_20px_rgba(249,115,22,0.45)] active:scale-95 transition-all duration-200"
-                  style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
-                  onClick={() => {
-                     const el = document.getElementById('enquiry-form');
-                     if (el) {
-                        const y = el.getBoundingClientRect().top + window.scrollY - 32;
-                        window.scrollTo({ top: y, behavior: 'smooth' });
-                     }
-                  }}
-               >
-                  Fill Enquiry Form
-               </button>
             </div>
          </div>
 
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-0 lg:pt-2 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 pt-2 lg:pt-2 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
 
                {/* Contact Info */}
-               <div>
+               <div className="order-2 lg:order-1">
                   <h2 className="text-3xl font-bold text-gray-900 mb-8">Get in Touch</h2>
                   <div className="space-y-8">
                      <div className="flex items-start gap-4">
@@ -137,10 +122,10 @@ export default function ContactPage() {
                </div>
 
                {/* Contact Form */}
-               <div id="enquiry-form" className="relative scroll-mt-8">
+               <div id="enquiry-form" className="relative scroll-mt-8 order-1 lg:order-2">
                   <div className="absolute -inset-4 bg-gradient-to-br from-orange-200/40 via-orange-100/20 to-transparent rounded-[2rem] blur-2xl pointer-events-none" />
                   <div
-                     className="relative w-full rounded-3xl border border-white/60 p-8 sm:p-10"
+                     className="relative w-full rounded-3xl border border-white/60 p-5 sm:p-8 lg:p-10"
                      style={{
                         background: "rgba(255, 255, 255, 0.55)",
                         backdropFilter: "blur(24px) saturate(180%)",
@@ -154,7 +139,7 @@ export default function ContactPage() {
                            Send a Message
                         </h3>
                      </div>
-                     <p className="text-sm text-gray-500 mb-6">
+                     <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
                         Fill in your details and we&apos;ll get back to you shortly.
                      </p>
 
@@ -165,7 +150,7 @@ export default function ContactPage() {
                            <button onClick={() => setSuccess(false)} className="mt-6 text-orange-600 font-semibold hover:text-orange-700">Send another message</button>
                         </div>
                      ) : (
-                        <form onSubmit={handleSubmit} className="space-y-5">
+                        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-5 pb-6 sm:pb-0">
                            {error && (
                               <div className="bg-red-50/90 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm backdrop-blur-sm">
                                  {error}
@@ -173,23 +158,23 @@ export default function ContactPage() {
                            )}
 
                            <div>
-                              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Full Name *</label>
-                              <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow" />
+                              <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Full Name *</label>
+                              <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Phone Number *</label>
-                              <input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow" />
+                              <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Phone Number *</label>
+                              <input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Email Address</label>
-                              <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow" />
+                              <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Email Address</label>
+                              <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" />
                            </div>
                            <div>
-                              <label className="block text-sm font-semibold text-gray-800 mb-1.5">Message *</label>
-                              <textarea required rows={4} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow resize-none"></textarea>
+                              <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Message *</label>
+                              <textarea required rows={3} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow resize-none text-sm sm:text-base"></textarea>
                            </div>
 
-                           <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-base py-3.5 rounded-xl flex items-center justify-center transition-colors active:scale-95 disabled:opacity-50 shadow-[0_4px_14px_rgba(249,115,22,0.35)]">
+                           <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl flex items-center justify-center transition-colors active:scale-95 disabled:opacity-50 shadow-[0_4px_14px_rgba(249,115,22,0.35)] mt-2">
                               {loading ? 'Sending...' : 'Send Message'}
                            </button>
                         </form>
