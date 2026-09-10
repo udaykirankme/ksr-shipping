@@ -117,17 +117,19 @@ export function buildLocalBusinessSchema() {
     ],
     parentOrganization: { "@id": `${SITE_URL}/#organization` },
     knowsAbout: [
-      "International Courier",
-      "Domestic Courier",
-      "Medicine Shipping",
-      "Document Shipping",
-      "Commercial Shipping",
-      "Fragile Shipping",
-      "Logistics",
-      "Free Pickup and Packing",
-      "Food-Grade Packing Materials",
-      "Affordable International Courier",
-      "Customs Clearance",
+      "International Courier Services",
+      "Domestic Courier Pan India",
+      "Free Doorstep Pickup Courier Hyderabad",
+      "Food-Grade Packing for Sweets and Pickles",
+      "Prescription Medicine Courier",
+      "Urgent Healthcare Logistics",
+      "Fragile and Electronics Item Packaging",
+      "Confidential Legal Document and Passport Delivery",
+      "Commercial and B2B Freight Logistics",
+      "Customs Clearance and International Documentation",
+      "Real-Time Parcel Tracking",
+      "Affordable Courier to USA, UK, Canada, Australia, UAE, Singapore, Europe",
+      "Door-to-door Express Shipping",
     ],
   };
 }
@@ -221,9 +223,59 @@ export type ServiceSchemaItem = {
   image: string;
 };
 
-export function buildServiceCatalogSchema(services: ServiceSchemaItem[]) {
+export const DEFAULT_SERVICES_SCHEMA: ServiceSchemaItem[] = [
+  {
+    id: "international-courier",
+    title: "International Courier Services",
+    overview: "Fast, reliable worldwide shipping to over 150 countries including USA, UK, Canada, Australia, UAE, Singapore, and Europe. Complete customs clearance paperwork assistance and door-to-door delivery.",
+    image: "/international_courier.png",
+  },
+  {
+    id: "domestic-courier",
+    title: "Domestic Courier Services (Pan-India)",
+    overview: "Comprehensive domestic shipping across India covering all states, cities, and pin codes. Features both Domestic Air Courier for urgent deliveries and Domestic Road Courier for economical transportation with verified doorstep pickup.",
+    image: "/domestic_courier.png",
+  },
+  {
+    id: "medicine-shipping",
+    title: "Medicine Shipping & Healthcare Logistics",
+    overview: "Safe, compliant, temperature-aware and prioritized transportation of prescription medicines, critical healthcare essentials, and emergency medical supplies worldwide.",
+    image: "/medicine_shipping.png",
+  },
+  {
+    id: "fragile-shipping",
+    title: "Fragile Shipping & Delicate Cargo Protection",
+    overview: "Reinforced multi-layer packaging, heavy-duty bubble wrap, foam cushioning, and custom boxing for fragile, delicate, glassware, and sensitive electronics.",
+    image: "/fragile_shipping.png",
+  },
+  {
+    id: "commercial-shipping",
+    title: "Commercial Shipping & Enterprise B2B Logistics",
+    overview: "Smart B2B logistics, palletized shipments, warehouse pickups, scheduled dispatch, and discounted corporate enterprise shipping solutions.",
+    image: "/commercial_shipping.png",
+  },
+  {
+    id: "document-shipping",
+    title: "Express Document Delivery",
+    overview: "Confidential, tamper-evident, and urgent courier delivery of legal documents, passports, contracts, and business certificates with signature upon delivery.",
+    image: "/express_document_delivery.png",
+  },
+  {
+    id: "food-grade-packing",
+    title: "Premium Food-Grade Packing for Sweets, Snacks & Pickles",
+    overview: "Specialized, certified food-grade packaging materials engineered to keep homemade treats, traditional sweets, spices, and pickles fresh, hygienic, and leak-proof during international transit.",
+    image: "/bg.png",
+  },
+  {
+    id: "free-doorstep-pickup",
+    title: "100% Free Doorstep Courier Pickup",
+    overview: "Convenient, zero-cost doorstep collection directly from your home or office in Hyderabad and surrounding areas, eliminating branch queues.",
+    image: "/bg.png",
+  },
+];
+
+export function buildServiceCatalogSchema(services: ServiceSchemaItem[] = DEFAULT_SERVICES_SCHEMA) {
   return {
-    "@context": "https://schema.org",
     "@type": "OfferCatalog",
     name: `${SITE_NAME} Courier Services`,
     itemListElement: services.map((service, index) => ({
@@ -238,6 +290,77 @@ export function buildServiceCatalogSchema(services: ServiceSchemaItem[]) {
         provider: { "@id": `${SITE_URL}/#localbusiness` },
         areaServed: ["Hyderabad", "Telangana", "India", "USA", "UK", "Canada", "Australia", "UAE", "Singapore", "New Zealand", "Europe"],
         serviceType: service.title,
+      },
+    })),
+  };
+}
+
+export function buildWhyChooseUsItemListSchema() {
+  const points = [
+    { name: "Convenient Doorstep Pickup", desc: "100% free pickup directly from your home or office, avoiding long courier branch queues." },
+    { name: "Priority Express Delivery", desc: "Lightning-fast, on-time delivery across India and worldwide through priority routing networks." },
+    { name: "Premium Food-Grade Packing", desc: "Specialized food-grade materials keeping homemade treats, sweets, and pickles clean, fresh, and protected." },
+    { name: "Real-Time Shipment Tracking", desc: "Single unified tracking number to track parcels 24/7 across all delivery partners." },
+    { name: "Safe & Secure Handling", desc: "Strict security protocols, monitored warehousing, and comprehensive transit guidelines." },
+    { name: "Advanced Protection for Fragile Shipments", desc: "Extra cushioning, shock absorption, and secure packaging best practices for delicate goods." },
+    { name: "Dedicated Customer Support", desc: "Fast personal assistance via Phone, WhatsApp, and Email for all tracking and courier queries." },
+    { name: "Trusted Courier Network", desc: "Intelligent partnerships with DHL, FedEx, UPS, DTDC, Delhivery, Shadowfax, and Ekart." },
+    { name: "Global Shipping & Customs Clearance", desc: "End-to-end international courier to 150+ countries with complex customs documentation handled." },
+    { name: "Business Logistics Solutions", desc: "Tailored bulk shipping, warehouse dispatches, and end-to-end enterprise B2B solutions." },
+    { name: "Secure Medicine Shipping", desc: "Compliant, temperature-aware, and urgent transportation of prescription medicines and healthcare supplies." },
+    { name: "Trusted by Thousands", desc: "Over 50,000+ satisfied customers with a 99.5% on-time delivery record." }
+  ];
+
+  return {
+    "@type": "ItemList",
+    name: "Why Choose KSR Shipping Services",
+    description: "Core differentiators and service highlights of KSR Shipping Services.",
+    itemListElement: points.map((pt, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: pt.name,
+      description: pt.desc,
+    })),
+  };
+}
+
+export function buildHomeFaqSchema() {
+  const faqs = [
+    {
+      q: "Does KSR Shipping Services provide free doorstep pickup?",
+      a: "Yes, KSR Shipping Services provides 100% free doorstep pickup from your home or office across Hyderabad and Telangana. You can schedule a pickup online at ksrshipping.com or call +91 99638 14267."
+    },
+    {
+      q: "Can I send homemade food, sweets, and pickles to the USA, UK, or other countries?",
+      a: "Yes, we specialize in international courier for homemade foods, sweets, snacks, and pickles. We use premium, certified food-grade packaging materials to ensure hygiene, complete freshness, and prevent any leakage during transit to USA, UK, Canada, Australia, UAE, Europe, and worldwide."
+    },
+    {
+      q: "Can I courier prescription medicines internationally through KSR Shipping?",
+      a: "Yes, we handle compliant, temperature-aware, and urgent international and domestic shipping of prescription medicines and healthcare supplies with specialized documentation and priority customs clearance."
+    },
+    {
+      q: "Which countries does KSR Shipping deliver to?",
+      a: "KSR Shipping Services delivers globally to over 150 countries, including USA, UK, Canada, Australia, UAE, Singapore, New Zealand, and all European nations, alongside comprehensive pan-India domestic delivery."
+    },
+    {
+      q: "How can I track my courier parcel?",
+      a: "You can track your shipment 24/7 in real-time by entering your unified tracking ID at ksrshipping.com/track across all of our partner courier networks."
+    },
+    {
+      q: "How does KSR Shipping protect fragile and delicate items?",
+      a: "We utilize multi-layer protective packaging, high-density bubble wrap, foam cushioning, and reinforced corrugated boxes to ensure delicate, fragile, glass, and electronic items are fully safeguarded throughout their journey."
+    }
+  ];
+
+  return {
+    "@type": "FAQPage",
+    name: "KSR Shipping Services - Frequently Asked Questions",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.a,
       },
     })),
   };
@@ -267,6 +390,9 @@ export function buildGlobalSchemaGraph() {
       buildOrganizationSchema(),
       buildLocalBusinessSchema(),
       buildWebSiteSchema(),
+      buildServiceCatalogSchema(),
+      buildWhyChooseUsItemListSchema(),
+      buildHomeFaqSchema(),
       ...buildSiteNavigationSchema(),
     ],
   };

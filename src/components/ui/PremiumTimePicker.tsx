@@ -47,7 +47,7 @@ export function PremiumTimePicker({
         setAmpm(isPm ? "PM" : "AM");
       }
     }
-  }, [isOpen, value]);
+  }, [isOpen]);
 
   const { initialHour, initialMin, initialAmPm } = useMemo(() => {
     if (!value) return { initialHour: "12", initialMin: "00", initialAmPm: "PM" };

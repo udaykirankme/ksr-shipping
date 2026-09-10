@@ -3,28 +3,55 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion, useMotionValue, useTransform, PanInfo, useInView, animate } from "framer-motion";
 import { 
-  PackageCheck, Home, MapPin, Globe2, Network, ShieldCheck, 
-  HeadphonesIcon, ThumbsUp, Box, HeartPulse, Building2, Zap,
+  Plane, Truck, HeartPulse, Box, Building2, FileText,
   ChevronLeft, ChevronRight, Hand
 } from "lucide-react";
+import Link from "next/link";
 import clsx from "clsx";
 
-const CARDS = [
-  { icon: Home, title: "Convenient Doorstep Pickup", desc: "Schedule a hassle-free pickup directly from your home or office. Save time by letting our team come to you, avoiding long queues at courier branches." },
-  { icon: Zap, title: "Priority Express Delivery", desc: "Experience lightning-fast, on-time delivery across India and worldwide. We use priority routing networks to ensure your urgent parcels reach their destination without delay." },
-  { icon: PackageCheck, title: "Premium Food-Grade Packing", desc: "We use high-quality, specialized food-grade packing materials. This ensures your homemade treats, sweets, and edibles remain completely clean, fresh, safe, and fully protected during transit." },
-  { icon: MapPin, title: "Real-Time Shipment Tracking", desc: "Stay informed at every step of the journey. Track your shipment in real time with our unified system, using just a single tracking number across all our delivery partners." },
-  { icon: ShieldCheck, title: "Safe & Secure", desc: "Your shipments are always in safe hands. We implement industry-best security protocols, strict handling guidelines, and comprehensive monitoring to guarantee peace of mind." },
-  { icon: Box, title: "Advanced Protection for Fragile Shipments", desc: "We provide extra cushioning and follow advanced secure packaging best practices. Your delicate, fragile, and sensitive items are rigorously protected to prevent transit damage." },
-  { icon: HeadphonesIcon, title: "Dedicated Customer Support", desc: "Get quick, personalized responses via Phone, WhatsApp, and Email. Our dedicated support team is always ready to assist you with tracking updates and shipping queries." },
-  { icon: Network, title: "Trusted Courier Network", desc: "We intelligently partner with the world's most reliable leading courier companies. This ensures you always receive the fastest, most cost-effective, and seamless delivery experience." },
-  { icon: Globe2, title: "Global Shipping", desc: "Seamless and reliable international courier services across India and worldwide. We handle all complex customs clearance and paperwork, so you can ship globally with ease." },
-  { icon: Building2, title: "Business Logistics Solutions", desc: "Tailored logistics, bulk shipments, and end-to-end B2B solutions built for your enterprise. Streamline your supply chain and focus on growing your core business operations." },
-  { icon: HeartPulse, title: "Secure Medicine Shipping", desc: "Safe, compliant, and urgent transportation of critical healthcare supplies. We ensure careful, temperature-aware handling and prioritized routing when absolutely required." },
-  { icon: ThumbsUp, title: "Trusted by Thousands", desc: "Join thousands of completely satisfied customers who confidently trust KSR Shipping Services every day. We consistently deliver on our promises, not just packages." },
+const SERVICES = [
+  { 
+    id: "international-courier", 
+    title: "International Courier", 
+    icon: Plane, 
+    desc: "Worldwide shipping with customs handled for you. Fast, reliable international delivery to 150+ countries." 
+  },
+  { 
+    id: "domestic-courier", 
+    title: "Domestic Courier", 
+    icon: Truck, 
+    desc: "Fast, reliable delivery to every corner of India with verified doorstep pickup and real-time tracking." 
+  },
+  { 
+    id: "medicine-shipping", 
+    title: "Medicine Shipping", 
+    icon: HeartPulse, 
+    desc: "Careful handling and prioritized routing for prescription medicines, critical healthcare supplies, and urgent care." 
+  },
+  { 
+    id: "fragile-shipping", 
+    title: "Fragile Shipping", 
+    icon: Box, 
+    desc: "Reinforced packaging for fragile and valuable items with multi-layer cushioning and damage protection." 
+  },
+  { 
+    id: "commercial-shipping", 
+    title: "Commercial Shipping", 
+    icon: Building2, 
+    desc: "Smart logistics for business and bulk orders. Tailored enterprise B2B solutions to optimize your supply chain." 
+  },
+  { 
+    id: "document-shipping", 
+    title: "Document Shipping", 
+    icon: FileText, 
+    desc: "Secure delivery of important documents with fast, reliable, tamper-evident, and fully trackable service." 
+  },
 ];
 
-export function WhyChooseCarousel() {
+// Duplicated for an infinitely smooth loop without wrap-around artifacts
+const CAROUSEL_ITEMS = [...SERVICES, ...SERVICES];
+
+export function WhatWeShipCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -53,11 +80,11 @@ export function WhyChooseCarousel() {
   const nextCard = useCallback(() => {
     if (!isDesktop && x.get() === 0) {
       animate(x, -400, { duration: 0.6, ease: "easeInOut" }).then(() => {
-        setCurrentIndex((prev) => (prev + 1) % CARDS.length);
+        setCurrentIndex((prev) => (prev + 1) % CAROUSEL_ITEMS.length);
         x.set(0);
       });
     } else {
-      setCurrentIndex((prev) => (prev + 1) % CARDS.length);
+      setCurrentIndex((prev) => (prev + 1) % CAROUSEL_ITEMS.length);
       if (!isDesktop) x.set(0);
     }
   }, [isDesktop, x]);
@@ -65,11 +92,11 @@ export function WhyChooseCarousel() {
   const prevCard = useCallback(() => {
     if (!isDesktop && x.get() === 0) {
       animate(x, 400, { duration: 0.6, ease: "easeInOut" }).then(() => {
-        setCurrentIndex((prev) => (prev - 1 + CARDS.length) % CARDS.length);
+        setCurrentIndex((prev) => (prev - 1 + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length);
         x.set(0);
       });
     } else {
-      setCurrentIndex((prev) => (prev - 1 + CARDS.length) % CARDS.length);
+      setCurrentIndex((prev) => (prev - 1 + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length);
       if (!isDesktop) x.set(0);
     }
   }, [isDesktop, x]);
@@ -101,6 +128,7 @@ export function WhyChooseCarousel() {
       }
     }
   };
+
   const renderMobileDeck = () => {
     const handleDragStart = () => {
       handleInteraction();
@@ -110,12 +138,12 @@ export function WhyChooseCarousel() {
       const swipeThreshold = 50;
       if (info.offset.x < -swipeThreshold) {
         animate(x, -400, { duration: 0.4, ease: "easeOut" }).then(() => {
-           setCurrentIndex((prev) => (prev + 1) % CARDS.length);
+           setCurrentIndex((prev) => (prev + 1) % CAROUSEL_ITEMS.length);
            x.set(0);
         });
       } else if (info.offset.x > swipeThreshold) {
         animate(x, 400, { duration: 0.4, ease: "easeOut" }).then(() => {
-           setCurrentIndex((prev) => (prev - 1 + CARDS.length) % CARDS.length);
+           setCurrentIndex((prev) => (prev - 1 + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length);
            x.set(0);
         });
       } else {
@@ -126,7 +154,7 @@ export function WhyChooseCarousel() {
     return (
       <div className="relative w-full max-w-[420px] mx-auto min-h-[350px] flex items-center justify-center">
         <AnimatePresence initial={false} mode="popLayout">
-          {CARDS.map((card, idx) => {
+          {CAROUSEL_ITEMS.map((service, idx) => {
             if (idx === currentIndex) {
               return (
                 <motion.div
@@ -150,12 +178,12 @@ export function WhyChooseCarousel() {
                       transition: { delay: 1, duration: 1.2, ease: "easeInOut", repeat: Infinity, repeatDelay: 3 }
                     } : { x: 0, rotate: 0 }}
                   >
-                    <CardContent card={card} isFocused={true} />
+                    <ServiceCardContent service={service} isFocused={true} />
                   </motion.div>
                 </motion.div>
               );
             }
-            if (idx === (currentIndex + 1) % CARDS.length) {
+            if (idx === (currentIndex + 1) % CAROUSEL_ITEMS.length) {
               return (
                 <motion.div
                   key={`mobile-next-${idx}`}
@@ -165,11 +193,11 @@ export function WhyChooseCarousel() {
                   style={{ zIndex: 20 }}
                   className="absolute w-full px-4 pointer-events-none"
                 >
-                  <CardContent card={card} isFocused={false} />
+                  <ServiceCardContent service={service} isFocused={false} />
                 </motion.div>
               );
             }
-            if (idx === (currentIndex - 1 + CARDS.length) % CARDS.length) {
+            if (idx === (currentIndex - 1 + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length) {
                return (
                 <motion.div
                   key={`mobile-prev-${idx}`}
@@ -179,7 +207,7 @@ export function WhyChooseCarousel() {
                   style={{ zIndex: 10 }}
                   className="absolute w-full px-4 pointer-events-none"
                 >
-                  <CardContent card={card} isFocused={false} />
+                  <ServiceCardContent service={service} isFocused={false} />
                 </motion.div>
               );
             }
@@ -220,7 +248,7 @@ export function WhyChooseCarousel() {
       <button 
         onClick={() => { handleInteraction(); prevCard(); }}
         className="absolute left-0 z-40 p-3 bg-white hover:bg-orange-50 text-orange-500 rounded-full shadow-lg border border-orange-100 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-orange-500"
-        aria-label="Previous card"
+        aria-label="Previous service"
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
@@ -256,22 +284,21 @@ export function WhyChooseCarousel() {
           }
         }}
       >
-          {CARDS.map((card, idx) => {
-             const offset = (idx - currentIndex + CARDS.length) % CARDS.length;
+          {CAROUSEL_ITEMS.map((service, idx) => {
+             const offset = (idx - currentIndex + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length;
              
              let position = offset;
-             if (offset > CARDS.length / 2) {
-               position = offset - CARDS.length;
+             if (offset > CAROUSEL_ITEMS.length / 2) {
+               position = offset - CAROUSEL_ITEMS.length;
              }
 
              // Keep cards completely opaque up to position 3 so they slide fully off-screen before fading.
-             // This creates the illusion of an infinitely scrolling solid row.
              const isSolid = Math.abs(position) <= 3;
              const isClickable = Math.abs(position) <= 2;
              
              return (
                <motion.div
-                 key={`desktop-${idx}`}
+                 key={`desktop-service-${idx}`}
                  initial={false}
                  animate={{ 
                    x: position * 400, 
@@ -289,11 +316,11 @@ export function WhyChooseCarousel() {
                    if (isDraggingRef.current) return;
                    if (position !== 0) {
                      handleInteraction();
-                     setCurrentIndex((prev) => (prev + position + CARDS.length) % CARDS.length);
+                     setCurrentIndex((prev) => (prev + position + CAROUSEL_ITEMS.length) % CAROUSEL_ITEMS.length);
                    }
                  }}
                >
-                  <CardContent card={card} isFocused={position === 0} />
+                  <ServiceCardContent service={service} isFocused={position === 0} />
                </motion.div>
              )
           })}
@@ -302,7 +329,7 @@ export function WhyChooseCarousel() {
       <button 
         onClick={() => { handleInteraction(); nextCard(); }}
         className="absolute right-0 z-40 p-3 bg-white hover:bg-orange-50 text-orange-500 rounded-full shadow-lg border border-orange-100 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-orange-500"
-        aria-label="Next card"
+        aria-label="Next service"
       >
         <ChevronRight className="w-6 h-6" />
       </button>
@@ -310,7 +337,7 @@ export function WhyChooseCarousel() {
   );
 
   return (
-    <section ref={sectionRef} className="py-20 relative overflow-hidden bg-white z-20">
+    <section ref={sectionRef} className="py-24 bg-gray-50 relative overflow-hidden z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
            <motion.div 
@@ -321,26 +348,60 @@ export function WhyChooseCarousel() {
            >
              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
              <h2 className="text-sm sm:text-base font-bold text-orange-500 tracking-widest uppercase">
-               Why Choose KSR
+               What We Ship
              </h2>
              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
            </motion.div>
-           <h3 className="mt-4 text-3xl md:text-4xl font-black text-gray-900">Premium Shipping Experience</h3>
+           <h3 className="mt-4 text-3xl md:text-4xl font-black text-gray-900">
+             Services built around<br className="hidden sm:inline" /> what you&apos;re sending
+           </h3>
         </div>
 
         <div className="mt-8 mb-16 sm:mb-12">
           {hasMounted && (isDesktop ? renderDesktopCarousel() : renderMobileDeck())}
+
+          {/* Fallback for search engines, AI web-crawlers, and accessibility */}
+          <noscript>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+              {SERVICES.map((service) => (
+                <div key={`noscript-${service.id}`} className="p-6 bg-white rounded-xl border border-gray-200">
+                  <h4 className="text-xl font-bold text-gray-900">{service.title}</h4>
+                  <p className="text-gray-600 mt-2">{service.desc}</p>
+                  <Link href={`/services#${service.id}`} className="text-orange-500 font-semibold mt-4 inline-block">
+                    Learn more about {service.title} &rarr;
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </noscript>
+          <div className="sr-only" aria-label="Services List for Search Engines">
+            <ul>
+              {SERVICES.map((service) => (
+                <li key={`seo-sr-${service.id}`}>
+                  <h4>{service.title}</h4>
+                  <p>{service.desc}</p>
+                  <Link href={`/services#${service.id}`}>Learn more about {service.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-12 px-4">
-          {CARDS.map((_, idx) => (
+          {SERVICES.map((_, idx) => (
             <button
-              key={`dot-${idx}`}
-              onClick={() => { handleInteraction(); setCurrentIndex(idx); }}
-              aria-label={`Go to card ${idx + 1}`}
+              key={`dot-service-${idx}`}
+              onClick={() => { 
+                handleInteraction(); 
+                const targetIdx = (currentIndex % SERVICES.length === idx)
+                  ? currentIndex
+                  : Math.floor(currentIndex / SERVICES.length) * SERVICES.length + idx;
+                setCurrentIndex(targetIdx); 
+              }}
+              aria-label={`Go to service ${idx + 1}`}
               className={clsx(
                 "h-2 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2",
-                idx === currentIndex ? "w-6 sm:w-8 bg-orange-500" : "w-2 sm:w-3 bg-orange-200 hover:bg-orange-300"
+                (currentIndex % SERVICES.length) === idx ? "w-6 sm:w-8 bg-orange-500" : "w-2 sm:w-3 bg-orange-200 hover:bg-orange-300"
               )}
             />
           ))}
@@ -350,31 +411,46 @@ export function WhyChooseCarousel() {
   );
 }
 
-function CardContent({ card, isFocused = true }: { card: typeof CARDS[0], isFocused?: boolean }) {
+function ServiceCardContent({ service, isFocused = true }: { service: typeof SERVICES[0], isFocused?: boolean }) {
   return (
     <div className={clsx(
-      "w-full h-[300px] sm:h-[280px] lg:h-[320px] bg-white rounded-2xl p-6 sm:p-8 flex flex-col items-start transition-all duration-300 border border-orange-200",
+      "w-full h-[320px] sm:h-[300px] lg:h-[330px] bg-white rounded-2xl p-6 sm:p-7 flex flex-col items-center text-center transition-all duration-300 border border-orange-200",
       isFocused 
         ? "shadow-[0_15px_40px_-15px_rgba(249,115,22,0.25)]" 
-        : "shadow-md"
+        : "shadow-md hover:shadow-lg"
     )}>
       <div className={clsx(
-        "w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl flex items-center justify-center mb-5 transition-colors duration-300",
+        "w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300",
         isFocused 
           ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]" 
           : "bg-orange-50 text-orange-500"
       )}>
-        <card.icon className="w-6 h-6 sm:w-7 sm:h-7" />
+        <service.icon className="w-6 h-6 sm:w-7 sm:h-7" />
       </div>
       <h3 className={clsx(
-        "text-lg sm:text-xl font-bold mb-3 leading-tight transition-colors duration-300",
+        "text-lg sm:text-xl font-bold mb-2 leading-tight transition-colors duration-300",
         isFocused ? "text-gray-900" : "text-gray-700"
       )}>
-        {card.title}
+        {service.title}
       </h3>
-      <p className="text-sm sm:text-base text-gray-500 leading-relaxed">
-        {card.desc}
+      <p className="text-sm sm:text-base text-gray-500 leading-relaxed mb-4 line-clamp-3">
+        {service.desc}
       </p>
+      <div className="mt-auto w-full">
+        {isFocused ? (
+          <Link
+            href={`/services#${service.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-bold rounded-full transition-all duration-300 shadow-sm hover:shadow-[0_4px_14px_rgba(249,115,22,0.35)] hover:from-orange-600 hover:to-orange-700 cursor-pointer"
+          >
+            Learn More <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
+          </Link>
+        ) : (
+          <div className="inline-flex h-10 w-full items-center justify-center gap-2 bg-orange-50 text-orange-600 hover:bg-orange-100 text-sm font-bold rounded-full transition-all duration-300 cursor-pointer">
+            Learn More <span>&rarr;</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { TrackingWidget } from "@/components/TrackingWidget";
 import { WhyChooseCarousel } from "@/components/WhyChooseCarousel";
+import { WhatWeShipCarousel } from "@/components/WhatWeShipCarousel";
 import { business } from "@/lib/config";
 import Image from "next/image";
 import Link from "next/link";
@@ -149,56 +150,8 @@ export default function Home() {
       {/* 2. Why Choose KSR Carousel Section */}
       <WhyChooseCarousel />
 
-      {/* 3. Services Scroll Section */}
-      <section className="py-24 bg-gray-50 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex items-center justify-center gap-4"
-            >
-              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
-              <h2 className="text-sm sm:text-base font-bold text-orange-500 tracking-widest uppercase">
-                What We Ship
-              </h2>
-              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
-            </motion.div>
-            <h3 className="mt-4 text-3xl md:text-4xl font-black text-gray-900">Services built around<br />what you&apos;re sending</h3>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6 relative group/container">
-          <InfiniteCarousel speed={1}>
-            <div className="flex gap-6 pr-6">
-              {[
-                { id: "international-courier", title: "International Courier", icon: Plane, desc: "Worldwide shipping with customs handled for you." },
-                { id: "domestic-courier", title: "Domestic Courier", icon: Truck, desc: "Fast, reliable delivery to every corner of India." },
-                { id: "medicine-shipping", title: "Medicine Shipping", icon: HeartPulse, desc: "Careful handling for medicines and health essentials." },
-                { id: "fragile-shipping", title: "Fragile Shipping", icon: Box, desc: "Reinforced packaging for fragile and valuable items." },
-                { id: "commercial-shipping", title: "Commercial Shipping", icon: Building2, desc: "Smart logistics for business and bulk orders." },
-                { id: "document-shipping", title: "Document Shipping", icon: FileText, desc: "Secure delivery of important documents with fast, reliable and trackable service." },
-              ].map((service, i) => (
-                <Link
-                  href={`/services#${service.id}`}
-                  key={`s1-${i}`}
-                  className="w-[280px] sm:w-[320px] h-[220px] shrink-0 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center transition-all duration-300 ease-in-out hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:-translate-y-2 hover:border-orange-200 animate-glow group"
-                >
-                  <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-3 text-orange-500 transition-colors duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(249,115,22,0.5)] shrink-0">
-                    <service.icon className="w-6 h-6" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-2">{service.title}</h4>
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-3">{service.desc}</p>
-                  <div className="mt-auto inline-flex h-9 w-full items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-bold rounded-full transition-all duration-300 shadow-sm group-hover:shadow-[0_4px_14px_rgba(249,115,22,0.35)] group-hover:from-orange-600 group-hover:to-orange-700">
-                    Learn More <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </InfiniteCarousel>
-        </div>
-      </section>
+      {/* 3. Services Section - What We Ship */}
+      <WhatWeShipCarousel />
 
       {/* 4. Stats Strip */}
       <section className="py-12 bg-orange-50 border-y border-orange-100">
