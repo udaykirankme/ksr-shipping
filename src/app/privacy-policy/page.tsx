@@ -95,7 +95,7 @@ export default function PrivacyPolicyPage() {
           In accordance with the Information Technology Act, 2000, the rules made thereunder, and the DPDP Act, we have appointed a Grievance Officer to address your queries and concerns regarding the processing of your Personal Data.</p>
           <p>Grievance Officer: The Proprietor, KSR Shipping Services<br/>
           Email: ksrshippingservice@gmail.com<br/>
-          Phone: +91 99638 14267<br/>
+          Phone: +91 99638 14267, +91 99120 14267<br/>
           Address: Khaja Mansion, beside HDFC ATM, Near Ramalingeswara Temple, Prakash Nagar, Begumpet, Hyderabad, Telangana 500016</p>
           <p>We will acknowledge grievances within twenty-four (24) hours of receipt and endeavour to resolve them within fifteen (15) days.</p>
 
@@ -120,7 +120,7 @@ export default function PrivacyPolicyPage() {
             KSR Shipping Services<br/>
             Khaja Mansion, beside HDFC ATM, Near Ramalingeswara Temple, Prakash Nagar, Begumpet, Hyderabad, Telangana 500016, India<br/>
             Email: ksrshippingservice@gmail.com<br/>
-            Phone: +91 99638 14267
+            Phone: +91 99638 14267, +91 99120 14267
           </p>
         </div>
       </div>

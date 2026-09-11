@@ -70,10 +70,50 @@ export function Navbar() {
 
           {/* CTA Button & Right actions */}
           <div className="hidden md:flex items-center space-x-4 ml-4">
-             <a href={`tel:${business.phone.replace(/\s+/g, '')}`} className="flex items-center gap-2 text-sm font-bold text-gray-800 hover:text-orange-600 transition-colors px-4 py-2 rounded-full border border-gray-200 hover:border-orange-200 bg-white" aria-label={`Call us at ${business.phone}`}>
-                <Phone className="w-4 h-4 text-orange-500" />
-                <span className="hidden xl:inline">Call Us</span>
-             </a>
+             <div className="relative group">
+               <a 
+                 href={`tel:${business.phone.replace(/\s+/g, '')}`} 
+                 className="flex items-center gap-2 text-sm font-bold text-gray-800 hover:text-orange-600 transition-all duration-200 px-4 py-2 rounded-full border border-gray-200 hover:border-orange-300 bg-white hover:shadow-md hover:shadow-orange-500/10 active:scale-95" 
+                 aria-label={`Call us at ${business.phone}`}
+               >
+                  <Phone className="w-4 h-4 text-orange-500 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                  <span className="hidden xl:inline">Call Us</span>
+               </a>
+
+               {/* Hover Quick-Dial Popover */}
+               <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
+                 <div className="bg-white rounded-2xl p-3 shadow-xl border border-orange-100 min-w-[240px] space-y-1.5">
+                   <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-2 pt-1">Direct Call Support</div>
+                   <a
+                     href={`tel:${business.phone.replace(/\s+/g, '')}`}
+                     className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-orange-50 text-gray-800 hover:text-orange-600 transition-all group/item"
+                   >
+                     <div className="w-8 h-8 rounded-lg bg-orange-100/70 text-orange-600 group-hover/item:bg-orange-500 group-hover/item:text-white flex items-center justify-center transition-colors">
+                       <Phone className="w-3.5 h-3.5" />
+                     </div>
+                     <div>
+                       <span className="text-xs font-bold block">{business.phone}</span>
+                       <span className="text-[10px] text-gray-500">Primary / WhatsApp</span>
+                     </div>
+                   </a>
+                   {business.phoneSecondary && (
+                     <a
+                       href={`tel:${business.phoneSecondary.replace(/\s+/g, '')}`}
+                       className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-orange-50 text-gray-800 hover:text-orange-600 transition-all group/item"
+                     >
+                       <div className="w-8 h-8 rounded-lg bg-orange-100/70 text-orange-600 group-hover/item:bg-orange-500 group-hover/item:text-white flex items-center justify-center transition-colors">
+                         <Phone className="w-3.5 h-3.5" />
+                       </div>
+                       <div>
+                         <span className="text-xs font-bold block">{business.phoneSecondary}</span>
+                         <span className="text-[10px] text-gray-500">Secondary Support</span>
+                       </div>
+                     </a>
+                   )}
+                 </div>
+               </div>
+             </div>
+
              <Link
                 href="/get-quotation"
                 className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_25px_rgba(249,115,22,0.5)] flex items-center justify-center relative overflow-hidden group"
@@ -138,14 +178,25 @@ export function Navbar() {
                 </div>
               ))}
               
-              <div className="pt-6 mt-6 border-t border-gray-100 space-y-4">
-                 <a
-                    href={`tel:${business.phone.replace(/\s+/g, '')}`}
-                    className="flex justify-center items-center gap-2 w-full bg-gray-50 text-gray-900 px-5 py-3.5 rounded-xl text-base font-bold border border-gray-200 transition-all duration-300 hover:bg-gray-100 hover:border-gray-300 active:scale-95"
-                 >
-                    <Phone className="w-5 h-5 text-orange-500" />
-                    Call {business.phone}
-                 </a>
+              <div className="pt-6 mt-6 border-t border-gray-100 space-y-3">
+                 <div className="grid grid-cols-1 gap-2">
+                   <a
+                      href={`tel:${business.phone.replace(/\s+/g, '')}`}
+                      className="flex justify-center items-center gap-2 w-full bg-gray-50 text-gray-900 px-4 py-3 rounded-xl text-sm font-bold border border-gray-200 transition-all duration-300 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 active:scale-95"
+                   >
+                      <Phone className="w-4 h-4 text-orange-500" />
+                      Call {business.phone}
+                   </a>
+                   {business.phoneSecondary && (
+                     <a
+                        href={`tel:${business.phoneSecondary.replace(/\s+/g, '')}`}
+                        className="flex justify-center items-center gap-2 w-full bg-gray-50 text-gray-900 px-4 py-3 rounded-xl text-sm font-bold border border-gray-200 transition-all duration-300 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 active:scale-95"
+                     >
+                        <Phone className="w-4 h-4 text-orange-500" />
+                        Call {business.phoneSecondary}
+                     </a>
+                   )}
+                 </div>
                  <Link
                     href="/get-quotation"
                     onClick={() => setMobileMenuOpen(false)}

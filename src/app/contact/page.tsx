@@ -57,15 +57,15 @@ export default function ContactPage() {
    };
 
    return (
-      <div className="bg-gray-50 min-h-screen pt-[104px] lg:pt-[130px] pb-24 relative overflow-hidden">
+      <div className="bg-gray-50 min-h-screen pt-[74px] sm:pt-[82px] lg:pt-[92px] pb-24 relative overflow-hidden">
          {/* Premium Background */}
          <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-orange-50 to-transparent pointer-events-none" />
          <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
          {/* Header */}
-         <div className="pt-4 pb-4 lg:pt-6 lg:pb-6 px-4 sm:px-6 lg:px-8 text-center relative z-10">
+         <div className="pt-3 pb-3 sm:pt-4 sm:pb-4 lg:pt-6 lg:pb-5 px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="max-w-3xl mx-auto">
-               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 lg:mb-6 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
+               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 lg:mb-4 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
                <p className="text-base md:text-xl text-gray-600 leading-relaxed">
                   Have a question, feedback, or need help with a shipment? We&apos;re here for you.
                </p>

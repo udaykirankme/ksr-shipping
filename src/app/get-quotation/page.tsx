@@ -98,7 +98,7 @@ export default function GetQuotationPage() {
   const inputClasses = "w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 outline-none text-gray-900 font-medium placeholder:font-normal placeholder:text-gray-400 hover:border-gray-300";
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-[104px] lg:pt-[130px] pb-24 relative overflow-hidden">
+    <div className="bg-gray-50 min-h-screen pt-[74px] sm:pt-[82px] lg:pt-[92px] pb-24 relative overflow-hidden">
       {/* Premium Background */}
       <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-orange-50 to-transparent pointer-events-none" />
       <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
@@ -108,14 +108,14 @@ export default function GetQuotationPage() {
          <motion.div 
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           className="text-center mb-12 lg:mb-16"
+           className="text-center pt-2 sm:pt-4 mb-8 lg:mb-10"
          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-600 rounded-full text-sm font-bold mb-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-orange-100 text-orange-600 rounded-full text-xs sm:text-sm font-bold mb-4">
               <Truck className="w-4 h-4" />
               Fast & Reliable
             </div>
-            <h1 className="text-4xl lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">Get a Free <span className="text-orange-500">Quotation</span></h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Get a Free <span className="text-orange-500">Quotation</span></h1>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
                Fill out the form below and we&apos;ll get back to you with a competitive shipping rate tailored precisely to your needs.
             </p>
          </motion.div>

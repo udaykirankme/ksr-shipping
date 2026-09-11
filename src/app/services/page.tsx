@@ -6,10 +6,12 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { InfiniteCarousel } from "@/components/ui/InfiniteCarousel";
+import { cn } from "@/lib/utils";
 
 type Service = {
   id: string;
   title: string;
+  shortDesc: string;
   icon: any;
   image: string;
   overview: string;
@@ -27,6 +29,7 @@ const SERVICES: Service[] = [
   {
     id: "international-courier",
     title: "International Courier",
+    shortDesc: "Fast and reliable global delivery across 150+ countries with complete customs clearance and tracking.",
     icon: Plane,
     image: "/international_courier.png",
     overview: "Seamless global shipping to over 150 countries. We handle all customs documentation, international routing, and clearance to ensure your package arrives without delays or unexpected fees.",
@@ -38,6 +41,7 @@ const SERVICES: Service[] = [
   {
     id: "domestic-courier",
     title: "Domestic Courier",
+    shortDesc: "Express air and cost-effective road cargo solutions connecting every city and village across India.",
     icon: Truck,
     image: "/domestic_courier.png",
     overview: "Fast, reliable, and secure shipping across every state, city, and remote village in India. Choose between our Domestic Air Courier service for urgent deliveries or our Domestic Road Courier service for cost-effective transportation. We help you select the best option based on your shipment's urgency, destination, and budget.",
@@ -53,6 +57,7 @@ const SERVICES: Service[] = [
   {
     id: "food-shipping",
     title: "Food & Homemade Sweets Shipping",
+    shortDesc: "Food-grade protective packing for homemade sweets, snacks, and leak-proof pickle jars overseas.",
     icon: Package,
     image: "/bg.png",
     overview: "Specialized food-grade packaging designed to reduce transit damage and maintain hygiene for homemade sweets, snacks, pickles, and dry spices sent from Hyderabad to the USA, UK, Canada, Australia, and worldwide.",
@@ -64,6 +69,7 @@ const SERVICES: Service[] = [
   {
     id: "medicine-shipping",
     title: "Medicine Shipping",
+    shortDesc: "Strictly compliant healthcare logistics with temperature-aware handling for prescription medicines.",
     icon: HeartPulse,
     image: "/medicine_shipping.png",
     overview: "Temperature-controlled and priority handling for prescription medicines, medical samples, and health essentials. We ensure strict compliance with health regulations.",
@@ -75,6 +81,7 @@ const SERVICES: Service[] = [
   {
     id: "fragile-shipping",
     title: "Fragile Shipping",
+    shortDesc: "Reinforced protective packing and cushioned layers for delicate glassware, artwork, and electronics.",
     icon: Box,
     image: "/fragile_shipping.png",
     overview: "Specialized packing with premium bubble wrap, foam peanuts, and reinforced double-walled boxes to guarantee the safety of electronics, glassware, and artwork.",
@@ -86,6 +93,7 @@ const SERVICES: Service[] = [
   {
     id: "document-delivery",
     title: "Express Document Delivery",
+    shortDesc: "Urgent and confidential door-to-door delivery for critical passports, legal contracts, and transcripts.",
     icon: FileText,
     image: "/express_document_delivery.png",
     overview: "Secure delivery of important documents with fast, reliable and trackable service. We ensure your critical paperwork reaches its destination safely and on time.",
@@ -97,6 +105,7 @@ const SERVICES: Service[] = [
   {
     id: "commercial-shipping",
     title: "Commercial Shipping",
+    shortDesc: "Scalable B2B logistics, pallet freight, regular bulk dispatches, and customized corporate pricing.",
     icon: Building2,
     image: "/commercial_shipping.png",
     overview: "B2B logistics tailored for scale. Bulk shipment solutions, warehouse pickups, regular dispatch scheduling, and discounted corporate rates.",
@@ -143,21 +152,21 @@ export default function ServicesPage() {
   }, []);
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-[104px] lg:pt-[130px] pb-24 relative overflow-hidden">
+    <div className="bg-gray-50 min-h-screen pt-[74px] sm:pt-[82px] lg:pt-[92px] pb-24 relative overflow-hidden">
       {/* Premium Background */}
       <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-orange-50 to-transparent pointer-events-none" />
       <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
       {/* 1. Hero Section */}
-      <section className="pt-4 pb-4 lg:pt-6 lg:pb-6 relative z-10 text-center">
+      <section className="pt-2 pb-2 sm:pt-4 sm:pb-3 lg:pt-6 lg:pb-4 relative z-10 text-center">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
                initial={{ opacity: 0, y: 20 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ duration: 0.6 }}
             >
-               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight">Our <span className="text-orange-500">Services</span></h1>
-               <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Our <span className="text-orange-500">Services</span></h1>
+               <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
                  From important international documents to heavy domestic freight, we have a premium shipping solution tailored for you.
                </p>
             </motion.div>
@@ -165,25 +174,39 @@ export default function ServicesPage() {
       </section>
 
       {/* 2. Service Navigation Cards */}
-      <section className="pb-16 pt-0 lg:pt-2 relative z-10">
+      <section className="pb-16 pt-2 lg:pt-3 relative z-10">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-               {SERVICES.map((service, i) => (
-                 <Link 
-                   href={`#${service.id}`} 
-                   key={i}
-                   className="h-full bg-gradient-to-b from-white to-orange-50/30 p-6 rounded-2xl border border-orange-100 shadow-[0_4px_20px_rgba(249,115,22,0.05)] flex flex-col items-center text-center hover:shadow-[0_8px_30px_rgba(249,115,22,0.15)] hover:border-orange-300 hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm cursor-pointer"
-                 >
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-orange-500 transition-all duration-300 relative z-10 shadow-[0_0_15px_rgba(249,115,22,0.1)] group-hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] shrink-0">
-                       <service.icon className="w-7 h-7 text-orange-500 group-hover:text-white transition-colors duration-300" />
-                    </div>
-                    <span className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition-colors relative z-10 mb-4">{service.title}</span>
-                    <div className="mt-auto relative z-10 inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold shadow-[0_4px_15px_rgba(249,115,22,0.2)] group-hover:shadow-[0_6px_20px_rgba(249,115,22,0.4)] group-hover:-translate-y-0.5 group-hover:scale-[1.03] transition-all duration-300">
-                      Learn More <span className="group-hover:translate-x-0.5 transition-transform duration-300">→</span>
-                    </div>
-                 </Link>
-               ))}
+               {SERVICES.map((service, i) => {
+                 const isLast = i === SERVICES.length - 1;
+                 return (
+                   <Link 
+                     href={`#${service.id}`} 
+                     key={i}
+                     className={cn(
+                       "h-full bg-gradient-to-b from-white to-orange-50/30 p-6 rounded-2xl border border-orange-100 shadow-[0_4px_20px_rgba(249,115,22,0.05)] flex flex-col items-center text-center hover:shadow-[0_12px_32px_rgba(249,115,22,0.18)] hover:border-orange-300 hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm cursor-pointer",
+                       isLast ? "sm:col-span-2 sm:max-w-md sm:mx-auto sm:w-full lg:col-span-1 lg:col-start-2 lg:max-w-none lg:mx-0" : ""
+                     )}
+                   >
+                      {/* Top Animated Accent Bar */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 via-orange-500 to-amber-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-orange-500 transition-all duration-300 relative z-10 shadow-[0_0_15px_rgba(249,115,22,0.1)] group-hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] shrink-0">
+                         <service.icon className="w-7 h-7 text-orange-500 group-hover:text-white transition-colors duration-300" />
+                      </div>
+                      
+                      <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors relative z-10 mb-2">{service.title}</h3>
+                      
+                      <p className="text-xs text-gray-500 leading-relaxed relative z-10 mb-5 max-w-xs">{service.shortDesc}</p>
+                      
+                      <div className="mt-auto relative z-10 inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold shadow-[0_4px_15px_rgba(249,115,22,0.2)] group-hover:shadow-[0_6px_20px_rgba(249,115,22,0.4)] group-hover:-translate-y-0.5 group-hover:scale-[1.03] transition-all duration-300">
+                        Learn More <span className="group-hover:translate-x-0.5 transition-transform duration-300">→</span>
+                      </div>
+                   </Link>
+                 );
+               })}
             </div>
          </div>
       </section>

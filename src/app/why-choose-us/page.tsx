@@ -21,23 +21,23 @@ export default function WhyChooseUsPage() {
   ];
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-[104px] lg:pt-[130px] relative overflow-hidden">
+    <div className="bg-gray-50 min-h-screen pt-[74px] sm:pt-[82px] lg:pt-[92px] relative overflow-hidden">
       {/* Premium Background */}
       <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-orange-50 to-transparent pointer-events-none" />
       <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
       {/* Hero */}
-      <div className="pt-10 pb-8 lg:pt-12 lg:pb-12 px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      <div className="pt-3 pb-3 sm:pt-5 sm:pb-4 lg:pt-7 lg:pb-5 px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <div className="max-w-3xl mx-auto">
-           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight">Why Choose <span className="text-orange-600">KSR Shipping?</span></h1>
-           <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
+           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Why Choose <span className="text-orange-600">KSR Shipping?</span></h1>
+           <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
              We don&apos;t just deliver packages; we deliver promises. Discover what makes us the preferred shipping partner for thousands.
            </p>
         </div>
       </div>
 
       {/* Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-4 lg:pt-8 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-2 lg:pt-4 bg-gray-50">
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {reasons.map((reason, idx) => (
                <motion.div 
