@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Plane, Truck, Box, HeartPulse, Building2, CheckCircle2, ShieldCheck, MapPin, FileText, Info } from "lucide-react";
+import { Plane, Truck, Box, HeartPulse, Building2, CheckCircle2, ShieldCheck, MapPin, FileText, Info, ArrowRight, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,6 +16,7 @@ type Service = {
   benefits: string[];
   features: string[];
   coverage: string;
+  detailHref?: string;
   infoNote?: {
     title: string;
     description: string;
@@ -32,6 +33,7 @@ const SERVICES: Service[] = [
     benefits: ["Free Customs Clearance Assistance", "Door-to-door Real-time Tracking", "Express & Economy Delivery Options"],
     features: ["Supported Types: Documents, Parcels, Freight", "Delivery: 3-7 Business Days globally", "Free Doorstep Pickup Available"],
     coverage: "150+ Countries Worldwide",
+    detailHref: "/services/international-courier",
   },
   {
     id: "domestic-courier",
@@ -42,10 +44,22 @@ const SERVICES: Service[] = [
     benefits: ["✈️ Domestic Air Courier for urgent and time-sensitive shipments", "🚛 Domestic Road Courier for economical and bulk deliveries", "Smart route selection for the fastest and most efficient delivery"],
     features: ["Service Modes: Air Courier & Road Courier", "Delivery Time: Based on the selected shipping mode and destination", "Doorstep Pickup Available Across India"],
     coverage: "Pan India (29 States, 8 UTs)",
+    detailHref: "/services/domestic-courier",
     infoNote: {
       title: "Choose Your Delivery Mode",
       description: "Select between Air Courier for speed or Road Courier for economical shipping based on your requirements."
     }
+  },
+  {
+    id: "food-shipping",
+    title: "Food & Homemade Sweets Shipping",
+    icon: Package,
+    image: "/bg.png",
+    overview: "Specialized food-grade packaging designed to reduce transit damage and maintain hygiene for homemade sweets, snacks, pickles, and dry spices sent from Hyderabad to the USA, UK, Canada, Australia, and worldwide.",
+    benefits: ["Specialized Food-grade Materials", "Leak-resistant Pickle Packaging", "Express Global Air Dispatch"],
+    features: ["Supported: Sweets, Snacks, Pickles, Spices", "Transit: 3-5 Days to Major Destinations", "Free Doorstep Pickup in Hyderabad"],
+    coverage: "150+ Countries Worldwide",
+    detailHref: "/services/food-shipping",
   },
   {
     id: "medicine-shipping",
@@ -56,6 +70,7 @@ const SERVICES: Service[] = [
     benefits: ["Temperature-aware Handling", "Priority Custom Clearance", "Confidential & Secure Packaging"],
     features: ["Supported Types: Prescription Drugs, OTC", "Delivery: Express Priority Routing", "Specialized Documentation Support"],
     coverage: "Global Medical Reach",
+    detailHref: "/services/medicine-shipping",
   },
   {
     id: "fragile-shipping",
@@ -66,6 +81,7 @@ const SERVICES: Service[] = [
     benefits: ["Premium Multi-layer Protection", "Special Handling Labels & Procedures", "Comprehensive Transit Insurance"],
     features: ["Supported Types: Glass, Electronics, Art", "Delivery: Extra-care Courier Network", "Professional Packing Service"],
     coverage: "Available on all routes",
+    detailHref: "/services/fragile-shipping",
   },
   {
     id: "document-delivery",
@@ -76,6 +92,7 @@ const SERVICES: Service[] = [
     benefits: ["Priority Handling", "Confidential & Secure Packaging", "Real-time Tracking Updates"],
     features: ["Supported Types: Legal Documents, Contracts, Passports", "Delivery: 1-2 Business Days", "Signature Required Upon Delivery"],
     coverage: "Global Document Reach",
+    detailHref: "/services/document-shipping",
   },
   {
     id: "commercial-shipping",
@@ -86,6 +103,7 @@ const SERVICES: Service[] = [
     benefits: ["Dedicated Account Manager", "Discounted Volume Pricing", "API Integration for Tracking"],
     features: ["Supported Types: Pallets, Bulk Cartons", "Delivery: Scheduled LTL / FTL", "Warehouse & Factory Pickups"],
     coverage: "Global B2B Network",
+    detailHref: "/services/commercial-shipping",
   }
 ];
 
@@ -247,9 +265,16 @@ export default function ServicesPage() {
                           </div>
                        )}
                        
-                       <Link href="/get-quotation" className="inline-flex h-14 items-center justify-center px-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-full transition-all duration-300 shadow-lg hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:-translate-y-1 hover:from-orange-600 hover:to-orange-700">
-                          Get Quote
-                       </Link>
+                        <div className="flex flex-wrap gap-4 items-center">
+                           <Link href="/get-quotation" className="inline-flex h-14 items-center justify-center px-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-full transition-all duration-300 shadow-lg hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:-translate-y-1 hover:from-orange-600 hover:to-orange-700">
+                              Get Quote
+                           </Link>
+                           {service.detailHref && (
+                              <Link href={service.detailHref} className="inline-flex h-14 items-center justify-center px-6 border border-gray-300 hover:border-orange-500 text-gray-800 hover:text-orange-600 font-semibold rounded-full transition-all duration-200">
+                                 Detailed Guide <ArrowRight className="w-4 h-4 ml-1.5" />
+                              </Link>
+                           )}
+                        </div>
                     </motion.div>
                     
                  </div>

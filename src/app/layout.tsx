@@ -4,8 +4,7 @@ import "./globals.css";
 import { PublicLayoutWrapper } from "@/components/layout/PublicLayoutWrapper";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { rootMetadata } from "@/lib/seo/metadata";
-import { buildGlobalSchemaGraph, buildWebPageSchema } from "@/lib/seo/schema";
-import { pageSeo } from "@/lib/seo/pages";
+import { buildGlobalSchemaGraph } from "@/lib/seo/schema";
 import { THEME_COLOR } from "@/lib/seo/site";
 
 const inter = Inter({
@@ -28,8 +27,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const homeSeo = pageSeo.home;
-
   return (
     <html lang="en-IN" suppressHydrationWarning className="scroll-smooth">
       <head>
@@ -38,13 +35,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://maps.googleapis.com" />
         <link rel="dns-prefetch" href="https://maps.googleapis.com" />
         <JsonLd data={buildGlobalSchemaGraph()} />
-        <JsonLd
-          data={buildWebPageSchema({
-            path: homeSeo.path,
-            title: homeSeo.title,
-            description: homeSeo.description,
-          })}
-        />
       </head>
       <body
         suppressHydrationWarning

@@ -8,10 +8,10 @@ export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 py-16 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           
           {/* Brand Info */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:col-span-1">
             <div className="bg-white p-2 rounded-xl inline-block shadow-lg leading-none">
                <Image 
                  src="/logo.png" 
@@ -44,14 +44,31 @@ export function Footer() {
           {/* Quick Links */}
           <nav aria-label="Footer quick links">
             <h4 className="text-white font-semibold mb-6">Quick Links</h4>
-            <ul className="space-y-4 text-sm">
+            <ul className="space-y-3 text-sm">
               <li><Link href="/" className="hover:text-orange-500 transition-colors">Home</Link></li>
-              <li><Link href="/services" className="hover:text-orange-500 transition-colors">Our Services</Link></li>
+              <li><Link href="/about" className="hover:text-orange-500 transition-colors">About Us</Link></li>
+              <li><Link href="/services" className="hover:text-orange-500 transition-colors">Services Overview</Link></li>
               <li><Link href="/why-choose-us" className="hover:text-orange-500 transition-colors">Why Choose Us</Link></li>
+              <li><Link href="/get-quotation" className="hover:text-orange-500 transition-colors">Get Quotation</Link></li>
               <li><Link href="/track" className="hover:text-orange-500 transition-colors">Track Shipment</Link></li>
               <li><Link href="/restricted-items" className="hover:text-orange-500 transition-colors">Restricted Items</Link></li>
-              <li><a href={business.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Reviews on Google Maps</a></li>
-              <li><a href={business.googleReviewUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Write a Google Review</a></li>
+              <li><a href={business.googleReviewUrl} target="_blank" rel="noopener noreferrer" className="hover:text-orange-500 transition-colors">Write a Review</a></li>
+            </ul>
+          </nav>
+
+          {/* Dedicated Services */}
+          <nav aria-label="Footer services links">
+            <h4 className="text-white font-semibold mb-6">Our Services</h4>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/services/international-courier" className="hover:text-orange-500 transition-colors">International Courier</Link></li>
+              <li><Link href="/services/international-courier/hyderabad-to-usa" className="hover:text-orange-500 transition-colors">Hyderabad to USA</Link></li>
+              <li><Link href="/services/international-courier/hyderabad-to-uk" className="hover:text-orange-500 transition-colors">Hyderabad to UK</Link></li>
+              <li><Link href="/services/domestic-courier" className="hover:text-orange-500 transition-colors">Domestic Courier</Link></li>
+              <li><Link href="/services/food-shipping" className="hover:text-orange-500 transition-colors">Food &amp; Sweets Shipping</Link></li>
+              <li><Link href="/services/medicine-shipping" className="hover:text-orange-500 transition-colors">Medicine Shipping</Link></li>
+              <li><Link href="/services/fragile-shipping" className="hover:text-orange-500 transition-colors">Fragile Shipping</Link></li>
+              <li><Link href="/services/document-shipping" className="hover:text-orange-500 transition-colors">Document Delivery</Link></li>
+              <li><Link href="/services/commercial-shipping" className="hover:text-orange-500 transition-colors">Commercial Shipping</Link></li>
             </ul>
           </nav>
 

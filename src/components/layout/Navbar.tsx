@@ -11,9 +11,9 @@ import { business } from "@/lib/config";
 
 const navLinks = [
   { name: "Home", href: "/" },
-  { name: "About Us", href: "/why-choose-us" },
+  { name: "About Us", href: "/about" },
   { name: "Services", href: "/services" },
-  { name: "Support", href: "/support" },
+  { name: "Why Choose Us", href: "/why-choose-us" },
   { name: "Track Shipment", href: "/track" },
   { name: "Contact Us", href: "/contact" },
 ];

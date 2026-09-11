@@ -307,8 +307,8 @@ export function buildWhyChooseUsItemListSchema() {
     { name: "Trusted Courier Network", desc: "Intelligent partnerships with DHL, FedEx, UPS, DTDC, Delhivery, Shadowfax, and Ekart." },
     { name: "Global Shipping & Customs Clearance", desc: "End-to-end international courier to 150+ countries with complex customs documentation handled." },
     { name: "Business Logistics Solutions", desc: "Tailored bulk shipping, warehouse dispatches, and end-to-end enterprise B2B solutions." },
-    { name: "Secure Medicine Shipping", desc: "Compliant, temperature-aware, and urgent transportation of prescription medicines and healthcare supplies." },
-    { name: "Trusted by Thousands", desc: "Over 50,000+ satisfied customers with a 99.5% on-time delivery record." }
+    { name: "Secure Medicine Shipping", desc: "Compliant, temperature-aware, and urgent transportation of prescription medicines and healthcare supplies subject to destination regulatory requirements." },
+    { name: "Reliable Door-to-Door Delivery", desc: "Dedicated logistics support with regular milestone tracking updates from collection to final destination." }
   ];
 
   return {
@@ -328,27 +328,27 @@ export function buildHomeFaqSchema() {
   const faqs = [
     {
       q: "Does KSR Shipping Services provide free doorstep pickup?",
-      a: "Yes, KSR Shipping Services provides 100% free doorstep pickup from your home or office across Hyderabad and Telangana. You can schedule a pickup online at ksrshipping.com or call +91 99638 14267."
+      a: "Yes, KSR Shipping Services provides complimentary doorstep pickup across Hyderabad and surrounding areas. You can schedule a pickup online at ksrshipping.com or call +91 99638 14267."
     },
     {
       q: "Can I send homemade food, sweets, and pickles to the USA, UK, or other countries?",
-      a: "Yes, we specialize in international courier for homemade foods, sweets, snacks, and pickles. We use premium, certified food-grade packaging materials to ensure hygiene, complete freshness, and prevent any leakage during transit to USA, UK, Canada, Australia, UAE, Europe, and worldwide."
+      a: "Yes, we handle international shipping for non-perishable homemade foods, traditional sweets, snacks, and pickles. We use specialized food-grade packaging materials engineered to protect against transit damage and maintain hygiene en route to USA, UK, Canada, Australia, UAE, Europe, and other destinations."
     },
     {
       q: "Can I courier prescription medicines internationally through KSR Shipping?",
-      a: "Yes, we handle compliant, temperature-aware, and urgent international and domestic shipping of prescription medicines and healthcare supplies with specialized documentation and priority customs clearance."
+      a: "Yes, eligible prescription medicines can be shipped internationally subject to destination customs and healthcare documentation requirements, including a valid doctor's prescription, commercial chemist bill, and identification."
     },
     {
       q: "Which countries does KSR Shipping deliver to?",
-      a: "KSR Shipping Services delivers globally to over 150 countries, including USA, UK, Canada, Australia, UAE, Singapore, New Zealand, and all European nations, alongside comprehensive pan-India domestic delivery."
+      a: "KSR Shipping Services delivers globally to major international destinations, including USA, UK, Canada, Australia, UAE, Singapore, New Zealand, and European countries, alongside comprehensive pan-India domestic delivery."
     },
     {
       q: "How can I track my courier parcel?",
-      a: "You can track your shipment 24/7 in real-time by entering your unified tracking ID at ksrshipping.com/track across all of our partner courier networks."
+      a: "You can track your shipment 24/7 in real-time by entering your tracking ID at ksrshipping.com/track."
     },
     {
       q: "How does KSR Shipping protect fragile and delicate items?",
-      a: "We utilize multi-layer protective packaging, high-density bubble wrap, foam cushioning, and reinforced corrugated boxes to ensure delicate, fragile, glass, and electronic items are fully safeguarded throughout their journey."
+      a: "We utilize multi-layer protective packaging, bubble cushioning, corner protectors, and reinforced corrugated boxes to provide enhanced protection for delicate, glassware, and electronic items during handling and transit."
     }
   ];
 
@@ -369,9 +369,13 @@ export function buildHomeFaqSchema() {
 export function buildSiteNavigationSchema() {
   const navItems = [
     { name: "Home", path: "/" },
-    { name: "About Us", path: "/why-choose-us" },
+    { name: "About Us", path: "/about" },
+    { name: "Why Choose Us", path: "/why-choose-us" },
     { name: "Services", path: "/services" },
-    { name: "Support", path: "/support" },
+    { name: "International Courier", path: "/services/international-courier" },
+    { name: "Domestic Courier", path: "/services/domestic-courier" },
+    { name: "Food Shipping", path: "/services/food-shipping" },
+    { name: "Medicine Shipping", path: "/services/medicine-shipping" },
     { name: "Track Shipment", path: "/track" },
     { name: "Contact Us", path: "/contact" },
   ];
@@ -381,6 +385,39 @@ export function buildSiteNavigationSchema() {
     name: item.name,
     url: absoluteUrl(item.path),
   }));
+}
+
+export function buildIndividualServiceSchema({
+  title,
+  description,
+  path,
+  image,
+  serviceType,
+  areaServed = ["Hyderabad", "Telangana", "India", "USA", "UK", "Canada", "Australia", "UAE"],
+}: {
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+  serviceType?: string;
+  areaServed?: string[];
+}) {
+  const url = absoluteUrl(path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "@id": `${url}#service`,
+    name: title,
+    description,
+    url,
+    serviceType: serviceType || title,
+    provider: { "@id": `${SITE_URL}/#localbusiness` },
+    areaServed: areaServed.map((name) => ({
+      "@type": name === "Hyderabad" ? "City" : "Country",
+      name,
+    })),
+    ...(image ? { image: absoluteUrl(image) } : {}),
+  };
 }
 
 export function buildGlobalSchemaGraph() {

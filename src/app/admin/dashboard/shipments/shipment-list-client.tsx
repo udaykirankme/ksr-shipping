@@ -31,6 +31,7 @@ interface ShipmentData {
   receiver_city?: string;
   service?: string;
   courier?: string;
+  medium?: string;
   booked_date: string;
   profit?: number;
   [key: string]: unknown;
@@ -372,7 +373,14 @@ export function ShipmentListClient({
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <span className="text-sm">{shipment.service || shipment.courier || 'N/A'}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">{shipment.service || shipment.courier || 'N/A'}</span>
+                      {Boolean(shipment.medium) && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 uppercase tracking-wider">
+                          {String(shipment.medium)}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <Badge variant={shipment.current_status === 'Delivered' ? 'success' : shipment.current_status === 'Shipment Created' ? 'default' : 'warning'}>

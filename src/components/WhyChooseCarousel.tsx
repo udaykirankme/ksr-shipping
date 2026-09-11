@@ -310,7 +310,7 @@ export function WhyChooseCarousel() {
   );
 
   return (
-    <section ref={sectionRef} className="py-20 relative overflow-hidden bg-white z-20">
+    <section ref={sectionRef} className="py-20 relative overflow-hidden bg-orange-50 z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
            <motion.div 

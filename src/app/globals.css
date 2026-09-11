@@ -236,3 +236,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
   filter: invert(0.5) sepia(1) saturate(5) hue-rotate(10deg); /* Make it bright orange on hover */
 }
+
+/* Hide Next.js development indicator badge and overlays */
+nextjs-portal,
+[data-nextjs-dev-indicator],
+[data-nextjs-toast-wrapper] {
+  display: none !important;
+}
+

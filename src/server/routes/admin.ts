@@ -211,7 +211,7 @@ router.get('/shipments/export', async (req, res) => {
     const fields = [
       'Tracking Number', 'Sender Name', 'Sender Mobile', 'Origin', 
       'Receiver Name', 'Receiver Mobile', 'Destination', 'Shipment Type', 
-      'Courier Service', 'Service Through', 'Current Status', 'Weight', 
+      'Courier Service', 'Service Through', 'Medium', 'Current Status', 'Weight', 
       'Book Date', 'Book Time', 'Estimated Delivery', 'Profit', 
       'Paid Amount', 'Receiver Amount', 'Active/Inactive'
     ];
@@ -230,6 +230,7 @@ router.get('/shipments/export', async (req, res) => {
           s.shipment_type,
           s.service,
           s.service_through,
+          (s as any).medium || '',
           s.current_status,
           s.weight,
           s.booked_date ? toBusinessDateInput(s.booked_date) : '',
@@ -304,7 +305,7 @@ router.post('/shipments', async (req, res) => {
     
     const requiredFields = [
       'official_tracking_id', 'booked_date', 'estimated_delivery', 
-      'service', 'service_through', 'sender_name', 'sender_phone', 
+      'service', 'service_through', 'medium', 'sender_name', 'sender_phone', 
       'sender_city', 'receiver_name', 'receiver_phone', 'receiver_city', 
       'weight', 'num_packages', 'shipment_type'
     ];
@@ -313,6 +314,10 @@ router.post('/shipments', async (req, res) => {
       if (data[field] === undefined || data[field] === null || data[field] === '') {
         return res.status(400).json({ success: false, message: `Field ${field} is required` });
       }
+    }
+
+    if (data.medium && !['Surface', 'Air'].includes(data.medium)) {
+      return res.status(400).json({ success: false, message: 'Medium must be either Surface or Air' });
     }
     
     if (data.paid_amount === undefined || data.paid_amount === null || data.paid_amount === '') {
@@ -346,6 +351,9 @@ router.post('/shipments', async (req, res) => {
         return res.status(400).json({ error: `Cannot process quote because it is already ${quote.status}` });
       }
     }
+
+    const medium = data.medium;
+    delete data.medium;
 
     let shipment;
     let attempts = 0;
@@ -391,6 +399,15 @@ router.post('/shipments', async (req, res) => {
           shipment = createdShipment;
         } else {
           shipment = await createShipmentOp;
+        }
+
+        if (medium && shipment?.id) {
+          await prisma.$executeRawUnsafe(
+            'UPDATE "shipments" SET "medium" = $1 WHERE "id" = $2::uuid',
+            medium,
+            shipment.id
+          );
+          (shipment as any).medium = medium;
         }
         
         break; // Success
@@ -447,6 +464,10 @@ router.put('/shipments/:id', async (req, res) => {
       }
     }
     
+    if (updateData.medium && !['Surface', 'Air'].includes(updateData.medium)) {
+      return res.status(400).json({ success: false, message: 'Medium must be either Surface or Air' });
+    }
+    
     if (updateData.paid_amount === undefined || updateData.paid_amount === null || updateData.paid_amount === '') {
       return res.status(400).json({ success: false, message: `Field paid_amount is required` });
     }
@@ -490,6 +511,9 @@ router.put('/shipments/:id', async (req, res) => {
     delete updateData.history;
     delete updateData.user_id;
 
+    const medium = updateData.medium;
+    delete updateData.medium;
+
     const shipment = await prisma.shipment.update({
       where: { id: req.params.id, version },
       data: {
@@ -497,6 +521,15 @@ router.put('/shipments/:id', async (req, res) => {
         version: { increment: 1 }
       }
     });
+
+    if (medium !== undefined) {
+      await prisma.$executeRawUnsafe(
+        'UPDATE "shipments" SET "medium" = $1 WHERE "id" = $2::uuid',
+        medium,
+        req.params.id
+      );
+      (shipment as any).medium = medium;
+    }
 
     res.json({ success: true, data: shipment });
   } catch (error: any) {

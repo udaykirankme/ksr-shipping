@@ -2,6 +2,39 @@ import { Suspense } from "react";
 import TrackResult from "./TrackResult";
 import Link from "next/link";
 import { Headset } from "lucide-react";
+import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/seo/site";
+
+type TrackPageProps = {
+  searchParams: Promise<{ id?: string }>;
+};
+
+export async function generateMetadata({ searchParams }: TrackPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  if (params?.id) {
+    return {
+      title: "Track Shipment",
+      robots: {
+        index: false,
+        follow: false,
+        nocache: true,
+        googleBot: {
+          index: false,
+          follow: false,
+          noimageindex: true,
+        },
+      },
+      alternates: {
+        canonical: absoluteUrl("/track"),
+      },
+    };
+  }
+  return {
+    alternates: {
+      canonical: absoluteUrl("/track"),
+    },
+  };
+}
 
 export default function TrackPage() {
   return (

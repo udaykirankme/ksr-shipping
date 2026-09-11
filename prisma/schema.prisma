@@ -13,6 +13,7 @@ model Shipment {
   official_tracking_id String?              @unique @db.VarChar(100)
   tracking_type    String                  @db.VarChar(10)
   shipment_type    String                  @default("Domestic") @db.VarChar(20)
+  medium           String?                 @db.VarChar(50)
   courier          String?                 @db.VarChar(50)
   service          String?                 @db.VarChar(50)
   service_through  String?                 @db.VarChar(50)

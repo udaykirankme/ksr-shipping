@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { shipmentService } from '@/lib/shipment-service';
 import { getQuote } from '@/lib/quote-service';
-import { ArrowLeft, Save, RefreshCw, Share2 } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, Share2, Plane, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { ServicesApi, ServiceThroughApi, ServiceItem } from '@/lib/services-api';
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
@@ -41,6 +41,7 @@ export default function NewShipmentPage() {
   const [formData, setFormData] = useState(() => ({
     official_tracking_id: '',
     shipment_type: 'Domestic',
+    medium: '',
     ...getCurrentBookedDateTime(),
     estimated_delivery: '',
     service: '',
@@ -132,6 +133,11 @@ export default function NewShipmentPage() {
       setError('Estimated Delivery Date is required');
       return;
     }
+
+    if (!formData.medium) {
+      setError('Medium is required');
+      return;
+    }
     
     setLoading(true);
 
@@ -190,6 +196,7 @@ export default function NewShipmentPage() {
                 setFormData((prev) => ({
                   ...prev,
                   official_tracking_id: '',
+                  medium: '',
                   ...getCurrentBookedDateTime(),
                 }));
               }}
@@ -301,7 +308,13 @@ export default function NewShipmentPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Type <span className="text-red-500">*</span></label>
               <PremiumSelect
                 value={formData.shipment_type}
-                onChange={(value) => handleChange({ target: { name: 'shipment_type', value } } as any)}
+                onChange={(value) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    shipment_type: value,
+                    medium: value === 'International' ? 'Air' : prev.medium
+                  }));
+                }}
                 options={[
                   { label: "Domestic", value: "Domestic" },
                   { label: "International", value: "International" }
@@ -336,6 +349,51 @@ export default function NewShipmentPage() {
                 placeholder="Select Vendor..."
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Medium <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label
+                  className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-medium transition-all select-none ${
+                    formData.medium === 'Surface'
+                      ? 'border-orange-500 bg-orange-50/70 text-orange-600 ring-1 ring-orange-500 shadow-xs'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="medium"
+                    value="Surface"
+                    checked={formData.medium === 'Surface'}
+                    onChange={handleChange}
+                    required
+                    className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                  />
+                  <Truck className={`w-4 h-4 ${formData.medium === 'Surface' ? 'text-orange-500' : 'text-gray-400'}`} />
+                  <span>Surface</span>
+                </label>
+                <label
+                  className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-medium transition-all select-none ${
+                    formData.medium === 'Air'
+                      ? 'border-orange-500 bg-orange-50/70 text-orange-600 ring-1 ring-orange-500 shadow-xs'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="medium"
+                    value="Air"
+                    checked={formData.medium === 'Air'}
+                    onChange={handleChange}
+                    required
+                    className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                  />
+                  <Plane className={`w-4 h-4 ${formData.medium === 'Air' ? 'text-orange-500' : 'text-gray-400'}`} />
+                  <span>Air</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>

@@ -9,7 +9,17 @@ export const LOCALE = "en_IN";
 
 export const PUBLIC_ROUTES = [
   { path: "/", priority: 1, changeFrequency: "weekly" as const },
+  { path: "/about", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/services", priority: 0.9, changeFrequency: "monthly" as const },
+  { path: "/services/international-courier", priority: 0.9, changeFrequency: "weekly" as const },
+  { path: "/services/international-courier/hyderabad-to-usa", priority: 0.85, changeFrequency: "monthly" as const },
+  { path: "/services/international-courier/hyderabad-to-uk", priority: 0.85, changeFrequency: "monthly" as const },
+  { path: "/services/domestic-courier", priority: 0.9, changeFrequency: "weekly" as const },
+  { path: "/services/food-shipping", priority: 0.9, changeFrequency: "weekly" as const },
+  { path: "/services/medicine-shipping", priority: 0.85, changeFrequency: "weekly" as const },
+  { path: "/services/fragile-shipping", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/services/document-shipping", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/services/commercial-shipping", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/get-quotation", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/track", priority: 0.9, changeFrequency: "weekly" as const },
   { path: "/why-choose-us", priority: 0.8, changeFrequency: "monthly" as const },

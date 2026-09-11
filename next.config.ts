@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   compress: true,
+  devIndicators: false,
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "date-fns"],
   },
