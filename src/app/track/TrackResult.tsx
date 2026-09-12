@@ -20,11 +20,13 @@ import {
   Package, 
   Inbox,
   Warehouse,
-  Info
+  Info,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
+import { business } from "@/lib/config/business";
 
 interface TrackingHistoryEvent {
   id: string;
@@ -503,6 +505,7 @@ export default function TrackResult() {
   };
 
   const isAir = data ? isAirShipment(data) : false;
+  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || getStageIndex(data.current_status) === 3) : false;
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
@@ -589,13 +592,48 @@ export default function TrackResult() {
                   />
 
                   {/* Customer Message Banner - Synced to Light Theme */}
-                  <div className="mt-3 bg-gradient-to-r from-orange-50/90 via-orange-50/50 to-amber-50/70 border border-orange-200/80 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 flex gap-3 sm:gap-3.5 items-center shadow-xs">
-                     <div className="bg-orange-500 text-white p-2 rounded-xl shrink-0 shadow-xs shadow-orange-500/20">
-                        <Info className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+                  <div className={cn(
+                    "mt-3 border rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-3.5 shadow-xs transition-all",
+                    isDelivered 
+                      ? "bg-gradient-to-r from-orange-50/90 via-amber-50/60 to-orange-50/90 border-orange-200" 
+                      : "bg-gradient-to-r from-orange-50/90 via-orange-50/50 to-amber-50/70 border-orange-200/80"
+                  )}>
+                     <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        <div className={cn(
+                          "text-white p-2 rounded-xl shrink-0 shadow-xs",
+                          isDelivered ? "bg-emerald-500 shadow-emerald-500/20" : "bg-orange-500 shadow-orange-500/20"
+                        )}>
+                           {isDelivered ? (
+                             <CheckCircle2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+                           ) : (
+                             <Info className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+                           )}
+                        </div>
+                        <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800">
+                           {getDynamicMessage(data.current_status, data.sender_name, data.receiver_name)}
+                        </p>
                      </div>
-                     <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800">
-                        {getDynamicMessage(data.current_status, data.sender_name, data.receiver_name)}
-                     </p>
+
+                     {isDelivered && (
+                        <a
+                          href={business.googleReviewUrl || "https://g.page/r/CdBtDQra-a6oEB0/review"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2 bg-white hover:bg-orange-50 text-gray-800 hover:text-orange-600 font-bold text-xs sm:text-sm rounded-xl border border-orange-200/90 hover:border-orange-300 shadow-2xs hover:shadow-xs transition-all duration-200 shrink-0 group whitespace-nowrap self-start md:self-auto w-full md:w-auto"
+                          id="google-review-btn"
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
+                            <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                              <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
+                              <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.369 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
+                              <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
+                              <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.109 -17.884 43.989 -14.754 43.989 Z" />
+                            </g>
+                          </svg>
+                          <span>Drop a review on Google</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-orange-500 transition-colors" />
+                        </a>
+                     )}
                   </div>
 
                   {/* Sub-info Row: IST Timing Note & Customer Update / Shipment Update */}
