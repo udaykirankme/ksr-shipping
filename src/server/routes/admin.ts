@@ -299,7 +299,87 @@ const generateTrackingId = async () => {
 
 router.post('/shipments', async (req, res) => {
   try {
-    const { source_quote_id, ...data } = req.body;
+    const { source_quote_id, entry_type, ...data } = req.body;
+    const isPacking = entry_type === 'packing' || data.type === 'packing' || data.shipment_type === 'Packing';
+
+    // Handle Packing Service Entry
+    if (isPacking) {
+      if (!data.booked_date) {
+        return res.status(400).json({ success: false, message: 'Booked Date is required' });
+      }
+      if (data.received_amount === undefined || data.received_amount === null || data.received_amount === '' || Number(data.received_amount) <= 0) {
+        return res.status(400).json({ success: false, message: 'Valid Received Amount is required' });
+      }
+
+      if (data.booked_time) {
+        data.booked_date = parseBusinessDateTime(`${data.booked_date}T${data.booked_time}:00`);
+        delete data.booked_time;
+      } else {
+        data.booked_date = parseBusinessDateTime(data.booked_date);
+      }
+
+      data.tracking_type = 'packing';
+      data.shipment_type = 'Packing';
+      data.service = 'Packing';
+      data.service_through = 'In-House';
+      data.current_status = 'Delivered';
+      data.description = data.description || 'Packing Service';
+      data.paid_amount = 0;
+      data.received_amount = Number(data.received_amount) || 0;
+      data.profit = data.received_amount;
+      data.official_tracking_id = null;
+      data.weight = 0;
+      data.num_packages = 1;
+
+      // Handle customer name / contact number
+      if (data.customer_name && !data.sender_name) {
+        data.sender_name = data.customer_name;
+      }
+      if (data.contact_number && !data.sender_phone) {
+        data.sender_phone = data.contact_number;
+      }
+      delete data.customer_name;
+      delete data.contact_number;
+
+      delete data.medium;
+      delete data.type;
+
+      let shipment;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        try {
+          const tracking_id = await generateTrackingId();
+          shipment = await prisma.shipment.create({
+            data: {
+              ...data,
+              tracking_id,
+              history: {
+                create: {
+                  status: 'Delivered',
+                  location: 'KSR Office',
+                  occurred_at: data.booked_date,
+                  updated_by: (req as any).user?.id || null,
+                  note: data.sender_name ? `Packing Service for ${data.sender_name}` : 'Packing Service charges recorded'
+                }
+              }
+            }
+          });
+          break;
+        } catch (e: any) {
+          if (e.code === 'P2002' && e.meta?.target?.includes('tracking_id')) {
+            attempts++;
+            if (attempts >= maxAttempts) throw new Error('Failed to generate unique tracking ID after 3 attempts');
+          } else {
+            throw e;
+          }
+        }
+      }
+
+      return res.json({ success: true, data: shipment });
+    }
+
     data.tracking_type = 'manual';
     data.current_status = 'Shipment Created';
     

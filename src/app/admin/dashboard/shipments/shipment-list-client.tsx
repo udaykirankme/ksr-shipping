@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Filter, ArrowRight, RefreshCw, ArchiveRestore, Trash2, Download } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -48,19 +47,23 @@ export function ShipmentListClient({
   const confirm = useConfirm();
   const hasInitialData = initialShipments.length > 0 || initialTotal > 0;
   const [shipments, setShipments] = useState<ShipmentData[]>(initialShipments);
+  const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(!hasInitialData);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isActiveFilter, setIsActiveFilter] = useState(true);
   const [olderThan31Days, setOlderThan31Days] = useState(false);
   
-  const limit = 10;
+  const limit = 50;
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(Math.max(1, Math.ceil(initialTotal / limit)));
+  const hasMore = shipments.length < total;
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const skipInitialFetch = useRef(hasInitialData);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -72,10 +75,10 @@ export function ShipmentListClient({
 
     if (
       skipInitialFetch.current &&
-      page === 1 &&
       !debouncedSearch &&
       !statusFilter &&
-      isActiveFilter
+      isActiveFilter &&
+      !olderThan31Days
     ) {
       skipInitialFetch.current = false;
       return;
@@ -85,7 +88,7 @@ export function ShipmentListClient({
       setLoading(true);
       try {
         const data = await shipmentService.getShipments({
-          page,
+          page: 1,
           limit,
           search: debouncedSearch,
           status: statusFilter,
@@ -94,8 +97,9 @@ export function ShipmentListClient({
         });
         if (mounted) {
           const resData = data as any;
-          setShipments(resData.shipments);
-          setTotalPages(Math.max(1, Math.ceil(resData.total / limit)));
+          setShipments(resData.shipments || []);
+          setTotal(resData.total || 0);
+          setPage(1);
         }
       } catch (err) {
         console.error(err);
@@ -106,11 +110,61 @@ export function ShipmentListClient({
     
     fetchData();
     return () => { mounted = false; };
-  }, [page, statusFilter, isActiveFilter, olderThan31Days, debouncedSearch]);
+  }, [statusFilter, isActiveFilter, olderThan31Days, debouncedSearch]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const data = await shipmentService.getShipments({
+        page: nextPage,
+        limit,
+        search: debouncedSearch,
+        status: statusFilter,
+        isActive: isActiveFilter,
+        olderThan31Days
+      });
+      const resData = data as any;
+      const newItems: ShipmentData[] = resData.shipments || [];
+      if (newItems.length > 0) {
+        setShipments(prev => {
+          const existing = new Set(prev.map(s => s.id));
+          const unique = newItems.filter(s => !existing.has(s.id));
+          return [...prev, ...unique];
+        });
+        setPage(nextPage);
+      }
+      setTotal(resData.total ?? total);
+    } catch (err) {
+      console.error("Failed to load more shipments:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore, hasMore, page, limit, debouncedSearch, statusFilter, isActiveFilter, olderThan31Days, total]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !loading && !loadingMore) {
+          loadMore();
+        }
+      },
+      { 
+        root: scrollContainerRef.current,
+        rootMargin: "300px" 
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, hasMore, loading, loadingMore]);
 
   // Provide manual refresh
   const handleRefresh = async () => {
-    setPage(1);
     setLoading(true);
     try {
       const data = await shipmentService.getShipments({
@@ -122,8 +176,9 @@ export function ShipmentListClient({
         olderThan31Days
       });
       const resData = data as any;
-      setShipments(resData.shipments);
-      setTotalPages(Math.ceil(resData.total / limit));
+      setShipments(resData.shipments || []);
+      setTotal(resData.total || 0);
+      setPage(1);
     } catch (err) {
       console.error(err);
     } finally {
@@ -193,9 +248,9 @@ export function ShipmentListClient({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full min-h-0 space-y-4 sm:space-y-5">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Shipments</h1>
           <p className="text-sm text-gray-500 mt-1">Manage and track all logistics operations</p>
@@ -245,7 +300,7 @@ export function ShipmentListClient({
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4">
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4 shrink-0">
         <div className="relative flex-1 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-orange-500 transition-colors" />
           <Input 
@@ -279,7 +334,7 @@ export function ShipmentListClient({
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
-        <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2">
+        <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2 shrink-0">
           <span className="text-sm font-medium text-orange-800">
             {selectedIds.size} selected
           </span>
@@ -294,52 +349,61 @@ export function ShipmentListClient({
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-100/50 rounded-2xl shadow-sm overflow-hidden relative">
+      {/* Table Box */}
+      <div className="bg-white border border-gray-100/80 rounded-2xl shadow-sm relative flex flex-col flex-1 min-h-0 overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-md z-10 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-md z-30 flex items-center justify-center">
             <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
           </div>
         )}
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                <TableHead className="w-12 text-center">
+        
+        {/* Scrollable container for the table rows inside the box */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-auto max-h-[calc(100vh-275px)]"
+        >
+          <table className="w-full caption-bottom text-sm border-collapse">
+            <thead className="sticky top-0 z-20 shadow-xs border-b border-gray-200">
+              <tr className="bg-gray-50/95 backdrop-blur-xs">
+                <th className="w-10 px-4 py-3.5 text-center sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">
                   <input 
                     type="checkbox" 
-                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
                     checked={shipments.length > 0 && selectedIds.size === shipments.length}
                     onChange={toggleAll}
                   />
-                </TableHead>
-                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Tracking Info</TableHead>
-                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Sender</TableHead>
-                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Receiver</TableHead>
-                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Service</TableHead>
-                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Status</TableHead>
-                <TableHead className="font-semibold text-gray-900 whitespace-nowrap">Booked Date</TableHead>
-                <TableHead className="font-semibold text-gray-900 text-right whitespace-nowrap">Profit</TableHead>
-                <TableHead className="w-24 font-semibold text-gray-900 text-center whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Tracking Info</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Sender</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Receiver</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Service</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Status</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Booked Date</th>
+                <th className="font-semibold text-gray-900 text-right whitespace-nowrap px-4 py-3.5 text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Profit</th>
+                <th className="w-20 font-semibold text-gray-900 text-center whitespace-nowrap px-4 py-3.5 text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
               {shipments.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-64 text-center">
+                <tr>
+                  <td colSpan={9} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500 gap-2">
                       <Search className="w-8 h-8 text-gray-300" />
                       <p>No shipments found</p>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               )}
               {shipments.map((shipment) => (
-                <TableRow key={shipment.id} className="group hover:bg-gray-50/50 cursor-pointer" onClick={() => window.location.href = `/admin/dashboard/shipments/${shipment.id}`}>
-                  <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                <tr 
+                  key={shipment.id} 
+                  className="group hover:bg-orange-50/30 transition-colors cursor-pointer border-b border-gray-100/80" 
+                  onClick={() => window.location.href = `/admin/dashboard/shipments/${shipment.id}`}
+                >
+                  <td className="w-10 text-center px-4 py-4" onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox" 
-                      className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                      className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
                       checked={selectedIds.has(shipment.id)}
                       onChange={(e) => {
                          if (e.target.checked) {
@@ -353,95 +417,86 @@ export function ShipmentListClient({
                          }
                       }}
                     />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-900">{shipment.tracking_id}</span>
-                      <span className="text-xs text-gray-500">{shipment.official_tracking_id}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-gray-900 hover:text-orange-600 transition-colors">{shipment.tracking_id}</span>
+                      {shipment.official_tracking_id && (
+                        <span className="text-xs text-gray-400 font-normal">{shipment.official_tracking_id}</span>
+                      )}
                     </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{shipment.sender_name || 'N/A'}</span>
-                      <span className="text-xs text-gray-500">{shipment.sender_city || 'N/A'}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4 max-w-[190px]">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-semibold text-gray-900 truncate" title={shipment.sender_name}>{shipment.sender_name || 'N/A'}</span>
+                      <span className="text-xs text-gray-500 truncate" title={shipment.sender_city}>{shipment.sender_city || 'N/A'}</span>
                     </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{shipment.receiver_name || 'N/A'}</span>
-                      <span className="text-xs text-gray-500">{shipment.receiver_city || 'N/A'}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4 max-w-[210px]">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-semibold text-gray-900 truncate" title={shipment.receiver_name}>{shipment.receiver_name || 'N/A'}</span>
+                      <span className="text-xs text-gray-500 truncate" title={shipment.receiver_city}>{shipment.receiver_city || 'N/A'}</span>
                     </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm">{shipment.service || shipment.courier || 'N/A'}</span>
+                      <span className="text-sm uppercase font-semibold text-gray-800">{shipment.service || shipment.courier || 'N/A'}</span>
                       {Boolean(shipment.medium) && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 uppercase tracking-wider">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 uppercase tracking-wider">
                           {String(shipment.medium)}
                         </span>
                       )}
                     </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Badge variant={shipment.current_status === 'Delivered' ? 'success' : shipment.current_status === 'Shipment Created' ? 'default' : 'warning'}>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4">
+                    <Badge variant={shipment.current_status === 'Delivered' ? 'success' : shipment.current_status === 'Shipment Created' ? 'default' : 'warning'} className="text-xs px-2.5 py-1 font-medium">
                       {shipment.current_status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600 whitespace-nowrap">
+                  </td>
+                  <td className="text-sm text-gray-600 whitespace-nowrap px-4 py-4">
                     {formatDate(shipment.booked_date)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-gray-900">
+                  </td>
+                  <td className="text-right font-bold text-gray-900 whitespace-nowrap px-4 py-4 text-sm">
                     {formatCurrency(shipment.profit || 0)}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors" onClick={(e) => handleDelete(shipment.id, e)}>
-                        <Trash2 className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors" onClick={(e) => handleDelete(shipment.id, e)} title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="transition-colors" asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors" asChild title="Edit">
                         <Link href={`/admin/dashboard/shipments/${shipment.id}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit text-gray-500"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="transition-colors" asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors" asChild title="View">
                         <Link href={`/admin/dashboard/shipments/${shipment.id}`}>
-                          <ArrowRight className="w-4 h-4 text-gray-400" />
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-        
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="border-t border-gray-100 p-4 flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              Page {page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={page === 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={page === totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </Button>
+            </tbody>
+          </table>
+
+          {/* Continuous Scroll Sentinel & Status inside scroll container */}
+          <div ref={sentinelRef} className="h-4" />
+
+          {loadingMore && (
+            <div className="py-4 flex items-center justify-center gap-2 text-sm text-gray-500 border-t border-gray-100/70 bg-gray-50/40">
+              <RefreshCw className="w-4 h-4 text-orange-500 animate-spin" />
+              <span>Loading more shipments...</span>
             </div>
-          </div>
-        )}
+          )}
+
+          {!hasMore && shipments.length > 0 && !loading && (
+            <div className="py-3.5 px-4 text-center text-xs text-gray-400 border-t border-gray-100/70 bg-gray-50/20">
+              Showing all {shipments.length} shipments
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

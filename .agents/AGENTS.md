@@ -14,3 +14,7 @@ Every single time you want to run a command, you MUST check if that command is i
 - **Privilege & Permissions**: `sudo`, `chmod`, `chown`
 - **Network Requests**: `curl`, `wget`, `Invoke-WebRequest`, `Invoke-RestMethod`
 - **Misc/Security**: `certutil`, `bitsadmin`, `powershell -enc`, `powershell -EncodedCommand`
+
+## Tooling & Automation Rules
+- **NEVER use `browser_subagent`**: Automated browser testing and browser subagent tools are permanently disabled for this workspace. Do not invoke `browser_subagent` under any circumstances. All testing and verification should be done via code inspection, TypeScript checks/unit tests, or direct manual user review in the browser.
+

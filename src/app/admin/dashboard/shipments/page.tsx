@@ -8,10 +8,10 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ShipmentsPage() {
-  const initial = await getShipmentsList({ page: 1, limit: 10, isActive: true });
+  const initial = await getShipmentsList({ page: 1, limit: 50, isActive: true });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto flex flex-col h-full min-h-0">
       <ShipmentListClient
         initialShipments={initial.shipments}
         initialTotal={initial.total}

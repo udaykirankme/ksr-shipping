@@ -14,6 +14,7 @@ import { formatDateToYYYYMMDD } from "@/lib/format";
 import { toBusinessTimeInput } from "@/lib/datetime";
 import {
   buildShipmentCreatedShareMessage,
+  buildPackingCreatedShareMessage,
   openWhatsAppShare,
 } from '@/lib/whatsapp-share';
 
@@ -34,6 +35,7 @@ export default function NewShipmentPage() {
   const [fetchingQuote, setFetchingQuote] = useState(!!quoteId);
   const [error, setError] = useState('');
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [entryType, setEntryType] = useState<'shipment' | 'packing'>('shipment');
 
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
@@ -129,6 +131,41 @@ export default function NewShipmentPage() {
     e.preventDefault();
     setError('');
     
+    if (entryType === 'packing') {
+      if (!formData.booked_date) {
+        setError('Booked Date is mandatory');
+        return;
+      }
+      const received = parseFloat(formData.received_amount);
+      if (!formData.received_amount || isNaN(received) || received <= 0) {
+        setError('Received Amount is mandatory and must be greater than 0');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await shipmentService.createShipment({
+          entry_type: 'packing',
+          booked_date: formData.booked_date,
+          booked_time: formData.booked_time,
+          received_amount: received,
+          paid_amount: 0,
+          description: formData.description || 'Packing Service',
+          sender_name: formData.sender_name?.trim() || null,
+          sender_phone: formData.sender_phone?.trim() || null,
+        });
+        const resData = res as any;
+        setCreatedId(resData.data?.tracking_id || resData.tracking_id || 'SUCCESS');
+        router.refresh();
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to record packing');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!formData.estimated_delivery) {
       setError('Estimated Delivery Date is required');
       return;
@@ -143,6 +180,7 @@ export default function NewShipmentPage() {
 
     try {
       const res = await shipmentService.createShipment({
+        entry_type: 'shipment',
         ...formData,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         num_packages: parseInt(formData.num_packages) || 1,
@@ -151,7 +189,7 @@ export default function NewShipmentPage() {
         source_quote_id: formData.source_quote_id || null
       });
       const resData = res as any;
-      setCreatedId(resData.tracking_id);
+      setCreatedId(resData.data?.tracking_id || resData.tracking_id);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create shipment');
@@ -168,11 +206,19 @@ export default function NewShipmentPage() {
              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-3">Shipment Created Successfully!</h2>
-        <p className="text-gray-500 mb-8">The customer tracking number has been generated securely.</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-3">
+          {entryType === 'packing' ? 'Packing Recorded Successfully!' : 'Shipment Created Successfully!'}
+        </h2>
+        <p className="text-gray-500 mb-8">
+          {entryType === 'packing' 
+            ? 'The packing revenue has been added directly to your monthly profits.' 
+            : 'The customer tracking number has been generated securely.'}
+        </p>
         
         <div className="bg-gray-50 rounded-2xl p-8 mb-8 border border-gray-100 inline-block min-w-[300px]">
-           <span className="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Customer Tracking ID</span>
+           <span className="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+             {entryType === 'packing' ? 'Packing Record ID' : 'Customer Tracking ID'}
+           </span>
            <span className="block text-4xl font-mono font-bold text-orange-500 tracking-wider cursor-pointer hover:text-orange-600 transition-colors" 
                  onClick={() => {
                    navigator.clipboard.writeText(createdId);
@@ -197,44 +243,67 @@ export default function NewShipmentPage() {
                   ...prev,
                   official_tracking_id: '',
                   medium: '',
+                  received_amount: '',
+                  paid_amount: '',
+                  sender_name: '',
+                  sender_phone: '',
                   ...getCurrentBookedDateTime(),
                 }));
               }}
               className="rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 transition-colors"
             >
-              Create Another
+              {entryType === 'packing' ? 'Record Another Packing' : 'Create Another'}
             </button>
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                openWhatsAppShare(
-                  formData.sender_phone,
-                  buildShipmentCreatedShareMessage(createdId, formData.sender_name),
-                )
-              }
-              className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!formData.sender_phone?.trim()}
-            >
-              <Share2 className="w-4 h-4" />
-              Share to Sender
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                openWhatsAppShare(
-                  formData.receiver_phone,
-                  buildShipmentCreatedShareMessage(createdId, formData.receiver_name),
-                )
-              }
-              className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!formData.receiver_phone?.trim()}
-            >
-              <Share2 className="w-4 h-4" />
-              Share to Receiver
-            </button>
-          </div>
+          {entryType === 'packing' && formData.sender_phone?.trim() && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() =>
+                  openWhatsAppShare(
+                    formData.sender_phone,
+                    buildPackingCreatedShareMessage(createdId, formData.received_amount, formData.sender_name),
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                Share Receipt to Customer
+              </button>
+            </div>
+          )}
+          {entryType === 'shipment' && (
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  openWhatsAppShare(
+                    formData.sender_phone,
+                    buildShipmentCreatedShareMessage(createdId, formData.sender_name),
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!formData.sender_phone?.trim()}
+              >
+                <Share2 className="w-4 h-4" />
+                Share to Sender
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openWhatsAppShare(
+                    formData.receiver_phone,
+                    buildShipmentCreatedShareMessage(createdId, formData.receiver_name),
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1fb855] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!formData.receiver_phone?.trim()}
+              >
+                <Share2 className="w-4 h-4" />
+                Share to Receiver
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -248,8 +317,14 @@ export default function NewShipmentPage() {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Shipment</h1>
-            <p className="text-sm text-gray-500 mt-1">Enter all details to register a new shipment</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {entryType === 'packing' ? 'Record Packing' : 'Create Shipment'}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {entryType === 'packing'
+                ? 'Record packing charges directly to monthly profit'
+                : 'Enter all details to register a new shipment'}
+            </p>
           </div>
         </div>
         <button 
@@ -258,7 +333,7 @@ export default function NewShipmentPage() {
           className="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] transition-all disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          {loading ? 'Saving...' : 'Save Shipment'}
+          {loading ? 'Saving...' : entryType === 'packing' ? 'Save Packing' : 'Save Shipment'}
         </button>
       </div>
 
@@ -282,232 +357,369 @@ export default function NewShipmentPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* Basic Info */}
+        {/* Type Selection */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Basic Information</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Official Tracking Number <span className="text-red-500">*</span></label>
-              <input required name="official_tracking_id" value={formData.official_tracking_id} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Booked Date <span className="text-red-500">*</span></label>
-              <PremiumDatePicker 
-                value={formData.booked_date} 
-                onChange={(date) => setFormData((prev: any) => ({ ...prev, booked_date: formatDateToYYYYMMDD(date) }))} 
+          <label className="block text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
+            Type <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label
+              className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all select-none ${
+                entryType === 'shipment'
+                  ? 'border-orange-500 bg-orange-50/60 ring-1 ring-orange-500 shadow-xs'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="entry_type"
+                value="shipment"
+                checked={entryType === 'shipment'}
+                onChange={() => setEntryType('shipment')}
+                className="w-4 h-4 text-orange-500 accent-orange-500 cursor-pointer"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Booked Time <span className="text-red-500">*</span></label>
-              <PremiumTimePicker 
-                value={formData.booked_time} 
-                onChange={(time: string) => setFormData((prev: any) => ({ ...prev, booked_time: time }))} 
+              <div>
+                <span className="block font-bold text-gray-900">1. Shipment</span>
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  Standard shipment with tracking, sender, receiver, and parcel details
+                </span>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-center gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all select-none ${
+                entryType === 'packing'
+                  ? 'border-orange-500 bg-orange-50/60 ring-1 ring-orange-500 shadow-xs'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="entry_type"
+                value="packing"
+                checked={entryType === 'packing'}
+                onChange={() => setEntryType('packing')}
+                className="w-4 h-4 text-orange-500 accent-orange-500 cursor-pointer"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Type <span className="text-red-500">*</span></label>
-              <PremiumSelect
-                value={formData.shipment_type}
-                onChange={(value) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    shipment_type: value,
-                    medium: value === 'International' ? 'Air' : prev.medium
-                  }));
-                }}
-                options={[
-                  { label: "Domestic", value: "Domestic" },
-                  { label: "International", value: "International" }
-                ]}
-                placeholder="Select Shipment Type..."
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery Date <span className="text-red-500">*</span></label>
-              <PremiumDatePicker 
-                value={formData.estimated_delivery} 
-                onChange={(date) => setFormData((prev: any) => ({ ...prev, estimated_delivery: formatDateToYYYYMMDD(date) }))} 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Service <span className="text-red-500">*</span></label>
-              <PremiumSelect
-                value={formData.service}
-                onChange={(value) => handleChange({ target: { name: 'service', value } } as any)}
-                options={dbServices.map(s => ({ label: s.name, value: s.slug }))}
-                placeholder="Select Service..."
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Service Through <span className="text-red-500">*</span></label>
-              <PremiumSelect
-                value={formData.service_through}
-                onChange={(value) => handleChange({ target: { name: 'service_through', value } } as any)}
-                options={dbServiceThrough.map(st => ({ label: st.name, value: st.slug }))}
-                placeholder="Select Vendor..."
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Medium <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label
-                  className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-medium transition-all select-none ${
-                    formData.medium === 'Surface'
-                      ? 'border-orange-500 bg-orange-50/70 text-orange-600 ring-1 ring-orange-500 shadow-xs'
-                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="medium"
-                    value="Surface"
-                    checked={formData.medium === 'Surface'}
-                    onChange={handleChange}
-                    required
-                    className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+              <div>
+                <span className="block font-bold text-gray-900">2. Packing</span>
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  Packing charges only — credited directly into this month&apos;s profits
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {entryType === 'packing' ? (
+          /* Packing Mode: Basic Info (Booked Date, Customer Name, Contact Number) and Financials (Received Amount) */
+          <>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Basic Information</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Booked Date <span className="text-red-500">*</span>
+                  </label>
+                  <PremiumDatePicker 
+                    value={formData.booked_date} 
+                    onChange={(date) => setFormData((prev: any) => ({ ...prev, booked_date: formatDateToYYYYMMDD(date) }))} 
                   />
-                  <Truck className={`w-4 h-4 ${formData.medium === 'Surface' ? 'text-orange-500' : 'text-gray-400'}`} />
-                  <span>Surface</span>
-                </label>
-                <label
-                  className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-medium transition-all select-none ${
-                    formData.medium === 'Air'
-                      ? 'border-orange-500 bg-orange-50/70 text-orange-600 ring-1 ring-orange-500 shadow-xs'
-                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300'
-                  }`}
-                >
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Customer Name
+                  </label>
                   <input
-                    type="radio"
-                    name="medium"
-                    value="Air"
-                    checked={formData.medium === 'Air'}
+                    type="text"
+                    name="sender_name"
+                    placeholder="Enter customer name"
+                    value={formData.sender_name}
                     onChange={handleChange}
-                    required
-                    className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-gray-900"
                   />
-                  <Plane className={`w-4 h-4 ${formData.medium === 'Air' ? 'text-orange-500' : 'text-gray-400'}`} />
-                  <span>Air</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
+                </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Sender Info */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Sender Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
-                <input required name="sender_name" value={formData.sender_name} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
-                  <input required name="sender_phone" value={formData.sender_phone} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input type="email" name="sender_email" value={formData.sender_email} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <input name="sender_address" value={formData.sender_address} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">City <span className="text-red-500">*</span></label>
-                  <input required name="sender_city" value={formData.sender_city} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pincode</label>
-                  <input name="sender_pincode" value={formData.sender_pincode} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="sender_phone"
+                    placeholder="Enter contact number"
+                    value={formData.sender_phone}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-gray-900"
+                  />
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Receiver Info */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Receiver Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
-                <input required name="receiver_name" value={formData.receiver_name} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm space-y-6">
+              <h2 className="text-lg font-semibold text-gray-900">Financials</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
-                  <input required name="receiver_phone" value={formData.receiver_phone} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input type="email" name="receiver_email" value={formData.receiver_email} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                <input name="receiver_address" value={formData.receiver_address} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">City <span className="text-red-500">*</span></label>
-                  <input required name="receiver_city" value={formData.receiver_city} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pincode</label>
-                  <input name="receiver_pincode" value={formData.receiver_pincode} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Received Amount (₹) <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    required 
+                    type="number" 
+                    step="0.01" 
+                    min="0.01"
+                    name="received_amount" 
+                    placeholder="Enter amount received (e.g. 500)"
+                    value={formData.received_amount} 
+                    onChange={handleChange} 
+                    className="w-full rounded-xl border border-emerald-300 px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 text-lg font-bold bg-emerald-50/40" 
+                  />
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Package & Payment */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Package Details</h2>
-            <div className="grid grid-cols-2 gap-6 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg) <span className="text-red-500">*</span></label>
-                <input required type="number" step="0.01" name="weight" value={formData.weight} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">No. of Packages</label>
-                <input required type="number" name="num_packages" value={formData.num_packages} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+              <div className="p-4 bg-emerald-50/50 rounded-xl flex items-center justify-between border border-emerald-100">
+                <div>
+                  <span className="block font-semibold text-gray-900">Added to Month&apos;s Profit</span>
+                  <span className="text-xs text-gray-500">100% of received packing amount counts as profit</span>
+                </div>
+                <span className="text-2xl font-bold text-emerald-600">
+                  ₹{Number(formData.received_amount) || 0}
+                </span>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description / Contents</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+          </>
+        ) : (
+          /* Shipment Mode */
+          <>
+            {/* Basic Info */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">Basic Information</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Official Tracking Number <span className="text-red-500">*</span></label>
+                  <input required name="official_tracking_id" value={formData.official_tracking_id} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Booked Date <span className="text-red-500">*</span></label>
+                  <PremiumDatePicker 
+                    value={formData.booked_date} 
+                    onChange={(date) => setFormData((prev: any) => ({ ...prev, booked_date: formatDateToYYYYMMDD(date) }))} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Booked Time <span className="text-red-500">*</span></label>
+                  <PremiumTimePicker 
+                    value={formData.booked_time} 
+                    onChange={(time: string) => setFormData((prev: any) => ({ ...prev, booked_time: time }))} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Shipment Type <span className="text-red-500">*</span></label>
+                  <PremiumSelect
+                    value={formData.shipment_type}
+                    onChange={(value) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        shipment_type: value,
+                        medium: value === 'International' ? 'Air' : prev.medium
+                      }));
+                    }}
+                    options={[
+                      { label: "Domestic", value: "Domestic" },
+                      { label: "International", value: "International" }
+                    ]}
+                    placeholder="Select Shipment Type..."
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery Date <span className="text-red-500">*</span></label>
+                  <PremiumDatePicker 
+                    value={formData.estimated_delivery} 
+                    onChange={(date) => setFormData((prev: any) => ({ ...prev, estimated_delivery: formatDateToYYYYMMDD(date) }))} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service <span className="text-red-500">*</span></label>
+                  <PremiumSelect
+                    value={formData.service}
+                    onChange={(value) => handleChange({ target: { name: 'service', value } } as any)}
+                    options={dbServices.map(s => ({ label: s.name, value: s.slug }))}
+                    placeholder="Select Service..."
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Through <span className="text-red-500">*</span></label>
+                  <PremiumSelect
+                    value={formData.service_through}
+                    onChange={(value) => handleChange({ target: { name: 'service_through', value } } as any)}
+                    options={dbServiceThrough.map(st => ({ label: st.name, value: st.slug }))}
+                    placeholder="Select Vendor..."
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Medium <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label
+                      className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-medium transition-all select-none ${
+                        formData.medium === 'Surface'
+                          ? 'border-orange-500 bg-orange-50/70 text-orange-600 ring-1 ring-orange-500 shadow-xs'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="medium"
+                        value="Surface"
+                        checked={formData.medium === 'Surface'}
+                        onChange={handleChange}
+                        required
+                        className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                      />
+                      <Truck className={`w-4 h-4 ${formData.medium === 'Surface' ? 'text-orange-500' : 'text-gray-400'}`} />
+                      <span>Surface</span>
+                    </label>
+                    <label
+                      className={`flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer text-sm font-medium transition-all select-none ${
+                        formData.medium === 'Air'
+                          ? 'border-orange-500 bg-orange-50/70 text-orange-600 ring-1 ring-orange-500 shadow-xs'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="medium"
+                        value="Air"
+                        checked={formData.medium === 'Air'}
+                        onChange={handleChange}
+                        required
+                        className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500 accent-orange-500 cursor-pointer"
+                      />
+                      <Plane className={`w-4 h-4 ${formData.medium === 'Air' ? 'text-orange-500' : 'text-gray-400'}`} />
+                      <span>Air</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Financials</h2>
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Received Amount (₹) <span className="text-red-500">*</span></label>
-                <input required type="number" name="received_amount" value={formData.received_amount} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Sender Info */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Sender Details</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
+                    <input required name="sender_name" value={formData.sender_name} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
+                      <input required name="sender_phone" value={formData.sender_phone} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                      <input type="email" name="sender_email" value={formData.sender_email} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <input name="sender_address" value={formData.sender_address} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">City <span className="text-red-500">*</span></label>
+                      <input required name="sender_city" value={formData.sender_city} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Pincode</label>
+                      <input name="sender_pincode" value={formData.sender_pincode} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Paid Amount (₹) <span className="text-red-500">*</span></label>
-                <input required type="number" name="paid_amount" value={formData.paid_amount} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50" />
+
+              {/* Receiver Info */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Receiver Details</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
+                    <input required name="receiver_name" value={formData.receiver_name} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone <span className="text-red-500">*</span></label>
+                      <input required name="receiver_phone" value={formData.receiver_phone} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                      <input type="email" name="receiver_email" value={formData.receiver_email} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <input name="receiver_address" value={formData.receiver_address} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">City <span className="text-red-500">*</span></label>
+                      <input required name="receiver_city" value={formData.receiver_city} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Pincode</label>
+                      <input name="receiver_pincode" value={formData.receiver_pincode} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100">
-               <span className="font-semibold text-gray-700">Estimated Profit</span>
-               <span className="text-2xl font-bold text-gray-900">₹{(Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0)}</span>
+
+            {/* Package & Payment */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Package Details</h2>
+                <div className="grid grid-cols-2 gap-6 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg) <span className="text-red-500">*</span></label>
+                    <input required type="number" step="0.01" name="weight" value={formData.weight} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">No. of Packages</label>
+                    <input required type="number" name="num_packages" value={formData.num_packages} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description / Contents</label>
+                  <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Financials</h2>
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Received Amount (₹) <span className="text-red-500">*</span></label>
+                    <input required type="number" name="received_amount" value={formData.received_amount} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Paid Amount (₹) <span className="text-red-500">*</span></label>
+                    <input required type="number" name="paid_amount" value={formData.paid_amount} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50" />
+                  </div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100">
+                   <span className="font-semibold text-gray-700">Estimated Profit</span>
+                   <span className="text-2xl font-bold text-gray-900">₹{(Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0)}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
       </form>
     </div>

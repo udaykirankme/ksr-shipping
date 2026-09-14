@@ -40,6 +40,15 @@ export function WhyChooseCarousel() {
   const rotate = useTransform(x, [-200, 200], [-8, 8]);
   const scale = useTransform(x, [-200, 0, 200], [0.85, 1, 0.85]);
 
+  // Smoothly morph upcoming cards into focus as the top card is swiped
+  const nextScale = useTransform(x, [-250, 0], [1, 0.92], { clamp: true });
+  const nextY = useTransform(x, [-250, 0], [0, 12], { clamp: true });
+  const nextX = useTransform(x, [-250, 0], [0, 12], { clamp: true });
+
+  const prevScale = useTransform(x, [0, 250], [0.92, 1], { clamp: true });
+  const prevY = useTransform(x, [0, 250], [12, 0], { clamp: true });
+  const prevX = useTransform(x, [0, 250], [-12, 0], { clamp: true });
+
   useEffect(() => {
     setHasMounted(true);
     const handleResize = () => {
@@ -52,7 +61,7 @@ export function WhyChooseCarousel() {
 
   const nextCard = useCallback(() => {
     if (!isDesktop && x.get() === 0) {
-      animate(x, -400, { duration: 0.6, ease: "easeInOut" }).then(() => {
+      animate(x, -400, { duration: 0.8, ease: "easeInOut" }).then(() => {
         setCurrentIndex((prev) => (prev + 1) % CARDS.length);
         x.set(0);
       });
@@ -64,7 +73,7 @@ export function WhyChooseCarousel() {
 
   const prevCard = useCallback(() => {
     if (!isDesktop && x.get() === 0) {
-      animate(x, 400, { duration: 0.6, ease: "easeInOut" }).then(() => {
+      animate(x, 400, { duration: 0.8, ease: "easeInOut" }).then(() => {
         setCurrentIndex((prev) => (prev - 1 + CARDS.length) % CARDS.length);
         x.set(0);
       });
@@ -108,13 +117,14 @@ export function WhyChooseCarousel() {
 
     const handleDragEnd = (e: any, info: PanInfo) => {
       const swipeThreshold = 50;
-      if (info.offset.x < -swipeThreshold) {
-        animate(x, -400, { duration: 0.4, ease: "easeOut" }).then(() => {
+      const swipeVelocity = 300;
+      if (info.offset.x < -swipeThreshold || info.velocity.x < -swipeVelocity) {
+        animate(x, -400, { duration: 0.6, ease: "easeOut" }).then(() => {
            setCurrentIndex((prev) => (prev + 1) % CARDS.length);
            x.set(0);
         });
-      } else if (info.offset.x > swipeThreshold) {
-        animate(x, 400, { duration: 0.4, ease: "easeOut" }).then(() => {
+      } else if (info.offset.x > swipeThreshold || info.velocity.x > swipeVelocity) {
+        animate(x, 400, { duration: 0.6, ease: "easeOut" }).then(() => {
            setCurrentIndex((prev) => (prev - 1 + CARDS.length) % CARDS.length);
            x.set(0);
         });
@@ -137,10 +147,9 @@ export function WhyChooseCarousel() {
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   style={{ x, rotate, scale, zIndex: 30 }}
-                  initial={{ scale: 0.9, opacity: 0, x: 0, rotate: 0 }}
+                  initial={false}
                   animate={{ scale: 1, opacity: 1, x: 0, rotate: 0 }}
-                  exit={{ opacity: 0, transition: { duration: 0 } }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  exit={{ opacity: 0, transition: { duration: 0.1 } }}
                   className="absolute w-full px-4 cursor-grab active:cursor-grabbing"
                 >
                   <motion.div
@@ -159,10 +168,15 @@ export function WhyChooseCarousel() {
               return (
                 <motion.div
                   key={`mobile-next-${idx}`}
-                  initial={false}
-                  animate={{ scale: 0.92, opacity: 1, y: 12, x: 12 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  style={{ zIndex: 20 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ 
+                    scale: nextScale, 
+                    y: nextY, 
+                    x: nextX, 
+                    zIndex: 20 
+                  }}
                   className="absolute w-full px-4 pointer-events-none"
                 >
                   <CardContent card={card} isFocused={false} />
@@ -173,10 +187,15 @@ export function WhyChooseCarousel() {
                return (
                 <motion.div
                   key={`mobile-prev-${idx}`}
-                  initial={false}
-                  animate={{ scale: 0.92, opacity: 1, y: 12, x: -12 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  style={{ zIndex: 10 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ 
+                    scale: prevScale, 
+                    y: prevY, 
+                    x: prevX, 
+                    zIndex: 10 
+                  }}
                   className="absolute w-full px-4 pointer-events-none"
                 >
                   <CardContent card={card} isFocused={false} />
@@ -279,7 +298,7 @@ export function WhyChooseCarousel() {
                    opacity: isSolid ? 1 : 0,
                    zIndex: 30 - Math.abs(position),
                  }}
-                 transition={{ duration: 0.6, ease: "easeInOut" }}
+                 transition={{ duration: 0.8, ease: "easeInOut" }}
                  className={clsx(
                    "absolute w-full max-w-[360px] lg:max-w-[380px] select-none transition-shadow",
                    position === 0 ? "cursor-grab active:cursor-grabbing" : "cursor-pointer hover:opacity-95"

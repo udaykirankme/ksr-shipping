@@ -43,6 +43,26 @@ Thank you for choosing ${business.name}. We appreciate your trust in us.
 — Team ${business.name}`;
 }
 
+export function buildPackingCreatedShareMessage(
+  receiptId: string,
+  amount: number | string,
+  customerName?: string,
+): string {
+  const greeting = customerName?.trim() ? `Dear ${customerName.trim()},` : 'Dear Customer,';
+
+  return `${greeting}
+
+Thank you for choosing ${business.name}. Your packing service has been recorded successfully.
+
+Receipt / Ref: ${receiptId}
+Amount Received: ₹${amount}
+
+We appreciate your trust in us.
+
+— Team ${business.name}`;
+}
+
+
 export type StatusUpdateShareDetails = {
   trackingId: string;
   status: string;
