@@ -76,6 +76,30 @@ export const shipmentService = {
     });
   },
 
+  async editStatus(id: string, historyId: string, data: { status: string, location?: string, occurred_at?: string, note?: string, version?: number }) {
+    return apiFetch(`${API_BASE}/shipments/${id}/status/${historyId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      credentials: 'include'
+    });
+  },
+
+  async undoStatus(id: string) {
+    return apiFetch(`${API_BASE}/shipments/${id}/status/undo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+  },
+
+  async deleteStatusHistory(id: string, historyId: string) {
+    return apiFetch(`${API_BASE}/shipments/${id}/status/${historyId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+  },
+
   async archiveShipment(id: string, is_active: boolean) {
     return apiFetch(`${API_BASE}/shipments/${id}/archive`, {
       method: 'POST',

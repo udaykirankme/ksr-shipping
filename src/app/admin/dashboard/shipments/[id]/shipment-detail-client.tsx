@@ -11,7 +11,7 @@ import {
   toBusinessTimeInput,
   toBusinessDateInput,
 } from '@/lib/datetime';
-import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, Plane, CheckCircle2, RefreshCw, Share2, Edit3 } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, Plane, CheckCircle2, RefreshCw, Share2, Edit3, RotateCcw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
@@ -32,7 +32,9 @@ const STATUS_WORKFLOW = [
   'In Transit',
   'At Hub',
   'Out For Delivery',
-  'Delivered'
+  'Delivered',
+  'Returned',
+  'Cancelled'
 ];
 
 function getOfficialTrackingInfo(service: string, trackingId: string) {
@@ -145,6 +147,17 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   }));
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
+
+  // Edit Status modal state
+  const [editingHistoryItem, setEditingHistoryItem] = useState<any | null>(null);
+  const [editStatusForm, setEditStatusForm] = useState({
+    status: '',
+    location: '',
+    date: '',
+    time: '',
+    note: ''
+  });
+  const [editLoading, setEditLoading] = useState(false);
 
   const isDelivered = shipment.current_status === 'Delivered';
   const shareableStatus = getShareableStatus(shipment);
@@ -283,6 +296,164 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setError((err as Error).message || 'Failed to update status');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUndoStatus = async () => {
+    if (!shipment.history || shipment.history.length <= 1) {
+      setError('Cannot undo the initial shipment creation status.');
+      return;
+    }
+
+    const latest = shipment.history[0];
+    const previous = shipment.history[1];
+    const confirmMessage = `Are you sure you want to undo the status update "${latest.status}"? The shipment status will revert to "${previous.status}".`;
+    
+    if (!(await confirm({
+      title: 'Undo Status Update',
+      message: confirmMessage,
+      confirmText: 'Undo Update',
+      cancelText: 'Cancel'
+    }))) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const res = await shipmentService.undoStatus(shipmentId) as any;
+      const updatedShipment = res.data || res;
+      setShipment(updatedShipment);
+      setFormData((prev: any) => ({
+        ...prev,
+        ...updatedShipment,
+        estimated_delivery: updatedShipment.estimated_delivery ? toBusinessDateInput(updatedShipment.estimated_delivery) : prev.estimated_delivery,
+        booked_time: updatedShipment.booked_date ? toBusinessTimeInput(updatedShipment.booked_date) : prev.booked_time
+      }));
+      setSuccess(`Status update undone. Shipment reverted to "${updatedShipment.current_status}".`);
+
+      const nextUpdate = getNextStatusUpdate(updatedShipment.current_status);
+      setStatusUpdate({
+        status: nextUpdate.status,
+        location: '',
+        note: '',
+        occurred_at: nextUpdate.occurred_at,
+      });
+      router.refresh();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to undo status update');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteStatus = async (historyId: string, statusName: string) => {
+    if (!shipment.history || shipment.history.length <= 1) {
+      setError('Cannot delete the initial shipment creation status.');
+      return;
+    }
+
+    if (!(await confirm({
+      title: 'Delete Status Entry',
+      message: `Are you sure you want to delete the status entry "${statusName}" from the timeline?`,
+      confirmText: 'Delete Entry',
+      cancelText: 'Cancel'
+    }))) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const res = await shipmentService.deleteStatusHistory(shipmentId, historyId) as any;
+      const updatedShipment = res.data || res;
+      setShipment(updatedShipment);
+      setFormData((prev: any) => ({
+        ...prev,
+        ...updatedShipment,
+        estimated_delivery: updatedShipment.estimated_delivery ? toBusinessDateInput(updatedShipment.estimated_delivery) : prev.estimated_delivery,
+        booked_time: updatedShipment.booked_date ? toBusinessTimeInput(updatedShipment.booked_date) : prev.booked_time
+      }));
+      setSuccess(`Status entry "${statusName}" deleted successfully.`);
+
+      const nextUpdate = getNextStatusUpdate(updatedShipment.current_status);
+      setStatusUpdate({
+        status: nextUpdate.status,
+        location: '',
+        note: '',
+        occurred_at: nextUpdate.occurred_at,
+      });
+      router.refresh();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to delete status entry');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartEditStatus = (event: any) => {
+    const occurredAt = typeof event.occurred_at === 'string' ? event.occurred_at : new Date(event.occurred_at).toISOString();
+    const { date, time } = toBusinessDateTimeFields(occurredAt);
+    setEditStatusForm({
+      status: event.status || '',
+      location: event.location || '',
+      date,
+      time,
+      note: event.note || ''
+    });
+    setEditingHistoryItem(event);
+  };
+
+  const handleSaveEditStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingHistoryItem) return;
+
+    if (!editStatusForm.status?.trim() || !editStatusForm.location?.trim() || !editStatusForm.date || !editStatusForm.time) {
+      setError('Please fill in status, location, date, and time.');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setEditLoading(true);
+
+    try {
+      const occurred_at = `${editStatusForm.date}T${editStatusForm.time}:00`;
+      const res = await shipmentService.editStatus(shipmentId, editingHistoryItem.id, {
+        status: editStatusForm.status,
+        location: editStatusForm.location,
+        occurred_at,
+        note: editStatusForm.note,
+        version: shipment.version
+      }) as any;
+
+      const updatedShipment = res.data || res;
+      setShipment(updatedShipment);
+      setFormData((prev: any) => ({
+        ...prev,
+        ...updatedShipment,
+        estimated_delivery: updatedShipment.estimated_delivery ? toBusinessDateInput(updatedShipment.estimated_delivery) : prev.estimated_delivery,
+        booked_time: updatedShipment.booked_date ? toBusinessTimeInput(updatedShipment.booked_date) : prev.booked_time
+      }));
+      setSuccess('Status entry updated successfully.');
+      setEditingHistoryItem(null);
+
+      const nextUpdate = getNextStatusUpdate(updatedShipment.current_status);
+      setStatusUpdate({
+        status: nextUpdate.status,
+        location: '',
+        note: '',
+        occurred_at: nextUpdate.occurred_at,
+      });
+      router.refresh();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to edit status');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -455,8 +626,22 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         </div>
       )}
       {success && (
-        <div className="p-4 rounded-xl bg-green-50 text-green-700 border border-green-100 font-medium">
-          {success}
+        <div className="p-4 rounded-xl bg-green-50 text-green-700 border border-green-100 font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+            <span>{success}</span>
+          </div>
+          {success.includes('Status') && shipment.history && shipment.history.length > 1 && (
+            <button
+              type="button"
+              onClick={handleUndoStatus}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-100/80 hover:bg-amber-200 border border-amber-300/60 rounded-lg transition-colors shrink-0 shadow-2xs cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Undo Update
+            </button>
+          )}
         </div>
       )}
 
@@ -819,42 +1004,102 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
           )}
 
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-8">Timeline</h2>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-gray-900">Timeline</h2>
+                {shipment.history && shipment.history.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleUndoStatus}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/90 rounded-lg transition-colors shadow-2xs cursor-pointer"
+                    title="Undo latest status update"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Undo</span>
+                  </button>
+                )}
+              </div>
+              <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                {shipment.history?.length || 0} updates
+              </span>
+            </div>
             <div className="flow-root">
               <ul role="list" className="-mb-8">
                 {shipment.history?.map((event: any, eventIdx: number) => {
                   const isLast = eventIdx === shipment.history.length - 1;
+                  const isTop = eventIdx === 0;
+                  const canDeleteThis = !isTop && !isLast && shipment.history.length > 1;
+
                   return (
-                    <li key={event.id || eventIdx} className="relative transition-all duration-300 ease-in-out">
+                    <li key={event.id || eventIdx} className="relative transition-all duration-300 ease-in-out group">
                       <div className="relative pb-8">
                         {!isLast ? (
                           <span className="absolute left-5 top-5 -ml-[0.5px] h-full w-[1px] bg-gray-200" aria-hidden="true" />
                         ) : null}
-                        <div className="relative flex items-start space-x-4">
+                        <div className="relative flex items-start space-x-3.5">
                           <div>
                             <span className={`h-10 w-10 rounded-full flex items-center justify-center ring-4 ring-white shadow-sm
-                              ${event.status === 'Delivered' ? 'bg-green-100 text-green-600' : 'bg-blue-50 text-blue-500'}`}>
+                              ${event.status === 'Delivered' ? 'bg-green-100 text-green-600' : 
+                                event.status === 'Cancelled' ? 'bg-red-100 text-red-600' :
+                                event.status === 'Returned' ? 'bg-purple-100 text-purple-600' :
+                                'bg-blue-50 text-blue-500'}`}>
                               {event.status === 'Delivered' ? <CheckCircle2 className="w-5 h-5" /> : 
                                event.status === 'In Transit' ? <Truck className="w-5 h-5" /> : 
                                <Clock className="w-5 h-5" />}
                             </span>
                           </div>
-                          <div className="flex min-w-0 flex-1 flex-col pt-1.5">
-                            <div className="flex justify-between items-start mb-1">
-                               <p className="text-sm font-bold text-gray-900">{event.status}</p>
-                               <time className="whitespace-nowrap text-xs text-gray-500" dateTime={event.occurred_at}>
-                                 {formatDateTime(event.occurred_at)}
-                               </time>
+                          <div className="flex min-w-0 flex-1 flex-col pt-1">
+                            {/* Line 1: Status Title (Left) + Timestamp (Right) */}
+                            <div className="flex justify-between items-baseline gap-2 mb-1">
+                              <p className="text-sm font-bold text-gray-900 leading-snug truncate">
+                                {event.status}
+                              </p>
+                              <time className="whitespace-nowrap text-xs text-gray-400 font-medium shrink-0 ml-auto" dateTime={event.occurred_at}>
+                                {formatDateTime(event.occurred_at)}
+                              </time>
                             </div>
-                            {event.location && (
-                               <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                                 <MapPin className="w-3.5 h-3.5" /> {event.location}
-                               </p>
-                            )}
+
+                            {/* Line 2: Location & Current Badge (Left) + Edit/Delete Actions (Right) */}
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                {event.location && (
+                                  <span className="font-medium text-gray-500 flex items-center gap-1 truncate">
+                                    <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" /> {event.location}
+                                  </span>
+                                )}
+                                {isTop && (
+                                  <span className="text-[10px] font-bold text-orange-700 bg-orange-100/90 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                                    Current
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditStatus(event)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200/90 hover:border-orange-300 transition-all shadow-2xs cursor-pointer"
+                                  title="Edit status details"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5 text-orange-600" />
+                                  <span>Edit</span>
+                                </button>
+                                {canDeleteThis && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteStatus(event.id, event.status)}
+                                    className="inline-flex items-center justify-center p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/90 hover:border-red-300 transition-all shadow-2xs cursor-pointer"
+                                    title="Delete this status entry"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                             {event.note && (
-                               <p className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                                 "{event.note}"
-                               </p>
+                              <p className="mt-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100 leading-relaxed">
+                                "{event.note}"
+                              </p>
                             )}
                           </div>
                         </div>
@@ -868,6 +1113,119 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         </div>
 
       </div>
+
+      {/* Edit Status Modal */}
+      {editingHistoryItem && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setEditingHistoryItem(null)} />
+          <div className="relative bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-100 z-10 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-orange-500" />
+                  Edit Status Entry
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Modify status milestone, location, timestamp, or note.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingHistoryItem(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditStatus} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Status <span className="text-red-500">*</span>
+                </label>
+                <PremiumSelect
+                  value={editStatusForm.status}
+                  onChange={(val) => setEditStatusForm((prev: any) => ({ ...prev, status: val }))}
+                  options={STATUS_WORKFLOW.map(s => ({ label: s, value: s }))}
+                  placeholder="Select status..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  required
+                  name="location"
+                  value={editStatusForm.location}
+                  onChange={(e) => setEditStatusForm((prev: any) => ({ ...prev, location: e.target.value }))}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-sm"
+                  placeholder="e.g. Surat Hub"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Date <span className="text-red-500">*</span>
+                  </label>
+                  <PremiumDatePicker
+                    value={editStatusForm.date}
+                    onChange={(date) => {
+                      const dateStr = date ? formatDateToYYYYMMDD(date) : '';
+                      setEditStatusForm((prev: any) => ({ ...prev, date: dateStr }));
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Time (IST) <span className="text-red-500">*</span>
+                  </label>
+                  <PremiumTimePicker
+                    value={editStatusForm.time}
+                    onChange={(timeStr) => {
+                      setEditStatusForm((prev: any) => ({ ...prev, time: timeStr }));
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Note (Optional)
+                </label>
+                <textarea
+                  name="note"
+                  value={editStatusForm.note}
+                  onChange={(e) => setEditStatusForm((prev: any) => ({ ...prev, note: e.target.value }))}
+                  rows={2}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-sm"
+                  placeholder="Add operational notes or details..."
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingHistoryItem(null)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading || !editStatusForm.status?.trim() || !editStatusForm.location?.trim() || !editStatusForm.date || !editStatusForm.time}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-sm font-semibold text-white shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {editLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -186,10 +186,9 @@ export function Header({ onMenuClick, mobileSidebarOpen = false, onDesktopMenuCl
         <div className="flex flex-1 items-center gap-x-4">
           <div className="hidden sm:block">
             <h1 className="text-xl font-bold text-gray-900 tracking-tight leading-tight">Dashboard</h1>
-            <div className="text-sm text-gray-500 font-medium flex flex-col leading-tight mt-1">
-              <span>{currentDay},</span>
-              <span>{currentDate}</span>
-            </div>
+            <p className="text-sm text-gray-500 font-medium whitespace-nowrap mt-0.5">
+              {currentDay}, {currentDate}
+            </p>
           </div>
           
           <div className="relative w-full max-w-md ml-auto group">

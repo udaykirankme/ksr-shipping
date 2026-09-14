@@ -11,7 +11,7 @@ export default async function ShipmentsPage() {
   const initial = await getShipmentsList({ page: 1, limit: 50, isActive: true });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto flex flex-col h-full min-h-0">
+    <div className="p-3 sm:p-5 lg:p-6 w-full max-w-[1600px] mx-auto flex flex-col h-full min-h-0">
       <ShipmentListClient
         initialShipments={initial.shipments}
         initialTotal={initial.total}

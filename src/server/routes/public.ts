@@ -52,7 +52,7 @@ router.post('/track', apiLimiter, async (req, res) => {
           { official_tracking_id: trackingNumber }
         ]
       },
-      include: { history: { orderBy: { occurred_at: 'desc' } } }
+      include: { history: { orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }] } }
     });
 
     if (!shipment) {

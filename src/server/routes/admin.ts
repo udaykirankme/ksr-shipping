@@ -156,7 +156,7 @@ router.patch('/shipments/:id/customer-update', async (req, res) => {
         customer_update,
         version: { increment: 1 }
       },
-      include: { history: { orderBy: { occurred_at: 'desc' } } }
+      include: { history: { orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }] } }
     });
 
     res.json({ success: true, data: updated });
@@ -281,7 +281,7 @@ router.get('/shipments/:id', async (req, res) => {
   try {
     const shipment = await prisma.shipment.findUnique({
       where: { id: req.params.id },
-      include: { history: { orderBy: { occurred_at: 'desc' } } }
+      include: { history: { orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }] } }
     });
     if (!shipment) return res.status(404).json({ success: false, message: 'Not found'  });
     res.json({ success: true, data: shipment });
@@ -668,7 +668,7 @@ router.patch('/shipments/:id/status', async (req, res) => {
           location,
           occurred_at: occurredAt,
           note,
-          updated_by: (req as any).user.id
+          updated_by: (req as any).user?.id || null
         }
       })
     ]);
@@ -678,6 +678,180 @@ router.patch('/shipments/:id/status', async (req, res) => {
     if (error.code === 'P2025') return res.status(409).json({ success: false, message: 'Conflict: This record has been updated. Please refresh.'  });
     console.error(error);
     res.status(500).json({ success: false, message: 'Internal error'  });
+  }
+});
+
+router.patch('/shipments/:id/status/:historyId', async (req, res) => {
+  try {
+    const { status, location, occurred_at, note } = req.body;
+    
+    if (!status?.trim()) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    const current = await prisma.shipment.findUnique({ where: { id: req.params.id } });
+    if (!current) return res.status(404).json({ success: false, message: 'Shipment not found' });
+
+    const targetHistory = await prisma.shipmentStatusHistory.findFirst({
+      where: { id: req.params.historyId, shipment_id: req.params.id }
+    });
+    if (!targetHistory) return res.status(404).json({ success: false, message: 'Status history record not found' });
+
+    const occurredAt = occurred_at ? parseBusinessDateTime(occurred_at) : targetHistory.occurred_at;
+
+    const updatedShipment = await prisma.$transaction(async (tx) => {
+      await tx.shipmentStatusHistory.update({
+        where: { id: req.params.historyId },
+        data: {
+          status: status.trim(),
+          location: location?.trim() || null,
+          occurred_at: occurredAt,
+          note: note !== undefined ? (note?.trim() || null) : targetHistory.note,
+          updated_by: (req as any).user?.id || null
+        }
+      });
+
+      // Find new latest history entry
+      const latestHistory = await tx.shipmentStatusHistory.findFirst({
+        where: { shipment_id: req.params.id },
+        orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+      });
+
+      const newStatus = latestHistory?.status || 'Shipment Created';
+      const newLocation = latestHistory?.location || null;
+      const isDelivered = newStatus === 'Delivered';
+
+      return tx.shipment.update({
+        where: { id: req.params.id },
+        data: {
+          current_status: newStatus,
+          current_location: newLocation,
+          delivered_at: isDelivered ? latestHistory?.occurred_at : null,
+          version: { increment: 1 }
+        },
+        include: {
+          history: {
+            orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+          }
+        }
+      });
+    });
+
+    res.json({ success: true, data: updatedShipment });
+  } catch (error: any) {
+    console.error('Error editing status:', error);
+    res.status(500).json({ success: false, message: error.message || 'Internal error' });
+  }
+});
+
+router.post('/shipments/:id/status/undo', async (req, res) => {
+  try {
+    const current = await prisma.shipment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        history: {
+          orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+        }
+      }
+    });
+    if (!current) return res.status(404).json({ success: false, message: 'Shipment not found' });
+
+    if (!current.history || current.history.length <= 1) {
+      return res.status(400).json({ success: false, message: 'Cannot undo the initial shipment creation status.' });
+    }
+
+    const latestHistory = current.history[0];
+
+    const updatedShipment = await prisma.$transaction(async (tx) => {
+      await tx.shipmentStatusHistory.delete({
+        where: { id: latestHistory.id }
+      });
+
+      const newLatest = await tx.shipmentStatusHistory.findFirst({
+        where: { shipment_id: req.params.id },
+        orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+      });
+
+      const newStatus = newLatest?.status || 'Shipment Created';
+      const newLocation = newLatest?.location || null;
+      const isDelivered = newStatus === 'Delivered';
+
+      return tx.shipment.update({
+        where: { id: req.params.id },
+        data: {
+          current_status: newStatus,
+          current_location: newLocation,
+          delivered_at: isDelivered ? newLatest?.occurred_at : null,
+          version: { increment: 1 }
+        },
+        include: {
+          history: {
+            orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+          }
+        }
+      });
+    });
+
+    res.json({ success: true, data: updatedShipment });
+  } catch (error: any) {
+    console.error('Error undoing status:', error);
+    res.status(500).json({ success: false, message: error.message || 'Internal error' });
+  }
+});
+
+router.delete('/shipments/:id/status/:historyId', async (req, res) => {
+  try {
+    const current = await prisma.shipment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        history: {
+          orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+        }
+      }
+    });
+    if (!current) return res.status(404).json({ success: false, message: 'Shipment not found' });
+
+    if (!current.history || current.history.length <= 1) {
+      return res.status(400).json({ success: false, message: 'Cannot delete the initial shipment creation status.' });
+    }
+
+    const target = current.history.find(h => h.id === req.params.historyId);
+    if (!target) return res.status(404).json({ success: false, message: 'Status record not found' });
+
+    const updatedShipment = await prisma.$transaction(async (tx) => {
+      await tx.shipmentStatusHistory.delete({
+        where: { id: req.params.historyId }
+      });
+
+      const newLatest = await tx.shipmentStatusHistory.findFirst({
+        where: { shipment_id: req.params.id },
+        orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+      });
+
+      const newStatus = newLatest?.status || 'Shipment Created';
+      const newLocation = newLatest?.location || null;
+      const isDelivered = newStatus === 'Delivered';
+
+      return tx.shipment.update({
+        where: { id: req.params.id },
+        data: {
+          current_status: newStatus,
+          current_location: newLocation,
+          delivered_at: isDelivered ? newLatest?.occurred_at : null,
+          version: { increment: 1 }
+        },
+        include: {
+          history: {
+            orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }]
+          }
+        }
+      });
+    });
+
+    res.json({ success: true, data: updatedShipment });
+  } catch (error: any) {
+    console.error('Error deleting status history:', error);
+    res.status(500).json({ success: false, message: error.message || 'Internal error' });
   }
 });
 

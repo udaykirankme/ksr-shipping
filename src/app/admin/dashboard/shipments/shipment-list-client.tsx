@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, ArrowRight, RefreshCw, ArchiveRestore, Trash2, Download } from "lucide-react";
+import { Plus, Search, Filter, RefreshCw, ArchiveRestore, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -365,7 +365,7 @@ export function ShipmentListClient({
           <table className="w-full caption-bottom text-sm border-collapse">
             <thead className="sticky top-0 z-20 shadow-xs border-b border-gray-200">
               <tr className="bg-gray-50/95 backdrop-blur-xs">
-                <th className="w-10 px-4 py-3.5 text-center sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">
+                <th className="w-9 px-2.5 py-3.5 text-center sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">
                   <input 
                     type="checkbox" 
                     className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
@@ -373,14 +373,14 @@ export function ShipmentListClient({
                     onChange={toggleAll}
                   />
                 </th>
-                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Tracking Info</th>
-                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Sender</th>
-                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Receiver</th>
-                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Service</th>
-                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Status</th>
-                <th className="font-semibold text-gray-900 whitespace-nowrap px-4 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Booked Date</th>
-                <th className="font-semibold text-gray-900 text-right whitespace-nowrap px-4 py-3.5 text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Profit</th>
-                <th className="w-20 font-semibold text-gray-900 text-center whitespace-nowrap px-4 py-3.5 text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Actions</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-3 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Tracking Info</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-3 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Sender</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-3 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Receiver</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-2.5 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Service</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-2.5 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Status</th>
+                <th className="font-semibold text-gray-900 whitespace-nowrap px-2.5 py-3.5 text-left text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Booked Date</th>
+                <th className="font-semibold text-gray-900 text-right whitespace-nowrap px-2.5 py-3.5 text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Profit</th>
+                <th className="w-12 font-semibold text-gray-900 text-center whitespace-nowrap px-2 py-3.5 text-xs uppercase tracking-wider sticky top-0 bg-gray-50/95 z-20 border-b border-gray-200">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
@@ -400,7 +400,7 @@ export function ShipmentListClient({
                   className="group hover:bg-orange-50/30 transition-colors cursor-pointer border-b border-gray-100/80" 
                   onClick={() => window.location.href = `/admin/dashboard/shipments/${shipment.id}`}
                 >
-                  <td className="w-10 text-center px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                  <td className="w-9 text-center px-2.5 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox" 
                       className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
@@ -418,61 +418,51 @@ export function ShipmentListClient({
                       }}
                     />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold text-gray-900 hover:text-orange-600 transition-colors">{shipment.tracking_id}</span>
+                  <td className="whitespace-nowrap px-3 py-3.5">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-gray-900 hover:text-orange-600 transition-colors text-xs sm:text-sm">{shipment.tracking_id}</span>
                       {shipment.official_tracking_id && (
-                        <span className="text-xs text-gray-400 font-normal">{shipment.official_tracking_id}</span>
+                        <span className="text-[11px] text-gray-400 font-normal">{shipment.official_tracking_id}</span>
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 max-w-[190px]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-semibold text-gray-900 truncate" title={shipment.sender_name}>{shipment.sender_name || 'N/A'}</span>
-                      <span className="text-xs text-gray-500 truncate" title={shipment.sender_city}>{shipment.sender_city || 'N/A'}</span>
+                  <td className="px-3 py-3.5 max-w-[140px] md:max-w-[160px] lg:max-w-[190px]">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block" title={shipment.sender_name}>{shipment.sender_name || 'N/A'}</span>
+                      <span className="text-[11px] text-gray-500 truncate block" title={shipment.sender_city}>{shipment.sender_city || 'N/A'}</span>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 max-w-[210px]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-semibold text-gray-900 truncate" title={shipment.receiver_name}>{shipment.receiver_name || 'N/A'}</span>
-                      <span className="text-xs text-gray-500 truncate" title={shipment.receiver_city}>{shipment.receiver_city || 'N/A'}</span>
+                  <td className="px-3 py-3.5 max-w-[150px] md:max-w-[170px] lg:max-w-[200px]">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block" title={shipment.receiver_name}>{shipment.receiver_name || 'N/A'}</span>
+                      <span className="text-[11px] text-gray-500 truncate block" title={shipment.receiver_city}>{shipment.receiver_city || 'N/A'}</span>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm uppercase font-semibold text-gray-800">{shipment.service || shipment.courier || 'N/A'}</span>
+                  <td className="whitespace-nowrap px-2.5 py-3.5">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs sm:text-sm uppercase font-semibold text-gray-800">{shipment.service || shipment.courier || 'N/A'}</span>
                       {Boolean(shipment.medium) && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 uppercase tracking-wider">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 uppercase tracking-wider">
                           {String(shipment.medium)}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    <Badge variant={shipment.current_status === 'Delivered' ? 'success' : shipment.current_status === 'Shipment Created' ? 'default' : 'warning'} className="text-xs px-2.5 py-1 font-medium">
+                  <td className="whitespace-nowrap px-2.5 py-3.5">
+                    <Badge variant={shipment.current_status === 'Delivered' ? 'success' : shipment.current_status === 'Shipment Created' ? 'default' : 'warning'} className="text-[11px] px-2 py-0.5 font-medium">
                       {shipment.current_status}
                     </Badge>
                   </td>
-                  <td className="text-sm text-gray-600 whitespace-nowrap px-4 py-4">
+                  <td className="text-xs sm:text-sm text-gray-600 whitespace-nowrap px-2.5 py-3.5">
                     {formatDate(shipment.booked_date)}
                   </td>
-                  <td className="text-right font-bold text-gray-900 whitespace-nowrap px-4 py-4 text-sm">
+                  <td className="text-right font-bold text-gray-900 whitespace-nowrap px-2.5 py-3.5 text-xs sm:text-sm">
                     {formatCurrency(shipment.profit || 0)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors" onClick={(e) => handleDelete(shipment.id, e)} title="Delete">
+                  <td className="w-12 whitespace-nowrap px-2 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer" onClick={(e) => handleDelete(shipment.id, e)} title="Delete">
                         <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-colors" asChild title="Edit">
-                        <Link href={`/admin/dashboard/shipments/${shipment.id}`}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors" asChild title="View">
-                        <Link href={`/admin/dashboard/shipments/${shipment.id}`}>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </Link>
                       </Button>
                     </div>
                   </td>

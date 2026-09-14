@@ -137,8 +137,8 @@ const getStageIndex = (status: string): number => {
       return 3;
     default: {
       const s = status.toLowerCase();
-      if (s.includes('deliver')) return 3;
-      if (s.includes('transit') || s.includes('hub') || s.includes('out for delivery')) return 2;
+      if (s.includes('out for delivery') || s.includes('transit') || s.includes('hub')) return 2;
+      if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 3;
       if (s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack')) return 1;
       return 0;
     }
@@ -168,8 +168,11 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
       return s.includes('transit') || s.includes('hub') || s.includes('out for delivery');
     });
   } else if (stageIndex === 3) {
-    // Delivered
-    matched = history.find(e => e.status.toLowerCase().includes('deliver'));
+    // Delivered (exclude 'out for delivery')
+    matched = history.find(e => {
+      const s = e.status.toLowerCase();
+      return s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'));
+    });
   }
 
   if (!matched?.occurred_at) return null;
@@ -413,7 +416,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                 </p>
 
                 {/* Stage Timestamp - Compact single date on mobile, full timestamp on desktop */}
-                {timestamp && (
+                {isCompleted && timestamp && (
                   <p className={cn(
                     "text-[8.5px] sm:text-xs mt-0.5 font-medium leading-tight text-center whitespace-normal",
                     isCompleted ? "text-gray-600" : "text-gray-400"
