@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const AVATARS = [
-  "/avatars/indian_1.png",
+  "/avatars/indian_1.png?v=2",
   "/avatars/indian_2.png",
   "/avatars/indian_3.png",
   "/avatars/indian_4.png",

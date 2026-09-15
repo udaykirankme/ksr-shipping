@@ -19,6 +19,8 @@ const PARTNERS = [
   { src: "/fedex logo.jpg", alt: "FedEx" },
   { src: "/ups logo.png", alt: "UPS" },
   { src: "/dhl logo.jpg", alt: "DHL" },
+  { src: "/bluedart logo.png", alt: "Blue Dart" },
+  { src: "/xpressbees logo.png", alt: "Xpressbees" },
 ];
 
 export default function Home() {

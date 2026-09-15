@@ -14,8 +14,8 @@ const navLinks = [
   { name: "About Us", href: "/about" },
   { name: "Services", href: "/services" },
   { name: "Why Choose Us", href: "/why-choose-us" },
+  { name: "Support", href: "/support" },
   { name: "Track Shipment", href: "/track" },
-  { name: "Contact Us", href: "/contact" },
 ];
 
 export function Navbar() {

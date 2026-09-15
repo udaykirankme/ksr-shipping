@@ -54,4 +54,29 @@ export const FAQS: FaqItem[] = [
     answer:
       "While we strive for 100% on-time delivery, delays can occasionally happen due to weather, customs clearance, or operational issues. If your shipment is delayed past the estimated delivery date, please reach out to our support team and we will prioritize resolving the issue.",
   },
+  {
+    question: "Can I ship homemade sweets and food items internationally?",
+    answer:
+      "Yes, we specialize in shipping homemade sweets, snacks, and food items internationally. We provide 100% free food-grade packing to ensure freshness and compliance with international customs regulations.",
+  },
+  {
+    question: "Who pays for customs duties and taxes on international shipments?",
+    answer:
+      "Customs duties, taxes, and clearance fees are typically the responsibility of the receiver, as they vary depending on the destination country's regulations and the declared value of the items. We recommend checking the destination country's import laws before shipping.",
+  },
+  {
+    question: "Can I change the delivery address after my parcel is dispatched?",
+    answer:
+      "Address changes can sometimes be accommodated if the shipment has not yet reached the final delivery facility, though they may incur a rerouting fee and cause a delay. Please contact our support team immediately if you need to update a delivery address.",
+  },
+  {
+    question: "What are the accepted modes of payment?",
+    answer:
+      "We accept various convenient payment methods, including UPI (Google Pay, PhonePe, Paytm), credit/debit cards, net banking, and cash for pickup services.",
+  },
+  {
+    question: "What is volumetric weight?",
+    answer:
+      "Volumetric (or dimensional) weight is a pricing technique for commercial freight transport which uses an estimated weight that is calculated from the length, width, and height of a package. Airlines and couriers charge based on whichever is greater: the actual weight or the volumetric weight.",
+  },
 ];
