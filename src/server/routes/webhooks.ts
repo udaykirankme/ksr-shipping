@@ -169,6 +169,13 @@ const processWebhookEvent = async (
 // B2C Webhook Route
 // ============================================================================
 router.post('/delhivery/b2c', verifyWebhookAuth('b2c'), async (req: Request, res: Response) => {
+  const startMs = performance.now();
+  const originalJson = res.json;
+  res.json = function (body) {
+    res.setHeader('X-KSR-Webhook-Processing-Time-Ms', (performance.now() - startMs).toFixed(2));
+    return originalJson.call(this, body);
+  };
+
   try {
     const payload = req.body;
     
@@ -200,6 +207,13 @@ router.post('/delhivery/b2c', verifyWebhookAuth('b2c'), async (req: Request, res
 // B2B Webhook Route
 // ============================================================================
 router.post('/delhivery/b2b', verifyWebhookAuth('b2b'), async (req: Request, res: Response) => {
+  const startMs = performance.now();
+  const originalJson = res.json;
+  res.json = function (body) {
+    res.setHeader('X-KSR-Webhook-Processing-Time-Ms', (performance.now() - startMs).toFixed(2));
+    return originalJson.call(this, body);
+  };
+
   try {
     const payload = req.body;
 
