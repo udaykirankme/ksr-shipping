@@ -29,7 +29,6 @@ import Link from "next/link";
 import { business } from "@/lib/config/business";
 
 interface TrackingHistoryEvent {
-  id: string;
   status: string;
   location: string;
   note: string;
@@ -496,11 +495,10 @@ export default function TrackResult() {
 
   const handleViewDetails = () => {
     if (!data?.history || data.history.length === 0) return;
-    const latestEvent = data.history[0];
-    const targetElement = document.getElementById("latest-tracking-event") || document.getElementById(`tracking-event-${latestEvent.id}`);
+    const targetElement = document.getElementById("latest-tracking-event");
     if (targetElement) {
       targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setHighlightedEventId(latestEvent.id);
+      setHighlightedEventId("0");
       setTimeout(() => {
         setHighlightedEventId(null);
       }, 2500);
@@ -670,12 +668,13 @@ export default function TrackResult() {
                    {data.history.map((event, eventIdx) => {
                       const isLast = eventIdx === data.history.length - 1;
                       const isFirst = eventIdx === 0;
-                      const isHighlighted = highlightedEventId === event.id;
+                      const eventKey = String(eventIdx);
+                      const isHighlighted = highlightedEventId === eventKey;
                       
                       return (
                        <li 
-                         key={event.id}
-                         id={isFirst ? "latest-tracking-event" : `tracking-event-${event.id}`}
+                         key={eventKey}
+                         id={isFirst ? "latest-tracking-event" : `tracking-event-${eventKey}`}
                          className="relative pb-5 sm:pb-6"
                        >
                          <div>

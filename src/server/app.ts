@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 import publicRoutes from './routes/public';
 import adminRoutes from './routes/admin';
+import webhookRoutes from './routes/webhooks';
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
  
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

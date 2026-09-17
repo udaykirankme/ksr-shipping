@@ -44,15 +44,38 @@ router.post('/track', apiLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Tracking number is required' });
     }
 
-    // Always search our DB using tracking_id OR official_tracking_id
+    // Search our DB using ONLY tracking_id (KSR tracking number)
     const shipment = await prisma.shipment.findFirst({
       where: {
-        OR: [
-          { tracking_id: trackingNumber },
-          { official_tracking_id: trackingNumber }
-        ]
+        tracking_id: trackingNumber
       },
-      include: { history: { orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }] } }
+      select: {
+        tracking_id: true,
+        current_status: true,
+        estimated_delivery: true,
+        origin: true,
+        destination: true,
+        sender_name: true,
+        receiver_name: true,
+        sender_city: true,
+        receiver_city: true,
+        booked_date: true,
+        medium: true,
+        current_location: true,
+        customer_update: true,
+        history: {
+          select: {
+            status: true,
+            location: true,
+            note: true,
+            occurred_at: true
+          },
+          orderBy: [
+            { occurred_at: 'desc' },
+            { created_at: 'desc' }
+          ]
+        }
+      }
     });
 
     if (!shipment) {

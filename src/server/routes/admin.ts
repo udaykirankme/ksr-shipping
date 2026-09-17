@@ -166,6 +166,18 @@ router.patch('/shipments/:id/customer-update', async (req, res) => {
   }
 });
 
+router.post('/shipments/:id/sync', async (req, res) => {
+  try {
+    const { syncTracking } = await import('@/lib/courier/sync');
+    const result = await syncTracking(req.params.id);
+    res.json(result);
+  } catch (err: any) {
+    console.error(`Admin Sync Error for ${req.params.id}:`, err);
+    res.status(500).json({ success: false, message: err.message || 'Courier synchronization failed' });
+  }
+});
+
+
 router.get('/shipments/export', async (req, res) => {
   try {
     const { search, status, courier, startDate, endDate, isActive } = req.query;
