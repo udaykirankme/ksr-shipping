@@ -63,10 +63,43 @@ const processWebhookEvent = async (
       return res.status(400).json({ success: false, message: 'Missing tracking identifier' });
     }
 
+    // Prepare timestamp for DB filtering
+    const nowMs = Date.now();
+    let occurredAt = eventTimeStr ? new Date(eventTimeStr) : new Date();
+    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+    
+    if (
+      isNaN(occurredAt.getTime()) || 
+      occurredAt.getFullYear() <= 1970 || 
+      occurredAt.getTime() > nowMs + twentyFourHoursMs
+    ) {
+       console.warn(`[Webhook] Invalid or far-future timestamp received for ${officialTrackingId}: ${occurredAt.toISOString()}. Falling back to current time.`);
+       occurredAt = new Date();
+    }
+
+    const timeLowerBound = new Date(occurredAt.getTime() - 60000);
+    const timeUpperBound = new Date(occurredAt.getTime() + 60000);
+
     // 1. Load the shipment using the official tracking ID (AWB / LR)
+    // OPTIMIZATION: Fetch ONLY necessary fields and filter history at DB level in a single roundtrip.
     const shipment = await prisma.shipment.findUnique({
       where: { official_tracking_id: officialTrackingId },
-      include: { history: true }
+      select: { 
+        id: true, 
+        service: true,
+        history: {
+          where: {
+            status: eventStatus,
+            location: eventLocation || null,
+            occurred_at: {
+              gte: timeLowerBound,
+              lte: timeUpperBound
+            }
+          },
+          select: { id: true },
+          take: 1
+        }
+      }
     });
 
     if (!shipment) {
@@ -85,41 +118,8 @@ const processWebhookEvent = async (
     }
 
     // 3. Deduplication Logic
-    // Delhivery webhooks don't guarantee unique event IDs in their basic payloads, so we match on time/status/location.
-    // WARNING (Race Condition): Since we cannot add a UNIQUE database constraint without a migration, 
-    // there is a theoretical microsecond read-modify-write race condition here. If two identical payloads 
-    // arrive at the exact same millisecond, they could both insert a history record.
-    let occurredAt = eventTimeStr ? new Date(eventTimeStr) : new Date();
-    
-    // Validate timestamp: 
-    // 1. Must be a valid date.
-    // 2. Must be after 1970.
-    // 3. Must not be unreasonably in the future (allow 24 hours clock skew).
-    // If invalid, fallback safely to the current time to preserve chronology.
-    const nowMs = Date.now();
-    const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-    
-    if (
-      isNaN(occurredAt.getTime()) || 
-      occurredAt.getFullYear() <= 1970 || 
-      occurredAt.getTime() > nowMs + twentyFourHoursMs
-    ) {
-       console.warn(`[Webhook] Invalid or far-future timestamp received for ${officialTrackingId}: ${occurredAt.toISOString()}. Falling back to current time.`);
-       occurredAt = new Date();
-    }
-
-    const isDuplicate = shipment.history.some(existingEvent => {
-      const existingTime = existingEvent.occurred_at.getTime();
-      const newTime = occurredAt.getTime();
-      
-      const timeMatches = Math.abs(existingTime - newTime) < 60000; // Within 1 minute tolerance
-      const statusMatches = existingEvent.status === eventStatus;
-      const locationMatches = (existingEvent.location || '') === (eventLocation || '');
-
-      return timeMatches && statusMatches && locationMatches;
-    });
-
-    if (isDuplicate) {
+    // Since we filtered history at the DB level, any result means it's a duplicate
+    if (shipment.history.length > 0) {
       // Acknowledge the webhook successfully but don't insert a duplicate record.
       return res.status(200).json({ success: true, message: 'Event already recorded' });
     }
@@ -127,40 +127,31 @@ const processWebhookEvent = async (
     // 4. Update the Database
     const finalNote = `Webhook Update: ${eventStatus}`;
 
-    // Execute in a transaction to ensure atomicity
-    await prisma.$transaction(async (tx) => {
-      // Create the history record
-      await tx.shipmentStatusHistory.create({
-        data: {
-          shipment_id: shipment.id,
+    // OPTIMIZATION: Use a nested write instead of an interactive transaction to reduce network roundtrips.
+    const updateData: any = {
+      current_status: eventStatus,
+      version: { increment: 1 },
+      history: {
+        create: {
           status: eventStatus,
           location: eventLocation || null,
           note: finalNote,
           occurred_at: occurredAt,
         }
-      });
-
-      // Update the main shipment record
-      const updateData: any = {
-        current_status: eventStatus,
-        version: { increment: 1 }
-      };
-
-      if (eventLocation) {
-        updateData.current_location = eventLocation;
       }
-      
-      // We don't forcefully overwrite estimated_delivery unless the payload provides a strictly better one,
-      // which basic scan push payloads often don't reliably provide in the standard schema.
-      // If it's delivered, we can record the timestamp.
-      if (eventStatus.toLowerCase() === 'delivered') {
-         updateData.delivered_at = occurredAt;
-      }
+    };
 
-      await tx.shipment.update({
-        where: { id: shipment.id },
-        data: updateData
-      });
+    if (eventLocation) {
+      updateData.current_location = eventLocation;
+    }
+    
+    if (eventStatus.toLowerCase() === 'delivered') {
+       updateData.delivered_at = occurredAt;
+    }
+
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: updateData
     });
 
     // 5. Respond quickly with 200 OK (<=500ms requirement)
