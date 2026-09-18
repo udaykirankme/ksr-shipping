@@ -41,19 +41,19 @@ const verifyWebhookAuth = (type: 'b2c' | 'b2b') => {
 
 // --- Helper Functions ---
 
-// Normalizes the service name to safely compare with the webhook route type
 const normalizeService = (serviceName: string | null | undefined): string => {
   if (!serviceName) return '';
-  return serviceName.toLowerCase().replace(/[\s\-]+/g, '');
+  return serviceName.toLowerCase().replace(/[\s\-_]+/g, '');
 };
 
 // Centralized logic to update the shipment and prevent duplicates
-const processWebhookEvent = async (
+export const processWebhookEvent = async (
   officialTrackingId: string,
   expectedServiceNormalized: string,
   eventStatus: string,
   eventLocation: string,
   eventTimeStr: string | null | undefined,
+  eventCustomerUpdate: string | null | undefined,
   rawPayload: any,
   res: Response
 ) => {
@@ -81,30 +81,12 @@ const processWebhookEvent = async (
     const timeUpperBound = new Date(occurredAt.getTime() + 60000);
 
     // 1. Load the shipment using the official tracking ID (AWB / LR)
-    // OPTIMIZATION: Fetch ONLY necessary fields and filter history at DB level in a single roundtrip.
     const shipment = await prisma.shipment.findUnique({
       where: { official_tracking_id: officialTrackingId },
-      select: { 
-        id: true, 
-        service: true,
-        history: {
-          where: {
-            status: eventStatus,
-            location: eventLocation || null,
-            occurred_at: {
-              gte: timeLowerBound,
-              lte: timeUpperBound
-            }
-          },
-          select: { id: true },
-          take: 1
-        }
-      }
+      select: { id: true, service: true }
     });
 
     if (!shipment) {
-      // User Modification #2: Return 200 OK for unknown shipments to avoid undocumented retry loops,
-      // but log it safely.
       console.info(`[Webhook] Received event for unknown shipment: ${officialTrackingId}. Ignoring.`);
       return res.status(200).json({ success: true, message: 'Event ignored (Unknown shipment)' });
     }
@@ -113,24 +95,37 @@ const processWebhookEvent = async (
     const shipmentServiceNormalized = normalizeService(shipment.service);
     if (shipmentServiceNormalized !== expectedServiceNormalized) {
       console.warn(`[Webhook] Provider mismatch for ${officialTrackingId}. Expected ${expectedServiceNormalized}, found ${shipmentServiceNormalized}.`);
-      // Return 200 to prevent retries of cross-contaminated events, but log the conflict.
       return res.status(200).json({ success: true, message: 'Event ignored (Provider mismatch)' });
     }
 
-    // 3. Deduplication Logic
-    // Since we filtered history at the DB level, any result means it's a duplicate
-    if (shipment.history.length > 0) {
-      // Acknowledge the webhook successfully but don't insert a duplicate record.
+    // 3. Deduplication Logic - Targeted Query
+    const duplicateCheck = await prisma.shipmentStatusHistory.findFirst({
+      where: {
+        shipment_id: shipment.id,
+        status: eventStatus,
+        location: eventLocation || null,
+        occurred_at: { gte: timeLowerBound, lte: timeUpperBound }
+      },
+      select: { id: true }
+    });
+
+    if (duplicateCheck) {
       return res.status(200).json({ success: true, message: 'Event already recorded' });
     }
 
-    // 4. Update the Database
+    // 4. Event Ordering Check - Find latest known event
+    const latestHistory = await prisma.shipmentStatusHistory.findFirst({
+      where: { shipment_id: shipment.id },
+      orderBy: { occurred_at: 'desc' },
+      select: { occurred_at: true }
+    });
+
+    const isNewerOrEqual = !latestHistory || occurredAt.getTime() >= latestHistory.occurred_at.getTime();
+
+    // 5. Update the Database
     const finalNote = `Webhook Update: ${eventStatus}`;
 
-    // OPTIMIZATION: Use a nested write instead of an interactive transaction to reduce network roundtrips.
     const updateData: any = {
-      current_status: eventStatus,
-      version: { increment: 1 },
       history: {
         create: {
           status: eventStatus,
@@ -141,12 +136,22 @@ const processWebhookEvent = async (
       }
     };
 
-    if (eventLocation) {
-      updateData.current_location = eventLocation;
-    }
-    
-    if (eventStatus.toLowerCase() === 'delivered') {
-       updateData.delivered_at = occurredAt;
+    // ONLY update main shipment state if this event is chronologically the newest
+    if (isNewerOrEqual) {
+      updateData.current_status = eventStatus;
+      updateData.version = { increment: 1 };
+      
+      if (eventLocation) {
+        updateData.current_location = eventLocation;
+      }
+      
+      if (eventCustomerUpdate && eventCustomerUpdate.trim() !== '') {
+        updateData.customer_update = eventCustomerUpdate.trim();
+      }
+      
+      if (eventStatus.toLowerCase() === 'delivered') {
+         updateData.delivered_at = occurredAt;
+      }
     }
 
     await prisma.shipment.update({
@@ -183,13 +188,14 @@ router.post('/delhivery/b2c', verifyWebhookAuth('b2c'), async (req: Request, res
     const eventStatus = statusObj.Status;
     const eventLocation = statusObj.StatusLocation;
     const eventTimeStr = statusObj.StatusDateTime || payload.Shipment.PickUpDate; // Fallback to other dates if needed
+    const eventCustomerUpdate = statusObj.Instructions;
 
     if (!eventStatus) {
        console.warn(`[Webhook B2C] Missing Status in payload for AWB ${awb}.`);
        return res.status(400).json({ success: false, message: 'Missing Status' });
     }
 
-    await processWebhookEvent(awb, 'delhiveryb2c', eventStatus, eventLocation, eventTimeStr, payload, res);
+    await processWebhookEvent(awb, 'delhiveryb2c', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, payload, res);
   } catch (error) {
     console.error('[Webhook B2C] Unhandled error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -214,13 +220,14 @@ router.post('/delhivery/b2b', verifyWebhookAuth('b2b'), async (req: Request, res
     const eventLocation = payload.location;
     // B2B provides a unix timestamp or formatted string, handle safely
     const eventTimeStr = payload.timestamp ? (typeof payload.timestamp === 'number' ? new Date(payload.timestamp).toISOString() : payload.timestamp) : null;
+    const eventCustomerUpdate = payload.shipment_remark;
 
     if (!eventStatus) {
        console.warn(`[Webhook B2B] Missing Status in payload for LR ${lrnum}.`);
        return res.status(400).json({ success: false, message: 'Missing Status' });
     }
 
-    await processWebhookEvent(lrnum, 'delhiveryb2b', eventStatus, eventLocation, eventTimeStr, payload, res);
+    await processWebhookEvent(lrnum, 'delhiveryb2b', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, payload, res);
   } catch (error) {
     console.error('[Webhook B2B] Unhandled error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });

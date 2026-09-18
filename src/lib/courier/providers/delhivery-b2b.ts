@@ -1,4 +1,4 @@
-import { CourierProvider, TrackingResponse, KSRTrackingStatus } from '../types';
+import { CourierProvider, TrackingResponse, TrackingEvent, KSRTrackingStatus } from '../types';
 
 // Module-level cache for the JWT, kept only in server memory.
 let cachedJwt: string | null = null;
@@ -112,18 +112,50 @@ export class DelhiveryB2BProvider implements CourierProvider {
       throw new Error(`Delhivery B2B API Error: ${response.status} - ${errMsg}`);
     }
 
-    // =========================================================================
-    // RESPONSE PARSING - PENDING VERIFICATION
-    // The exact JSON structure is currently undocumented.
-    // Do NOT guess fields like data.status, location, messages, etc.
-    // Wait for a real test response to complete this section properly.
-    // =========================================================================
-    
-    // TEMPORARY: Log the raw data to console during the real test phase
-    console.log(`[Delhivery B2B Raw Response for ${identifier}]:`, JSON.stringify(rawData));
+    // Parse the actual response structure
+    const data = rawData?.data;
+    if (!data || !data.wbns || !Array.isArray(data.wbns) || data.wbns.length === 0) {
+      throw new Error(`Delhivery B2B API returned no tracking information for LR: ${identifier}`);
+    }
 
-    // Throwing a controlled error here to stop execution cleanly until we inspect
-    // the real payload structure and know how to extract status/timestamp/location.
-    throw new Error("Delhivery B2B API response structure is pending inspection. View server logs for the raw payload.");
+    const latest = data.wbns[0];
+    
+    if (!latest.status) {
+      throw new Error("Delhivery B2B API returned missing status field.");
+    }
+
+    // Extract fields
+    const current_status = latest.status;
+    const current_location = latest.location || '';
+    
+    // Attempt to parse the timestamp safely. If missing, fallback to current time since it's the latest known state.
+    let occurred_at = new Date();
+    if (latest.scan_timestamp) {
+      const parsed = new Date(latest.scan_timestamp);
+      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1970) {
+        occurred_at = parsed;
+      }
+    }
+
+    const estimated_delivery = latest.estimated_date || latest.promised_delivery_date || undefined;
+
+    // We yield a single event for the sync engine because the API only gives the latest state.
+    // Sync logic will deduplicate based on time/status/location.
+    const events: TrackingEvent[] = [
+      {
+        status: current_status,
+        location: current_location,
+        occurred_at,
+        note: latest.scan_remark || '',
+        raw_status: latest.status
+      }
+    ];
+
+    return {
+      current_status,
+      current_location,
+      estimated_delivery,
+      events
+    };
   }
 }

@@ -8,8 +8,8 @@ export function getCourierProvider(serviceName: string | null | undefined): Cour
     throw new Error("No courier service specified for this shipment.");
   }
 
-  // Remove spaces and dashes for safe comparison
-  const normalizedService = serviceName.toLowerCase().replace(/[\s\-]+/g, '');
+  // Remove spaces, dashes, and underscores for safe comparison
+  const normalizedService = serviceName.toLowerCase().replace(/[\s\-_]+/g, '');
 
   if (normalizedService === 'delhiveryb2b') {
     return new DelhiveryB2BProvider();

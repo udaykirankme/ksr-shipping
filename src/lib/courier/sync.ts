@@ -32,24 +32,33 @@ export async function syncTracking(shipmentId: string) {
   // (6. The provider normalizes the response internally into KSR's format)
   const trackingData = await provider.trackShipment(shipment.official_tracking_id);
 
+  // Find the max occurred_at from existing history to know our current freshest state
+  let maxDbDate = new Date(0);
+  for (const h of shipment.history) {
+    if (h.occurred_at.getTime() > maxDbDate.getTime()) {
+      maxDbDate = h.occurred_at;
+    }
+  }
+
   let newEventsInserted = 0;
+  let maxIncomingDate = new Date(0);
 
   // 7. Compare incoming tracking events with existing ShipmentStatusHistory
   // 8. Insert only genuinely new events, avoid duplicates (using status, location, occurred_at)
   for (const event of trackingData.events) {
+    if (event.occurred_at.getTime() > maxIncomingDate.getTime()) {
+      maxIncomingDate = event.occurred_at;
+    }
+
     const isDuplicate = shipment.history.some(existingEvent => {
-      // 1. Prefer stable provider event ID if the provider supplies one
       if (event.provider_event_id) {
-        // Since we don't have a dedicated DB column for this yet, we check the note
         return existingEvent.note && existingEvent.note.includes(`[ID:${event.provider_event_id}]`);
       }
-
-      // 2. Fallback to heuristic comparison
-      // Create safe timestamp comparison (handling slight parsing differences)
+      
       const existingTime = existingEvent.occurred_at.getTime();
       const newTime = event.occurred_at.getTime();
       
-      const timeMatches = Math.abs(existingTime - newTime) < 60000; // Within 1 minute tolerance
+      const timeMatches = Math.abs(existingTime - newTime) < 60000;
       const statusMatches = existingEvent.status === event.status;
       const locationMatches = existingEvent.location === event.location;
 
@@ -75,22 +84,33 @@ export async function syncTracking(shipmentId: string) {
     }
   }
 
-  // 10. Update Shipment.current_status
-  // 11. Update current location
-  // 12. Update estimated delivery
-  await prisma.shipment.update({
-    where: { id: shipment.id },
-    data: {
-      current_status: trackingData.current_status || shipment.current_status,
-      current_location: trackingData.current_location || shipment.current_location,
-      estimated_delivery: trackingData.estimated_delivery || shipment.estimated_delivery,
+  // 10. Update Shipment.current_status safely
+  // ONLY overwrite if the incoming data represents an event newer than what we had,
+  // OR if we didn't have any history at all.
+  const updateData: any = {};
+  
+  if (trackingData.estimated_delivery) {
+    updateData.estimated_delivery = trackingData.estimated_delivery;
+  }
+
+  if (maxIncomingDate.getTime() >= maxDbDate.getTime()) {
+    updateData.current_status = trackingData.current_status;
+    if (trackingData.current_location) {
+      updateData.current_location = trackingData.current_location;
     }
-  });
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: updateData
+    });
+  }
 
   return {
     success: true,
     shipment_id: shipment.tracking_id,
     new_events: newEventsInserted,
-    current_status: trackingData.current_status,
+    current_status: updateData.current_status || shipment.current_status,
   };
 }
