@@ -138,7 +138,7 @@ const getStageIndex = (status: string): number => {
       const s = status.toLowerCase();
       if (s.includes('out for delivery') || s.includes('transit') || s.includes('hub')) return 2;
       if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 3;
-      if (s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack')) return 1;
+      if (s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest')) return 1;
       return 0;
     }
   }
@@ -158,7 +158,7 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
     // Shipped / Dispatched / Bagged / Picked up / Received
     matched = history.find(e => {
       const s = e.status.toLowerCase();
-      return s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack');
+      return s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest');
     });
   } else if (stageIndex === 2) {
     // In Transit
@@ -736,18 +736,21 @@ export default function TrackResult() {
                                  
                                  <div className="mt-2.5 p-3 sm:p-4 bg-blue-50/70 border border-blue-100 rounded-xl shadow-sm flex flex-col gap-2.5">
                                    {group.events.map((evt, evtIdx) => (
-                                     <div key={evtIdx} className={cn("flex justify-between items-start gap-4", evtIdx !== group.events.length - 1 && "pb-2.5 border-b border-blue-100/60")}>
-                                       <div className="flex items-start gap-2.5 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
-                                         <svg className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                     <div key={evtIdx} className={cn("flex justify-between items-start gap-2 sm:gap-4", evtIdx !== group.events.length - 1 && "pb-2.5 border-b border-blue-100/60")}>
+                                       <div className="flex flex-1 items-start gap-2 sm:gap-2.5 text-[11px] sm:text-sm text-blue-950 font-medium leading-relaxed">
+                                         <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                          </svg>
                                          <p>{evt.note || "Status updated"}</p>
                                        </div>
-                                       <div className="text-right shrink-0">
-                                         <time dateTime={evt.occurred_at} className="text-[10.5px] sm:text-xs text-blue-700 font-semibold block">
-                                           {formatDateTime(evt.occurred_at)}
+                                       <div className="text-right shrink-0 ml-1 flex flex-col items-end gap-0.5 mt-0.5">
+                                         <time dateTime={evt.occurred_at} className="text-[10px] sm:text-[11px] text-blue-800 font-bold tracking-tight">
+                                           {new Date(evt.occurred_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                          </time>
-                                         <span className="text-[9px] sm:text-[10px] text-blue-500/80 font-medium uppercase tracking-wider">IST</span>
+                                         <div className="flex items-center gap-1">
+                                            <span className="text-[9.5px] sm:text-[10.5px] text-blue-600 font-semibold">{new Date(evt.occurred_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}</span>
+                                            <span className="text-[8px] sm:text-[9px] text-blue-500/80 font-bold uppercase tracking-wider">IST</span>
+                                         </div>
                                        </div>
                                      </div>
                                    ))}
