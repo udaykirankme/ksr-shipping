@@ -48,13 +48,14 @@ const normalizeService = (serviceName: string | null | undefined): string => {
 
 // Centralized logic to update the shipment and prevent duplicates
 export const processWebhookEvent = async (
-  officialTrackingId: string,
-  expectedServiceNormalized: string,
-  eventStatus: string,
-  eventLocation: string,
-  eventTimeStr: string | null | undefined,
-  eventCustomerUpdate: string | null | undefined,
-  rawPayload: any,
+  officialTrackingId: string, 
+  expectedServiceNormalized: string, 
+  eventStatus: string, 
+  eventLocation: string | undefined, 
+  eventTimeStr: string | undefined, 
+  eventCustomerUpdate: string | undefined, 
+  estimatedDeliveryStr: string | undefined,
+  payload: any, 
   res: Response
 ) => {
   try {
@@ -154,6 +155,17 @@ export const processWebhookEvent = async (
       }
     }
 
+    if (estimatedDeliveryStr) {
+      let ed = estimatedDeliveryStr;
+      if (!ed.includes('Z') && !ed.includes('+')) {
+        ed += '+05:30';
+      }
+      const edDate = new Date(ed);
+      if (!isNaN(edDate.getTime()) && edDate.getFullYear() > 1970) {
+        updateData.estimated_delivery = edDate;
+      }
+    }
+
     await prisma.shipment.update({
       where: { id: shipment.id },
       data: updateData
@@ -195,7 +207,9 @@ router.post('/delhivery/b2c', verifyWebhookAuth('b2c'), async (req: Request, res
        return res.status(400).json({ success: false, message: 'Missing Status' });
     }
 
-    await processWebhookEvent(awb, 'delhiveryb2c', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, payload, res);
+    const estimatedDeliveryStr = payload.Shipment.ExpectedDeliveryDate;
+
+    await processWebhookEvent(awb, 'delhiveryb2c', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr, payload, res);
   } catch (error) {
     console.error('[Webhook B2C] Unhandled error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -227,7 +241,9 @@ router.post('/delhivery/b2b', verifyWebhookAuth('b2b'), async (req: Request, res
        return res.status(400).json({ success: false, message: 'Missing Status' });
     }
 
-    await processWebhookEvent(lrnum, 'delhiveryb2b', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, payload, res);
+    const estimatedDeliveryStr = payload.estimated_date || payload.promised_delivery_date;
+
+    await processWebhookEvent(lrnum, 'delhiveryb2b', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr, payload, res);
   } catch (error) {
     console.error('[Webhook B2B] Unhandled error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });

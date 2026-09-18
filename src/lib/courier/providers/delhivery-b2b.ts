@@ -137,8 +137,18 @@ export class DelhiveryB2BProvider implements CourierProvider {
       }
     }
 
-    const estimated_delivery = latest.estimated_date || latest.promised_delivery_date || undefined;
-
+    let estimated_delivery: Date | null = null;
+    const ed_raw = latest.estimated_date || latest.promised_delivery_date;
+    if (ed_raw) {
+      let ed = ed_raw;
+      if (!ed.includes('Z') && !ed.includes('+')) {
+        ed += '+05:30';
+      }
+      const d = new Date(ed);
+      if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
+        estimated_delivery = d;
+      }
+    }
     // We yield a single event for the sync engine because the API only gives the latest state.
     // Sync logic will deduplicate based on time/status/location.
     const events: TrackingEvent[] = [

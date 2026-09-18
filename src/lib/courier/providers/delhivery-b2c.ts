@@ -111,7 +111,19 @@ export class DelhiveryB2CProvider implements CourierProvider {
 
     const current_status = shipmentInfo.Status?.Status || events[events.length - 1]?.status || 'Unknown';
     const current_location = shipmentInfo.Status?.StatusLocation || events[events.length - 1]?.location || '';
-    const estimated_delivery = shipmentInfo.ExpectedDeliveryDate || undefined;
+    
+    let estimated_delivery: Date | null = null;
+    if (shipmentInfo.ExpectedDeliveryDate) {
+      let ed = shipmentInfo.ExpectedDeliveryDate;
+      // If there's no timezone info (Z or +), append +05:30 as Delhivery times are typically IST
+      if (!ed.includes('Z') && !ed.includes('+')) {
+        ed += '+05:30';
+      }
+      const d = new Date(ed);
+      if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
+        estimated_delivery = d;
+      }
+    }
 
     return {
       current_status,
