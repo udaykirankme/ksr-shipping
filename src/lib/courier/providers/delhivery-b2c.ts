@@ -68,7 +68,11 @@ export class DelhiveryB2CProvider implements CourierProvider {
         
         let occurred_at = new Date();
         if (scan.ScanDateTime) {
-          const parsed = new Date(scan.ScanDateTime);
+          let dt = scan.ScanDateTime;
+          if (!dt.includes('Z') && !dt.includes('+')) {
+            dt += '+05:30';
+          }
+          const parsed = new Date(dt);
           if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1970) {
             occurred_at = parsed;
           }
@@ -90,7 +94,11 @@ export class DelhiveryB2CProvider implements CourierProvider {
       
       let occurred_at = new Date();
       if (statusObj.StatusDateTime) {
-        const parsed = new Date(statusObj.StatusDateTime);
+        let dt = statusObj.StatusDateTime;
+        if (!dt.includes('Z') && !dt.includes('+')) {
+          dt += '+05:30';
+        }
+        const parsed = new Date(dt);
         if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1970) {
           occurred_at = parsed;
         }

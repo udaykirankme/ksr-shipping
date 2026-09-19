@@ -66,7 +66,13 @@ export const processWebhookEvent = async (
 
     // Prepare timestamp for DB filtering
     const nowMs = Date.now();
-    let occurredAt = eventTimeStr ? new Date(eventTimeStr) : new Date();
+
+    let parsedTimeStr = eventTimeStr;
+    if (parsedTimeStr && !parsedTimeStr.includes('Z') && !parsedTimeStr.includes('+')) {
+      parsedTimeStr += '+05:30';
+    }
+
+    let occurredAt = parsedTimeStr ? new Date(parsedTimeStr) : new Date();
     const twentyFourHoursMs = 24 * 60 * 60 * 1000;
     
     if (

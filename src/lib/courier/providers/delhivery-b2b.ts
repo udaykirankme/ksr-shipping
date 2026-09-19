@@ -131,7 +131,11 @@ export class DelhiveryB2BProvider implements CourierProvider {
     // Attempt to parse the timestamp safely. If missing, fallback to current time since it's the latest known state.
     let occurred_at = new Date();
     if (latest.scan_timestamp) {
-      const parsed = new Date(latest.scan_timestamp);
+      let ts = latest.scan_timestamp;
+      if (typeof ts === 'string' && !/(Z|[+-]\d{2}:?\d{2})$/i.test(ts)) {
+        ts += '+05:30';
+      }
+      const parsed = new Date(ts);
       if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1970) {
         occurred_at = parsed;
       }
