@@ -1,0 +1,22 @@
+name: Courier Sync Backup
+
+on:
+  schedule:
+    # Run approximately every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Allow manual triggers for testing
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger KSR Shipping active shipments sync
+        run: |
+          # Use --fail to exit with non-zero on HTTP errors (4xx/5xx)
+          # Use --show-error to print error messages if curl fails
+          # Use --silent to hide progress bars and response body output by piping output to /dev/null
+          # Use --max-time to enforce a timeout (e.g., 75 seconds since Vercel maxDuration is 60s)
+          curl --fail --show-error --silent \
+               --max-time 75 \
+               --request GET "https://ksrshipping.com/api/cron/sync-active-shipments" \
+               --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}" > /dev/null
