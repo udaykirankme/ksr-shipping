@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@/lib/db';
 import { parseBusinessDateTime } from '@/lib/datetime';
+import { isDuplicateEvent } from '@/lib/courier/identity';
 
 const router = Router();
 
@@ -106,15 +107,24 @@ export const processWebhookEvent = async (
     }
 
     // 3. Deduplication Logic - Targeted Query
-    const duplicateCheck = await prisma.shipmentStatusHistory.findFirst({
+    // Fetch recent events to run deterministic composite identity check
+    const potentialDuplicates = await prisma.shipmentStatusHistory.findMany({
       where: {
         shipment_id: shipment.id,
-        status: eventStatus,
-        location: eventLocation || null,
         occurred_at: { gte: timeLowerBound, lte: timeUpperBound }
-      },
-      select: { id: true }
+      }
     });
+
+    const incomingEventForDedup = {
+      status: eventStatus,
+      location: eventLocation || null,
+      occurred_at: occurredAt,
+      note: eventCustomerUpdate,
+    };
+
+    const duplicateCheck = potentialDuplicates.find(existing =>
+      isDuplicateEvent(existing, incomingEventForDedup)
+    );
 
     if (duplicateCheck) {
       return res.status(200).json({ success: true, message: 'Event already recorded' });
@@ -130,7 +140,7 @@ export const processWebhookEvent = async (
     const isNewerOrEqual = !latestHistory || occurredAt.getTime() >= latestHistory.occurred_at.getTime();
 
     // 5. Update the Database
-    const finalNote = `Webhook Update: ${eventStatus}`;
+    const finalNote = eventCustomerUpdate?.trim() ? `Webhook Update: ${eventCustomerUpdate.trim()}` : `Webhook Update: ${eventStatus}`;
 
     const updateData: any = {
       history: {

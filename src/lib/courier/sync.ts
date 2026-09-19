@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { getCourierProvider } from './index';
+import { isDuplicateEvent } from './identity';
 import { TrackingEvent } from './types';
 
 export async function syncTracking(shipmentId: string) {
@@ -44,25 +45,18 @@ export async function syncTracking(shipmentId: string) {
   let maxIncomingDate = new Date(0);
 
   // 7. Compare incoming tracking events with existing ShipmentStatusHistory
-  // 8. Insert only genuinely new events, avoid duplicates (using status, location, occurred_at)
+  // Maintain an up-to-date in-memory list of events to check against
+  // This solves the stale snapshot issue when processing multiple incoming events in one sync
+  const currentHistory = [...shipment.history];
+
+  // 8. Insert only genuinely new events, avoid duplicates (using status, location, occurred_at, and note)
   for (const event of trackingData.events) {
     if (event.occurred_at.getTime() > maxIncomingDate.getTime()) {
       maxIncomingDate = event.occurred_at;
     }
 
-    const isDuplicate = shipment.history.some(existingEvent => {
-      if (event.provider_event_id) {
-        return existingEvent.note && existingEvent.note.includes(`[ID:${event.provider_event_id}]`);
-      }
-      
-      const existingTime = existingEvent.occurred_at.getTime();
-      const newTime = event.occurred_at.getTime();
-      
-      const timeMatches = Math.abs(existingTime - newTime) < 60000;
-      const statusMatches = existingEvent.status === event.status;
-      const locationMatches = existingEvent.location === event.location;
-
-      return timeMatches && statusMatches && locationMatches;
+    const isDuplicate = currentHistory.some(existingEvent => {
+      return isDuplicateEvent(existingEvent, event);
     });
 
     if (!isDuplicate) {
@@ -71,7 +65,7 @@ export async function syncTracking(shipmentId: string) {
         finalNote = `[ID:${event.provider_event_id}] ${finalNote}`;
       }
 
-      await prisma.shipmentStatusHistory.create({
+      const newHistoryRecord = await prisma.shipmentStatusHistory.create({
         data: {
           shipment_id: shipment.id,
           status: event.status,
@@ -80,7 +74,9 @@ export async function syncTracking(shipmentId: string) {
           occurred_at: event.occurred_at,
         }
       });
+
       newEventsInserted++;
+      currentHistory.push(newHistoryRecord); // Add to in-memory history
     }
   }
 
