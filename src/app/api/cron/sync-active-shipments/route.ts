@@ -63,13 +63,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      processed: activeShipments.length,
-      successCount,
-      failCount,
-      message: 'Batch synchronization completed.'
-    });
+    const success = failCount === 0;
+
+    return NextResponse.json(
+      {
+        success,
+        total: activeShipments.length,
+        successful: successCount,
+        failed: failCount
+      },
+      { status: success ? 200 : 500 }
+    );
 
   } catch (err: any) {
     console.error('[CRON] Critical error during batch synchronization:', err);

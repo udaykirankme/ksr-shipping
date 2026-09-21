@@ -29,7 +29,8 @@ export class DelhiveryB2BProvider implements CourierProvider {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
+        cache: 'no-store'
       });
     } catch (err: any) {
       throw new Error(`Delhivery B2B Login network request failed: ${err.message}`);
@@ -78,7 +79,8 @@ export class DelhiveryB2BProvider implements CourierProvider {
         headers: {
           'Authorization': `Bearer ${jwt}`,
           'Accept': 'application/json'
-        }
+        },
+        cache: 'no-store'
       });
     } catch (err: any) {
       throw new Error(`Delhivery B2B network request failed: ${err.message}`);

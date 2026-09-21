@@ -21,7 +21,8 @@ export class DelhiveryB2CProvider implements CourierProvider {
           'Authorization': `Token ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        }
+        },
+        cache: 'no-store'
       });
     } catch (err: any) {
       throw new Error(`Delhivery B2C network request failed: ${err.message}`);
