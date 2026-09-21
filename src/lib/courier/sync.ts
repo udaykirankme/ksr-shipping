@@ -42,19 +42,18 @@ export async function syncTracking(shipmentId: string) {
   }
 
   let newEventsInserted = 0;
-  let maxIncomingDate = new Date(0);
+  
+  // Track the latest date among successfully inserted or confirmed duplicate events
+  let maxSuccessfulDate = maxDbDate;
+  let latestSuccessfulStatus = shipment.current_status;
+  let latestSuccessfulLocation = shipment.current_location;
 
   // 7. Compare incoming tracking events with existing ShipmentStatusHistory
   // Maintain an up-to-date in-memory list of events to check against
-  // This solves the stale snapshot issue when processing multiple incoming events in one sync
   const currentHistory = [...shipment.history];
 
   // 8. Insert only genuinely new events, avoid duplicates (using status, location, occurred_at, and note)
   for (const event of trackingData.events) {
-    if (event.occurred_at.getTime() > maxIncomingDate.getTime()) {
-      maxIncomingDate = event.occurred_at;
-    }
-
     const isDuplicate = currentHistory.some(existingEvent => {
       return isDuplicateEvent(existingEvent, event);
     });
@@ -65,34 +64,51 @@ export async function syncTracking(shipmentId: string) {
         finalNote = `[ID:${event.provider_event_id}] ${finalNote}`;
       }
 
-      const newHistoryRecord = await prisma.shipmentStatusHistory.create({
-        data: {
-          shipment_id: shipment.id,
-          status: event.status,
-          location: event.location,
-          note: finalNote,
-          occurred_at: event.occurred_at,
-        }
-      });
+      try {
+        const newHistoryRecord = await prisma.shipmentStatusHistory.create({
+          data: {
+            shipment_id: shipment.id,
+            status: event.status,
+            location: event.location,
+            note: finalNote,
+            occurred_at: event.occurred_at,
+          }
+        });
 
-      newEventsInserted++;
-      currentHistory.push(newHistoryRecord); // Add to in-memory history
+        newEventsInserted++;
+        currentHistory.push(newHistoryRecord); // Add to in-memory history
+        
+        if (event.occurred_at.getTime() > maxSuccessfulDate.getTime()) {
+          maxSuccessfulDate = event.occurred_at;
+          latestSuccessfulStatus = event.status;
+          latestSuccessfulLocation = event.location || '';
+        }
+      } catch (err: any) {
+        console.error(`[Sync Error] Failed to insert event for ${shipment.official_tracking_id}:`, err.message);
+        // Continue to the next event
+      }
+    } else {
+      // If it is a duplicate, it's a valid event that is already safely persisted.
+      if (event.occurred_at.getTime() > maxSuccessfulDate.getTime()) {
+        maxSuccessfulDate = event.occurred_at;
+        latestSuccessfulStatus = event.status;
+        latestSuccessfulLocation = event.location || '';
+      }
     }
   }
 
   // 10. Update Shipment.current_status safely
-  // ONLY overwrite if the incoming data represents an event newer than what we had,
-  // OR if we didn't have any history at all.
+  // ONLY overwrite if the successful events represent an event newer than what we had.
   const updateData: any = {};
   
   if (trackingData.estimated_delivery) {
     updateData.estimated_delivery = trackingData.estimated_delivery;
   }
 
-  if (maxIncomingDate.getTime() >= maxDbDate.getTime()) {
-    updateData.current_status = trackingData.current_status;
-    if (trackingData.current_location) {
-      updateData.current_location = trackingData.current_location;
+  if (maxSuccessfulDate.getTime() > maxDbDate.getTime()) {
+    updateData.current_status = latestSuccessfulStatus;
+    if (latestSuccessfulLocation) {
+      updateData.current_location = latestSuccessfulLocation;
     }
   }
 

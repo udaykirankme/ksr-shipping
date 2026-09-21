@@ -47,8 +47,8 @@ const normalizeService = (serviceName: string | null | undefined): string => {
   return serviceName.toLowerCase().replace(/[\s\-_]+/g, '');
 };
 
-// Centralized logic to update the shipment and prevent duplicates
-export const processWebhookEvent = async (
+// Centralized core logic to update the shipment and prevent duplicates
+export const processWebhookEventCore = async (
   officialTrackingId: string, 
   expectedServiceNormalized: string, 
   eventStatus: string, 
@@ -56,13 +56,12 @@ export const processWebhookEvent = async (
   eventTimeStr: string | undefined, 
   eventCustomerUpdate: string | undefined, 
   estimatedDeliveryStr: string | undefined,
-  payload: any, 
-  res: Response
-) => {
+  payload: any
+): Promise<{ status: number, message: string }> => {
   try {
     if (!officialTrackingId) {
       console.warn('[Webhook] Received payload without a valid tracking identifier.');
-      return res.status(400).json({ success: false, message: 'Missing tracking identifier' });
+      return { status: 400, message: 'Missing tracking identifier' };
     }
 
     // Prepare timestamp for DB filtering
@@ -70,7 +69,7 @@ export const processWebhookEvent = async (
 
     let parsedTimeStr = eventTimeStr;
     if (parsedTimeStr && !parsedTimeStr.includes('Z') && !parsedTimeStr.includes('+')) {
-      parsedTimeStr += '+05:30';
+      parsedTimeStr = parsedTimeStr.replace(' ', 'T') + '+05:30';
     }
 
     let occurredAt = parsedTimeStr ? new Date(parsedTimeStr) : new Date();
@@ -95,15 +94,22 @@ export const processWebhookEvent = async (
     });
 
     if (!shipment) {
-      console.info(`[Webhook] Received event for unknown shipment: ${officialTrackingId}. Ignoring.`);
-      return res.status(200).json({ success: true, message: 'Event ignored (Unknown shipment)' });
+      console.info(`[Webhook] Received event for unknown shipment: ${officialTrackingId}. Storing in PendingWebhookEvent.`);
+      await prisma.pendingWebhookEvent.create({
+        data: {
+          official_tracking_id: officialTrackingId,
+          provider: expectedServiceNormalized,
+          payload: payload || {}
+        }
+      });
+      return { status: 200, message: 'Event ignored (Unknown shipment) but stored as pending' };
     }
 
     // 2. Verify the provider matches
     const shipmentServiceNormalized = normalizeService(shipment.service);
     if (shipmentServiceNormalized !== expectedServiceNormalized) {
       console.warn(`[Webhook] Provider mismatch for ${officialTrackingId}. Expected ${expectedServiceNormalized}, found ${shipmentServiceNormalized}.`);
-      return res.status(200).json({ success: true, message: 'Event ignored (Provider mismatch)' });
+      return { status: 200, message: 'Event ignored (Provider mismatch)' };
     }
 
     // 3. Deduplication Logic - Targeted Query
@@ -120,6 +126,7 @@ export const processWebhookEvent = async (
       location: eventLocation || null,
       occurred_at: occurredAt,
       note: eventCustomerUpdate,
+      raw_status: eventStatus,
     };
 
     const duplicateCheck = potentialDuplicates.find(existing =>
@@ -127,7 +134,7 @@ export const processWebhookEvent = async (
     );
 
     if (duplicateCheck) {
-      return res.status(200).json({ success: true, message: 'Event already recorded' });
+      return { status: 200, message: 'Event already recorded' };
     }
 
     // 4. Event Ordering Check - Find latest known event
@@ -174,7 +181,7 @@ export const processWebhookEvent = async (
     if (estimatedDeliveryStr) {
       let ed = estimatedDeliveryStr;
       if (!ed.includes('Z') && !ed.includes('+')) {
-        ed += '+05:30';
+        ed = ed.replace(' ', 'T') + '+05:30';
       }
       const edDate = new Date(ed);
       if (!isNaN(edDate.getTime()) && edDate.getFullYear() > 1970) {
@@ -188,10 +195,38 @@ export const processWebhookEvent = async (
     });
 
     // 5. Respond quickly with 200 OK (<=500ms requirement)
-    return res.status(200).json({ success: true, message: 'Event recorded' });
+    return { status: 200, message: 'Event recorded' };
 
   } catch (error: any) {
     console.error(`[Webhook Error] Failed to process event for ${officialTrackingId}:`, error.message);
+    throw error;
+  }
+};
+
+export const processWebhookEvent = async (
+  officialTrackingId: string, 
+  expectedServiceNormalized: string, 
+  eventStatus: string, 
+  eventLocation: string | undefined, 
+  eventTimeStr: string | undefined, 
+  eventCustomerUpdate: string | undefined, 
+  estimatedDeliveryStr: string | undefined,
+  payload: any, 
+  res: Response
+) => {
+  try {
+    const result = await processWebhookEventCore(
+      officialTrackingId, 
+      expectedServiceNormalized, 
+      eventStatus, 
+      eventLocation, 
+      eventTimeStr, 
+      eventCustomerUpdate, 
+      estimatedDeliveryStr, 
+      payload
+    );
+    return res.status(result.status).json({ success: result.status >= 200 && result.status < 300, message: result.message });
+  } catch (error: any) {
     // Return 500 for genuine server/DB errors so the provider knows it failed on our end
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }

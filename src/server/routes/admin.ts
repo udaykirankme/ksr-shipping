@@ -513,6 +513,65 @@ router.post('/shipments', async (req, res) => {
       }
     }
 
+    // Process pending webhooks if any
+    if (shipment && shipment.official_tracking_id) {
+      try {
+        const pendingEvents = await prisma.pendingWebhookEvent.findMany({
+          where: { official_tracking_id: shipment.official_tracking_id },
+          orderBy: { created_at: 'asc' }
+        });
+
+        if (pendingEvents.length > 0) {
+          const { processWebhookEventCore } = await import('./webhooks');
+          for (const pending of pendingEvents) {
+            try {
+              const payload = pending.payload as any;
+              
+              let eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr;
+              
+              if (pending.provider === 'delhiveryb2c') {
+                const statusObj = payload.Shipment?.Status || {};
+                eventStatus = statusObj.Status;
+                eventLocation = statusObj.StatusLocation;
+                eventTimeStr = statusObj.StatusDateTime || payload.Shipment?.PickUpDate;
+                eventCustomerUpdate = statusObj.Instructions;
+                estimatedDeliveryStr = payload.Shipment?.ExpectedDeliveryDate;
+              } else if (pending.provider === 'delhiveryb2b') {
+                eventStatus = payload.status;
+                eventLocation = payload.location;
+                eventTimeStr = payload.timestamp ? (typeof payload.timestamp === 'number' ? new Date(payload.timestamp).toISOString() : payload.timestamp) : null;
+                eventCustomerUpdate = payload.shipment_remark;
+                estimatedDeliveryStr = payload.estimated_date || payload.promised_delivery_date;
+              }
+
+              if (eventStatus) {
+                const result = await processWebhookEventCore(
+                  shipment.official_tracking_id,
+                  pending.provider,
+                  eventStatus,
+                  eventLocation,
+                  eventTimeStr,
+                  eventCustomerUpdate,
+                  estimatedDeliveryStr,
+                  payload
+                );
+                
+                // Only delete if successful or considered a duplicate (HTTP 2xx)
+                if (result.status >= 200 && result.status < 300) {
+                  await prisma.pendingWebhookEvent.delete({ where: { id: pending.id } });
+                }
+              }
+            } catch (e) {
+              console.error(`[Pending Webhook] Failed to process pending event ${pending.id}:`, e);
+              // Do NOT delete pending event on failure.
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Pending Webhook] Error fetching/processing pending events:', err);
+      }
+    }
+
     res.json({ success: true, data: shipment });
   } catch (error: any) {
     console.error(error);
