@@ -575,7 +575,7 @@ router.post('/shipments', async (req, res) => {
     res.json({ success: true, data: shipment });
   } catch (error: any) {
     console.error(error);
-    if (error.code === 'P2002' && error.meta?.target?.includes('official_tracking_id')) {
+    if (error.code === 'P2002' && Array.isArray(error.meta?.target) && error.meta.target.includes('official_tracking_id')) {
        return res.status(400).json({ success: false, message: 'Official tracking number must be unique'  });
     }
     res.status(500).json({ success: false, message: error.message || 'Internal error' });
