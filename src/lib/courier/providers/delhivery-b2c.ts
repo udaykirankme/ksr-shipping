@@ -1,4 +1,5 @@
-import { CourierProvider, TrackingResponse, TrackingEvent } from '../types';
+import { CourierProvider, TrackingResponse, TrackingEvent, KSRTrackingStatus } from '../types';
+import { normalizeDelhiveryStatus } from '../normalization';
 
 export class DelhiveryB2CProvider implements CourierProvider {
   async trackShipment(awb: string): Promise<TrackingResponse> {
@@ -80,7 +81,7 @@ export class DelhiveryB2CProvider implements CourierProvider {
         }
         
         events.push({
-          status: scan.Scan,
+          status: normalizeDelhiveryStatus(scan.Scan, scan.Instructions) as KSRTrackingStatus,
           location: scan.ScannedLocation || '',
           occurred_at,
           note: scan.Instructions || '',
@@ -106,7 +107,7 @@ export class DelhiveryB2CProvider implements CourierProvider {
       }
       
       events.push({
-        status: statusObj.Status || 'Unknown',
+        status: normalizeDelhiveryStatus(statusObj.Status, statusObj.Instructions) as KSRTrackingStatus,
         location: statusObj.StatusLocation || '',
         occurred_at,
         note: statusObj.Instructions || '',

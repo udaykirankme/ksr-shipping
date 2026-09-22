@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@/lib/db';
 import { parseBusinessDateTime } from '@/lib/datetime';
 import { isDuplicateEvent } from '@/lib/courier/identity';
+import { normalizeDelhiveryStatus } from '@/lib/courier/normalization';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ const getB2BConfig = () => ({
 const verifyWebhookAuth = (type: 'b2c' | 'b2b') => {
   return (req: Request, res: Response, next: NextFunction) => {
     const config = type === 'b2c' ? getB2CConfig() : getB2BConfig();
-    
+
     if (!config.headerName || !config.secret) {
       console.error(`[Webhook ${type}] Auth configuration missing on server.`);
       return res.status(500).json({ success: false, message: 'Server configuration error' });
@@ -49,16 +50,19 @@ const normalizeService = (serviceName: string | null | undefined): string => {
 
 // Centralized core logic to update the shipment and prevent duplicates
 export const processWebhookEventCore = async (
-  officialTrackingId: string, 
-  expectedServiceNormalized: string, 
-  eventStatus: string, 
-  eventLocation: string | undefined, 
-  eventTimeStr: string | undefined, 
-  eventCustomerUpdate: string | undefined, 
+  officialTrackingId: string,
+  expectedServiceNormalized: string,
+  eventStatus: string,
+  eventLocation: string | undefined,
+  eventTimeStr: string | undefined,
+  eventCustomerUpdate: string | undefined,
   estimatedDeliveryStr: string | undefined,
   payload: any
 ): Promise<{ status: number, message: string }> => {
   try {
+    // 0. Normalize the status strictly using the shared function
+    const normalizedStatus = normalizeDelhiveryStatus(eventStatus, eventCustomerUpdate);
+
     if (!officialTrackingId) {
       console.warn('[Webhook] Received payload without a valid tracking identifier.');
       return { status: 400, message: 'Missing tracking identifier' };
@@ -74,10 +78,10 @@ export const processWebhookEventCore = async (
 
     let occurredAt = parsedTimeStr ? new Date(parsedTimeStr) : new Date();
     const twentyFourHoursMs = 24 * 60 * 60 * 1000;
-    
+
     if (
-      isNaN(occurredAt.getTime()) || 
-      occurredAt.getFullYear() <= 1970 || 
+      isNaN(occurredAt.getTime()) ||
+      occurredAt.getFullYear() <= 1970 ||
       occurredAt.getTime() > nowMs + twentyFourHoursMs
     ) {
        console.warn(`[Webhook] Invalid or far-future timestamp received for ${officialTrackingId}: ${occurredAt.toISOString()}. Falling back to current time.`);
@@ -94,15 +98,8 @@ export const processWebhookEventCore = async (
     });
 
     if (!shipment) {
-      console.info(`[Webhook] Received event for unknown shipment: ${officialTrackingId}. Storing in PendingWebhookEvent.`);
-      await prisma.pendingWebhookEvent.create({
-        data: {
-          official_tracking_id: officialTrackingId,
-          provider: expectedServiceNormalized,
-          payload: payload || {}
-        }
-      });
-      return { status: 200, message: 'Event ignored (Unknown shipment) but stored as pending' };
+      console.info(`[Webhook] Received event for unknown shipment: ${officialTrackingId}. Leaving in PendingWebhookEvent.`);
+      return { status: 404, message: 'Event ignored (Unknown shipment)' };
     }
 
     // 2. Verify the provider matches
@@ -122,7 +119,7 @@ export const processWebhookEventCore = async (
     });
 
     const incomingEventForDedup = {
-      status: eventStatus,
+      status: normalizedStatus,
       location: eventLocation || null,
       occurred_at: occurredAt,
       note: eventCustomerUpdate,
@@ -152,7 +149,7 @@ export const processWebhookEventCore = async (
     const updateData: any = {
       history: {
         create: {
-          status: eventStatus,
+          status: normalizedStatus,
           location: eventLocation || null,
           note: finalNote,
           occurred_at: occurredAt,
@@ -162,18 +159,18 @@ export const processWebhookEventCore = async (
 
     // ONLY update main shipment state if this event is chronologically the newest
     if (isNewerOrEqual) {
-      updateData.current_status = eventStatus;
+      updateData.current_status = normalizedStatus;
       updateData.version = { increment: 1 };
-      
+
       if (eventLocation) {
         updateData.current_location = eventLocation;
       }
-      
+
       if (eventCustomerUpdate && eventCustomerUpdate.trim() !== '') {
         updateData.customer_update = eventCustomerUpdate.trim();
       }
-      
-      if (eventStatus.toLowerCase() === 'delivered') {
+
+      if (normalizedStatus.toLowerCase() === 'delivered') {
          updateData.delivered_at = occurredAt;
       }
     }
@@ -204,30 +201,64 @@ export const processWebhookEventCore = async (
 };
 
 export const processWebhookEvent = async (
-  officialTrackingId: string, 
-  expectedServiceNormalized: string, 
-  eventStatus: string, 
-  eventLocation: string | undefined, 
-  eventTimeStr: string | undefined, 
-  eventCustomerUpdate: string | undefined, 
+  officialTrackingId: string,
+  expectedServiceNormalized: string,
+  eventStatus: string,
+  eventLocation: string | undefined,
+  eventTimeStr: string | undefined,
+  eventCustomerUpdate: string | undefined,
   estimatedDeliveryStr: string | undefined,
-  payload: any, 
+  payload: any,
+  req: Request,
   res: Response
 ) => {
+  const start = performance.now();
   try {
-    const result = await processWebhookEventCore(
-      officialTrackingId, 
-      expectedServiceNormalized, 
-      eventStatus, 
-      eventLocation, 
-      eventTimeStr, 
-      eventCustomerUpdate, 
-      estimatedDeliveryStr, 
-      payload
-    );
-    return res.status(result.status).json({ success: result.status >= 200 && result.status < 300, message: result.message });
+    // 1. Insert into PendingWebhookEvent FIRST
+    const pendingEvent = await prisma.pendingWebhookEvent.create({
+      data: {
+        official_tracking_id: officialTrackingId,
+        provider: expectedServiceNormalized,
+        payload: payload || {}
+      }
+    });
+
+    // 2. Schedule background task
+    const requestId = req.headers['x-internal-request-id'] as string;
+    if (requestId) {
+      const { registerBackgroundTask } = await import('@/lib/background-tasks');
+      registerBackgroundTask(requestId, async () => {
+        try {
+          const result = await processWebhookEventCore(
+            officialTrackingId,
+            expectedServiceNormalized,
+            eventStatus,
+            eventLocation,
+            eventTimeStr,
+            eventCustomerUpdate,
+            estimatedDeliveryStr,
+            payload
+          );
+
+          if (result.status >= 200 && result.status < 300) {
+            await prisma.pendingWebhookEvent.delete({ where: { id: pendingEvent.id } });
+          }
+        } catch (err) {
+          console.error(`[Webhook Worker] Failed processing pending event ${pendingEvent.id}:`, err);
+        }
+      });
+    } else {
+       console.warn(`[Webhook Ingestion] No request ID found, skipping background task for pending event ${pendingEvent.id}`);
+    }
+
+    const duration = performance.now() - start;
+    console.log(`[Webhook Ingestion] Accepted ${officialTrackingId} via ${expectedServiceNormalized} in ${duration.toFixed(2)}ms (Pending ID: ${pendingEvent.id})`);
+
+    // 3. Respond quickly with 200 OK
+    return res.status(200).json({ success: true, message: 'Event accepted' });
   } catch (error: any) {
-    // Return 500 for genuine server/DB errors so the provider knows it failed on our end
+    console.error('[Webhook Ingestion Error]', error.message);
+    // Return 500 for genuine DB errors so Delhivery retries
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 };
@@ -239,7 +270,7 @@ export const processWebhookEvent = async (
 router.post('/delhivery/b2c', verifyWebhookAuth('b2c'), async (req: Request, res: Response) => {
   try {
     const payload = req.body;
-    
+
     // Delhivery B2C payload format: { Shipment: { AWB, Status: { Status, StatusDateTime, StatusLocation }, ... } }
     if (!payload || !payload.Shipment) {
        console.warn('[Webhook B2C] Malformed payload received.');
@@ -260,7 +291,7 @@ router.post('/delhivery/b2c', verifyWebhookAuth('b2c'), async (req: Request, res
 
     const estimatedDeliveryStr = payload.Shipment.ExpectedDeliveryDate;
 
-    await processWebhookEvent(awb, 'delhiveryb2c', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr, payload, res);
+    await processWebhookEvent(awb, 'delhiveryb2c', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr, payload, req, res);
   } catch (error) {
     console.error('[Webhook B2C] Unhandled error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -294,7 +325,7 @@ router.post('/delhivery/b2b', verifyWebhookAuth('b2b'), async (req: Request, res
 
     const estimatedDeliveryStr = payload.estimated_date || payload.promised_delivery_date;
 
-    await processWebhookEvent(lrnum, 'delhiveryb2b', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr, payload, res);
+    await processWebhookEvent(lrnum, 'delhiveryb2b', eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr, payload, req, res);
   } catch (error) {
     console.error('[Webhook B2B] Unhandled error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });

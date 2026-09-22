@@ -1,4 +1,5 @@
 import { CourierProvider, TrackingResponse, TrackingEvent, KSRTrackingStatus } from '../types';
+import { normalizeDelhiveryStatus } from '../normalization';
 
 // Module-level cache for the JWT, kept only in server memory.
 let cachedJwt: string | null = null;
@@ -127,7 +128,7 @@ export class DelhiveryB2BProvider implements CourierProvider {
     }
 
     // Extract fields
-    const current_status = latest.status;
+    const current_status = normalizeDelhiveryStatus(latest.status, latest.scan_remark) as KSRTrackingStatus;
     const current_location = latest.location || '';
     
     // Attempt to parse the timestamp safely. If missing, fallback to current time since it's the latest known state.

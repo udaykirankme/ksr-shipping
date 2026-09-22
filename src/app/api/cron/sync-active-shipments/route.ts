@@ -30,6 +30,70 @@ export async function GET(req: NextRequest) {
   console.log('[CRON] Starting batch synchronization for active shipments...');
 
   try {
+    // 0. Process Pending Webhook Events (Retry Mechanism)
+    console.log('[CRON] Checking for unprocessed Pending Webhook Events...');
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60000);
+    const pendingEvents = await prisma.pendingWebhookEvent.findMany({
+      where: { created_at: { lt: fiveMinutesAgo } },
+      orderBy: { created_at: 'asc' }
+    });
+
+    let pendingSuccess = 0;
+    let pendingFail = 0;
+
+    if (pendingEvents.length > 0) {
+      const { processWebhookEventCore } = await import('@/server/routes/webhooks');
+      for (const pending of pendingEvents) {
+        try {
+          const payload = pending.payload as any;
+          let eventStatus, eventLocation, eventTimeStr, eventCustomerUpdate, estimatedDeliveryStr;
+
+          if (pending.provider === 'delhiveryb2c') {
+            const statusObj = payload.Shipment?.Status || {};
+            eventStatus = statusObj.Status;
+            eventLocation = statusObj.StatusLocation;
+            eventTimeStr = statusObj.StatusDateTime || payload.Shipment?.PickUpDate;
+            eventCustomerUpdate = statusObj.Instructions;
+            estimatedDeliveryStr = payload.Shipment?.ExpectedDeliveryDate;
+          } else if (pending.provider === 'delhiveryb2b') {
+            eventStatus = payload.status;
+            eventLocation = payload.location;
+            eventTimeStr = payload.timestamp ? (typeof payload.timestamp === 'number' ? new Date(payload.timestamp).toISOString() : payload.timestamp) : null;
+            eventCustomerUpdate = payload.shipment_remark;
+            estimatedDeliveryStr = payload.estimated_date || payload.promised_delivery_date;
+          }
+
+          if (eventStatus) {
+            const result = await processWebhookEventCore(
+              pending.official_tracking_id,
+              pending.provider,
+              eventStatus,
+              eventLocation,
+              eventTimeStr,
+              eventCustomerUpdate,
+              estimatedDeliveryStr,
+              payload
+            );
+
+            // Delete if successful or duplicate (HTTP 2xx). Unknown shipment returns 404, so it stays.
+            if (result.status >= 200 && result.status < 300) {
+              await prisma.pendingWebhookEvent.delete({ where: { id: pending.id } });
+              pendingSuccess++;
+            } else {
+              pendingFail++;
+            }
+          } else {
+            pendingFail++;
+          }
+        } catch (e) {
+          console.error(`[CRON] Failed to process pending event ${pending.id}:`, e);
+          pendingFail++;
+        }
+      }
+    }
+
+    console.log(`[CRON] Processed ${pendingEvents.length} pending events (${pendingSuccess} succeeded, ${pendingFail} skipped/failed).`);
+
     // 1. Find active/non-delivered shipments
     // Only looking for shipments that have an official tracking ID and service
     const activeShipments = await prisma.shipment.findMany({
@@ -70,7 +134,9 @@ export async function GET(req: NextRequest) {
         success,
         total: activeShipments.length,
         successful: successCount,
-        failed: failCount
+        failed: failCount,
+        pendingProcessed: pendingEvents.length,
+        pendingSuccess: pendingSuccess
       },
       { status: success ? 200 : 500 }
     );
