@@ -74,7 +74,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
               >
-                <p className="text-orange-500 font-black text-sm md:text-base lg:text-lg uppercase tracking-wider mb-3">
+                <p className="text-orange-500 font-black text-base sm:text-lg md:text-xl lg:text-2xl uppercase tracking-wider mb-2 sm:mb-3">
                   International & Domestic Courier
                 </p>
                 <h1 className="text-4xl lg:text-6xl font-black leading-[1.05] tracking-tight text-gray-900 mb-4 lg:mb-6">
@@ -99,19 +99,33 @@ export default function Home() {
               <div className="relative z-10 mt-6 lg:mt-0 mb-0 lg:mb-4">
                 {/* DESKTOP BUTTONS */}
                 <div className="hidden lg:flex items-center gap-3">
-                  <Link href="/get-quotation" className="h-10 px-6 text-sm font-semibold rounded-full bg-orange-500 hover:bg-orange-600 text-white inline-flex items-center justify-center whitespace-nowrap transition-colors">
-                    Get Quote
-                  </Link>
-                  <a href={business.googleReviewUrl.includes('http') ? business.googleReviewUrl : "#"} target="_blank" rel="noopener noreferrer" className="h-10 px-6 text-sm font-semibold rounded-full bg-white border border-gray-200 hover:border-orange-300 text-gray-900 inline-flex items-center justify-center gap-2 whitespace-nowrap">
+                  <a href="https://maps.app.goo.gl/1YEG5j5ueKDFxqHW7" target="_blank" rel="noopener noreferrer" className="h-10 px-6 text-sm font-semibold rounded-full bg-white border border-orange-500 hover:border-orange-600 text-gray-900 inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors">
+                    <svg viewBox="0 0 92.3 132.3" width="20" height="20" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="#1a73e8" d="M60.2 2.2C55.8.8 51 0 46.1 0 32 0 19.3 6.4 10.8 16.5l21.8 18.3L60.2 2.2z" />
+                      <path fill="#ea4335" d="M10.8 16.5C4.1 24.5 0 34.9 0 46.1c0 8.7 1.7 15.7 4.6 22l28-33.3-21.8-18.3z" />
+                      <path fill="#4285f4" d="M46.2 28.5c9.8 0 17.7 7.9 17.7 17.7 0 4.3-1.6 8.3-4.2 11.4 0 0 13.9-16.6 27.5-32.7-5.6-10.8-15.3-19-27-22.7L32.6 34.8c3.3-3.8 8.1-6.3 13.6-6.3" />
+                      <path fill="#fbbc04" d="M46.2 63.8c-9.8 0-17.7-7.9-17.7-17.7 0-4.3 1.5-8.3 4.1-11.3l-28 33.3c4.8 10.6 12.8 19.2 21 29.9l34.1-40.5c-3.3 3.9-8.1 6.3-13.5 6.3" />
+                      <path fill="#34a853" d="M59.1 109.2c15.4-24.1 33.3-35 33.3-63 0-7.7-1.9-14.9-5.2-21.3L25.6 98c2.6 3.4 5.3 7.3 7.9 11.3 9.4 14.5 6.8 23.1 12.8 23.1s3.4-8.7 12.8-23.2" />
+                    </svg>
+                    View Us on Maps
+                  </a>
+                  <a href={business.googleReviewUrl.includes('http') ? business.googleReviewUrl : "#"} target="_blank" rel="noopener noreferrer" className="h-10 px-6 text-sm font-semibold rounded-full bg-white border border-orange-500 hover:border-orange-600 text-gray-900 inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors">
                     <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)"><path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" /><path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.369 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" /><path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" /><path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.109 -17.884 43.989 -14.754 43.989 Z" /></g></svg> Review Us on Google
                   </a>
                 </div>
                 {/* MOBILE BUTTONS */}
                 <div className="flex lg:hidden flex-row gap-2 w-full">
-                  <Link href="/get-quotation" className="flex-1 min-w-0 h-10 px-3 text-xs sm:text-sm font-semibold rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-colors">
-                    Get Quote
-                  </Link>
-                  <a href={business.googleReviewUrl.includes('http') ? business.googleReviewUrl : "#"} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 h-10 px-2 sm:px-3 text-xs sm:text-sm font-semibold rounded-full bg-white border border-gray-200 hover:border-orange-300 text-gray-900 flex items-center justify-center gap-1.5 transition-colors">
+                  <a href="https://maps.app.goo.gl/1YEG5j5ueKDFxqHW7" target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 h-10 px-2 sm:px-3 text-xs sm:text-sm font-semibold rounded-full bg-white border border-orange-500 hover:border-orange-600 text-gray-900 flex items-center justify-center gap-1.5 transition-colors">
+                    <svg viewBox="0 0 92.3 132.3" width="18" height="18" className="shrink-0 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="#1a73e8" d="M60.2 2.2C55.8.8 51 0 46.1 0 32 0 19.3 6.4 10.8 16.5l21.8 18.3L60.2 2.2z" />
+                      <path fill="#ea4335" d="M10.8 16.5C4.1 24.5 0 34.9 0 46.1c0 8.7 1.7 15.7 4.6 22l28-33.3-21.8-18.3z" />
+                      <path fill="#4285f4" d="M46.2 28.5c9.8 0 17.7 7.9 17.7 17.7 0 4.3-1.6 8.3-4.2 11.4 0 0 13.9-16.6 27.5-32.7-5.6-10.8-15.3-19-27-22.7L32.6 34.8c3.3-3.8 8.1-6.3 13.6-6.3" />
+                      <path fill="#fbbc04" d="M46.2 63.8c-9.8 0-17.7-7.9-17.7-17.7 0-4.3 1.5-8.3 4.1-11.3l-28 33.3c4.8 10.6 12.8 19.2 21 29.9l34.1-40.5c-3.3 3.9-8.1 6.3-13.5 6.3" />
+                      <path fill="#34a853" d="M59.1 109.2c15.4-24.1 33.3-35 33.3-63 0-7.7-1.9-14.9-5.2-21.3L25.6 98c2.6 3.4 5.3 7.3 7.9 11.3 9.4 14.5 6.8 23.1 12.8 23.1s3.4-8.7 12.8-23.2" />
+                    </svg>
+                    <span className="truncate">View Us on Maps</span>
+                  </a>
+                  <a href={business.googleReviewUrl.includes('http') ? business.googleReviewUrl : "#"} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 h-10 px-2 sm:px-3 text-xs sm:text-sm font-semibold rounded-full bg-white border border-orange-500 hover:border-orange-600 text-gray-900 flex items-center justify-center gap-1.5 transition-colors">
                     <svg viewBox="0 0 24 24" width="14" height="14" className="shrink-0 sm:w-4 sm:h-4" xmlns="http://www.w3.org/2000/svg"><g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)"><path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" /><path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.369 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" /><path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" /><path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.109 -17.884 43.989 -14.754 43.989 Z" /></g></svg>
                     <span className="truncate">Review on Google</span>
                   </a>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, RefreshCw, Star, Trash2, CheckCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { DateFilter } from "@/components/dashboard/date-filter";
 import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function QuoteListClient() {
+  const router = useRouter();
   const confirm = useConfirm();
   const [quotes, setQuotes] = useState<QuotationRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -260,7 +262,8 @@ export function QuoteListClient() {
                   <TableRow 
                     key={quote.id} 
                     className="group hover:bg-gray-50/50 transition-colors cursor-pointer"
-                    onClick={() => window.location.href = `/admin/dashboard/quotations/${quote.id}`}
+                    onClick={() => router.push(`/admin/dashboard/quotations/${quote.id}`)}
+                    onMouseEnter={() => router.prefetch(`/admin/dashboard/quotations/${quote.id}`)}
                   >
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <input 

@@ -192,7 +192,6 @@ export function ShipmentListClient({
     try {
       await shipmentService.deleteShipment(id);
       await handleRefresh();
-      router.refresh();
     } catch (err: unknown) {
       alert((err as Error).message || 'Failed to delete');
     }
@@ -214,7 +213,6 @@ export function ShipmentListClient({
       await shipmentService.deleteBulk(Array.from(selectedIds));
       setSelectedIds(new Set());
       await handleRefresh();
-      router.refresh();
     } catch (err) {
       console.error(err);
       alert("Failed to delete selected records.");
@@ -398,7 +396,8 @@ export function ShipmentListClient({
                 <tr 
                   key={shipment.id} 
                   className="group hover:bg-orange-50/30 transition-colors cursor-pointer border-b border-gray-100/80" 
-                  onClick={() => window.location.href = `/admin/dashboard/shipments/${shipment.id}`}
+                  onClick={() => router.push(`/admin/dashboard/shipments/${shipment.id}`)}
+                  onMouseEnter={() => router.prefetch(`/admin/dashboard/shipments/${shipment.id}`)}
                 >
                   <td className="w-9 text-center px-2.5 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <input 

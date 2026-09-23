@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, RefreshCw, CheckCircle, Star, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { DateFilter } from "@/components/dashboard/date-filter";
 import { useConfirm } from "@/components/ui/confirm-modal";
 
 export function MessageListClient() {
+  const router = useRouter();
   const confirm = useConfirm();
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,7 +233,12 @@ export function MessageListClient() {
                 </TableRow>
               ) : (
                 messages.map((msg) => (
-                  <TableRow key={msg.id} className="group hover:bg-gray-50/50 cursor-pointer" onClick={() => window.location.href = `/admin/dashboard/messages/${msg.id}`}>
+                  <TableRow 
+                    key={msg.id} 
+                    className="group hover:bg-gray-50/50 cursor-pointer" 
+                    onClick={() => router.push(`/admin/dashboard/messages/${msg.id}`)}
+                    onMouseEnter={() => router.prefetch(`/admin/dashboard/messages/${msg.id}`)}
+                  >
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <input 
                         type="checkbox" 

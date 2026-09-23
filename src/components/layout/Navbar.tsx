@@ -53,6 +53,7 @@ export function Navbar() {
               <div key={link.name} className="relative group">
                 <Link
                   href={link.href}
+                  prefetch={true}
                   className={cn(
                     "block px-1 py-2 text-sm font-semibold transition-all duration-300 relative group-hover:-translate-y-0.5",
                     pathname === link.href ? "text-orange-500" : "text-gray-800 hover:text-orange-500"
@@ -116,6 +117,7 @@ export function Navbar() {
 
              <Link
                 href="/get-quotation"
+                prefetch={true}
                 className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:shadow-[0_0_25px_rgba(249,115,22,0.5)] flex items-center justify-center relative overflow-hidden group"
              >
                 <span className="relative z-10">Get Quote</span>
@@ -167,6 +169,7 @@ export function Navbar() {
                 <div key={link.name}>
                   <Link
                     href={link.href}
+                    prefetch={true}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
                       "block px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300",
@@ -199,6 +202,7 @@ export function Navbar() {
                  </div>
                  <Link
                     href="/get-quotation"
+                    prefetch={true}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex justify-center w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-3.5 rounded-xl text-base font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all duration-300 hover:shadow-[0_0_25px_rgba(249,115,22,0.5)] hover:scale-[1.02] active:scale-95 relative overflow-hidden group"
                  >

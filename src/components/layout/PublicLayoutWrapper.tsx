@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { KSRAssistantWidget } from "@/components/ui/KSRAssistantWidget";
 import { Toaster } from "sonner";
 import { BackToTopButton } from "@/components/ui/BackToTopButton";
 
@@ -33,7 +33,7 @@ export function PublicLayoutWrapper({ children }: { children: React.ReactNode })
         {children}
       </main>
       <Footer />
-      <WhatsAppButton />
+      <KSRAssistantWidget />
       <BackToTopButton />
       <Toaster position="top-right" richColors />
     </>

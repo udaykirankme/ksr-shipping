@@ -80,6 +80,7 @@ function SidebarContent({
       <Link
         key={item.name}
         href={item.href}
+        prefetch={true}
         onClick={onNavigate}
         className={cn(
           "group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-200 relative overflow-hidden",
@@ -184,6 +185,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
   const pathname = usePathname();
   const router = useRouter();
   const isMounted = useRef(false);
+  const prevPathnameRef = useRef(pathname);
   const [counts, setCounts] = useState({ unreadQuotes: 0, unreadContacts: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -203,6 +205,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
 
   useEffect(() => {
     isMounted.current = true;
+    if (pathname === '/admin/dashboard/quotations') {
+      setCounts(prev => ({ ...prev, unreadQuotes: 0 }));
+    } else if (pathname === '/admin/dashboard/messages') {
+      setCounts(prev => ({ ...prev, unreadContacts: 0 }));
+    } else if (pathname === '/admin/dashboard/notifications') {
+      setCounts(prev => ({ ...prev, unreadCount: 0 }));
+    }
     fetchCounts();
     
     const intervalId = setInterval(() => {
@@ -216,6 +225,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
   }, []);
 
   useEffect(() => {
+    if (prevPathnameRef.current === pathname) {
+      return;
+    }
+    prevPathnameRef.current = pathname;
+
     if (pathname === '/admin/dashboard/quotations') {
       setCounts(prev => ({ ...prev, unreadQuotes: 0 }));
     }
@@ -223,7 +237,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
       setCounts(prev => ({ ...prev, unreadContacts: 0 }));
     }
     if (pathname === '/admin/dashboard/notifications') {
-      setCounts(prev => ({ ...prev, unreadCount: 0 })); // Note: typings for counts? Just mimicking original
+      setCounts(prev => ({ ...prev, unreadCount: 0 }));
     }
     fetchCounts();
     onMobileClose?.();

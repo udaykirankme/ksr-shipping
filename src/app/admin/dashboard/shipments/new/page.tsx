@@ -157,7 +157,6 @@ export default function NewShipmentPage() {
         });
         const resData = res as any;
         setCreatedId(resData.data?.tracking_id || resData.tracking_id || 'SUCCESS');
-        router.refresh();
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to record packing');
       } finally {
@@ -190,7 +189,6 @@ export default function NewShipmentPage() {
       });
       const resData = res as any;
       setCreatedId(resData.data?.tracking_id || resData.tracking_id);
-      router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create shipment');
     } finally {

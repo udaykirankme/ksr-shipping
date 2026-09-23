@@ -247,7 +247,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         booked_time: updated.booked_date ? toBusinessTimeInput(updated.booked_date) : ''
       });
       setSuccess('Shipment details updated successfully');
-      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to update shipment');
       if ((err as Error).message?.includes('refresh')) {
@@ -291,7 +290,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         note: '',
         occurred_at: nextUpdate.occurred_at,
       });
-      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to update status');
     } finally {
@@ -341,7 +339,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         note: '',
         occurred_at: nextUpdate.occurred_at,
       });
-      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to undo status update');
     } finally {
@@ -387,7 +384,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         note: '',
         occurred_at: nextUpdate.occurred_at,
       });
-      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to delete status entry');
     } finally {
@@ -449,7 +445,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         note: '',
         occurred_at: nextUpdate.occurred_at,
       });
-      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to edit status');
     } finally {
@@ -470,7 +465,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setShipment(resData);
       setFormData((prev: any) => ({ ...prev, ...resData }));
       setSuccess('Customer update saved successfully');
-      router.refresh();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to save customer update');
     } finally {

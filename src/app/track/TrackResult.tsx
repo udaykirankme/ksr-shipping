@@ -446,15 +446,20 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
 }
 
 
-export default function TrackResult() {
+export default function TrackResult({ initialData = null }: { initialData?: TrackingData | null }) {
   const searchParams = useSearchParams();
   const trackingId = searchParams.get("id");
-  const [data, setData] = useState<TrackingData | null>(null);
+  const [data, setData] = useState<TrackingData | null>(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialData && initialData.tracking_id === trackingId) {
+      setData(initialData);
+      return;
+    }
+
     const handleSearch = async (id: string) => {
       setLoading(true);
       setError("");
@@ -491,7 +496,7 @@ export default function TrackResult() {
     if (trackingId) {
       handleSearch(trackingId);
     }
-  }, [trackingId]);
+  }, [trackingId, initialData]);
 
   const handleViewDetails = () => {
     if (!data?.history || data.history.length === 0) return;

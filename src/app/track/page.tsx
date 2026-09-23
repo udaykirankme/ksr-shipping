@@ -4,10 +4,54 @@ import Link from "next/link";
 import { Headset } from "lucide-react";
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/seo/site";
+import { prisma } from "@/lib/db";
 
 type TrackPageProps = {
   searchParams: Promise<{ id?: string }>;
 };
+
+async function getInitialTrackingData(id?: string) {
+  if (!id?.trim()) return null;
+  try {
+    const shipment = await prisma.shipment.findFirst({
+      where: {
+        tracking_id: id.trim(),
+      },
+      select: {
+        tracking_id: true,
+        current_status: true,
+        estimated_delivery: true,
+        origin: true,
+        destination: true,
+        sender_name: true,
+        receiver_name: true,
+        sender_city: true,
+        receiver_city: true,
+        booked_date: true,
+        medium: true,
+        current_location: true,
+        customer_update: true,
+        history: {
+          select: {
+            status: true,
+            location: true,
+            note: true,
+            occurred_at: true,
+          },
+          orderBy: [
+            { occurred_at: 'desc' },
+            { created_at: 'desc' },
+          ],
+        },
+      },
+    });
+
+    return shipment ? JSON.parse(JSON.stringify(shipment)) : null;
+  } catch (err) {
+    console.error("Server tracking fetch fallback:", err);
+    return null;
+  }
+}
 
 export async function generateMetadata({ searchParams }: TrackPageProps): Promise<Metadata> {
   const params = await searchParams;
@@ -36,7 +80,10 @@ export async function generateMetadata({ searchParams }: TrackPageProps): Promis
   };
 }
 
-export default function TrackPage() {
+export default async function TrackPage({ searchParams }: TrackPageProps) {
+  const params = await searchParams;
+  const initialData = await getInitialTrackingData(params?.id);
+
   return (
     <div className="min-h-[90vh] bg-gray-50 pt-[74px] sm:pt-[82px] lg:pt-[92px] pb-24 relative overflow-hidden flex flex-col">
       {/* Premium Background */}
@@ -53,7 +100,7 @@ export default function TrackPage() {
               </p>
             </div>
           }>
-            <TrackResult />
+            <TrackResult initialData={initialData} />
           </Suspense>
         </div>
 
