@@ -341,9 +341,9 @@ export function KSRAssistantWidget() {
         >
           {/* Mascot Image with state toggle */}
           <img
-            src={isOpen ? "/mascot/badge_happy.png" : "/mascot/badge_idle.png"}
+            src={isOpen ? "/mascot/mascot_cutout_happy.png" : "/mascot/mascot_cutout_idle.png"}
             alt="KSR Assistant Mascot"
-            className="w-full h-full object-cover rounded-full transition-transform duration-200"
+            className="w-full h-full object-contain p-1 transition-transform duration-200"
             draggable={false}
           />
         </motion.button>
