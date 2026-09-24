@@ -267,16 +267,8 @@ export function ShipmentListClient({
     <div className="flex flex-col h-full min-h-0 space-y-4 sm:space-y-5">
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4 shrink-0">
-        <div className="w-full sm:w-auto">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Shipments</h1>
-            <Link href="/admin/dashboard/shipments/new" className="sm:hidden shrink-0">
-              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5 px-3 h-8 rounded-xl shadow-xs text-xs font-semibold inline-flex items-center justify-center">
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span>New</span>
-              </Button>
-            </Link>
-          </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Shipments</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Manage and track all logistics operations</p>
         </div>
 
@@ -424,9 +416,10 @@ export function ShipmentListClient({
             )}
           </div>
 
-          <Link href="/admin/dashboard/shipments/new" className="hidden sm:inline-block shrink-0">
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white gap-2 px-3 sm:px-4 h-10 w-full sm:w-auto text-sm">
-              <Plus className="w-4 h-4 shrink-0" />
+          <Link href="/admin/dashboard/shipments/new" className="inline-block shrink-0">
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5 sm:gap-2 px-3 sm:px-4 h-9 sm:h-10 text-xs sm:text-sm font-semibold sm:font-medium">
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="sm:hidden">New</span>
               <span className="hidden sm:inline">Create Shipment</span>
             </Button>
           </Link>

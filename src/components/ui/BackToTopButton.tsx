@@ -31,12 +31,13 @@ export function BackToTopButton() {
     <button
       onClick={scrollToTop}
       className={cn(
-        "fixed bottom-[6.5rem] right-6 sm:bottom-[7rem] sm:right-7 z-40 p-3 rounded-full btn-primary shadow-[0_4px_20px_rgba(255,106,0,0.3)] transition-all duration-300",
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+        "fixed bottom-[8.5rem] right-7 sm:bottom-[10.5rem] sm:right-10 z-40 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#FF6A00] to-[#FF8C3A] text-white shadow-[0_4px_14px_rgba(255,106,0,0.38)] hover:shadow-[0_6px_20px_rgba(255,106,0,0.5)] border border-white/25 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer flex items-center justify-center group",
+        isVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-6 pointer-events-none"
       )}
-      aria-label="Scroll to top"
+      aria-label="Back to top"
+      title="Back to top"
     >
-      <ChevronUp className="w-6 h-6 text-white stroke-[2.5]" />
+      <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.5] transition-transform duration-200 group-hover:-translate-y-0.5" />
     </button>
   );
 }
