@@ -1,6 +1,15 @@
 import { apiFetch, API_HOST } from './api-client';
 const API_BASE = `${API_HOST}/api/admin`;
 
+export interface ContactHistoryEvent {
+  id: string;
+  contact_submission_id?: string;
+  status: string;
+  occurred_at: string;
+  note?: string | null;
+  updated_by?: string | null;
+}
+
 export interface ContactMessage {
   id: string;
   contact_id: string;
@@ -16,6 +25,7 @@ export interface ContactMessage {
   opened_at: string | null;
   created_at: string;
   updated_at: string;
+  history?: ContactHistoryEvent[];
 }
 
 export const contactService = {
@@ -47,6 +57,15 @@ export const contactService = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ responded })
+    });
+    return res as ContactMessage;
+  },
+
+  async addActivity(id: string, data: { action: string; note?: string }): Promise<ContactMessage> {
+    const res = await apiFetch(`${API_BASE}/contact-messages/${id}/activity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
     });
     return res as ContactMessage;
   },

@@ -91,6 +91,15 @@ export async function updateQuoteStatus(id: string, data: { status: string; note
   return res as QuotationRequest;
 }
 
+export async function addQuoteActivity(id: string, data: { action: string; note?: string }): Promise<QuotationRequest> {
+  const res = await apiFetch(`${API_URL}/quotations/${id}/activity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res as QuotationRequest;
+}
+
 
 export async function deleteQuote(id: string): Promise<void> {
   await apiFetch(`${API_URL}/quotations/${id}`, {

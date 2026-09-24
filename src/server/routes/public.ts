@@ -217,6 +217,14 @@ router.post('/contact', apiLimiter, async (req, res) => {
         }
       });
 
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "contact_status_history" ("contact_submission_id", "status", "occurred_at", "note") VALUES ($1::uuid, $2, $3, $4)`,
+        newContact.id,
+        'New',
+        new Date(),
+        'Contact Message Created via Public Form'
+      );
+
       await tx.notification.create({
         data: {
           type: 'CONTACT_MESSAGE',

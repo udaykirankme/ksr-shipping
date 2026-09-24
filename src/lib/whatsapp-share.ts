@@ -146,3 +146,30 @@ export function openWhatsAppShare(phone: string, message: string) {
   const encoded = encodeURIComponent(message);
   window.open(`https://wa.me/${normalizedPhone}?text=${encoded}`, '_blank', 'noopener,noreferrer');
 }
+
+export function getDialerHref(phone?: string | null): string | null {
+  if (!phone?.trim()) return null;
+  let cleaned = phone.trim().replace(/[^\d+]/g, '');
+  if (!cleaned) return null;
+
+  if (cleaned.startsWith('+')) {
+    return `tel:${cleaned}`;
+  }
+
+  // Remove leading 0 if 11 digits (Indian STD/trunk prefix e.g., 09876543210)
+  if (cleaned.startsWith('0') && cleaned.length === 11) {
+    cleaned = cleaned.slice(1);
+  }
+
+  // 10-digit Indian mobile number
+  if (cleaned.length === 10) {
+    return `tel:+91${cleaned}`;
+  }
+
+  // 12-digit Indian number starting with 91
+  if (cleaned.length === 12 && cleaned.startsWith('91')) {
+    return `tel:+${cleaned}`;
+  }
+
+  return `tel:${cleaned}`;
+}

@@ -243,6 +243,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
     onMobileClose?.();
   }, [pathname, onMobileClose]);
 
+  useEffect(() => {
+    if (!mobileOpen && typeof document !== 'undefined') {
+      if (document.activeElement instanceof HTMLElement && document.activeElement.closest('#admin-mobile-sidebar')) {
+        document.activeElement.blur();
+      }
+    }
+  }, [mobileOpen]);
+
   const handleLogout = () => {
     setShowLogoutModal(true);
   };
@@ -290,6 +298,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
           mobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         aria-hidden={!mobileOpen}
+        inert={!mobileOpen ? true : undefined}
       >
         <button
           type="button"

@@ -247,7 +247,7 @@ router.get('/shipments/export', async (req, res) => {
           s.weight,
           s.booked_date ? toBusinessDateInput(s.booked_date) : '',
           s.booked_date ? toBusinessTimeInput(s.booked_date) : '',
-          s.estimated_delivery ? s.estimated_delivery.toISOString().split('T')[0] : '',
+          s.estimated_delivery ? (s.estimated_delivery instanceof Date && !isNaN(s.estimated_delivery.getTime()) ? s.estimated_delivery.toISOString().split('T')[0] : String(s.estimated_delivery).split('T')[0]) : '',
           s.profit,
           s.paid_amount,
           s.received_amount,
@@ -1247,9 +1247,9 @@ router.patch('/quotations/:id/status', async (req, res) => {
       prisma.quoteStatusHistory.create({
         data: {
           quote_request_id: req.params.id,
-          status,
+          status: status === 'Contacted' ? 'Marked as Responded' : status,
           occurred_at: new Date(),
-          note,
+          note: note || (status === 'Contacted' ? 'Marked as responded' : undefined),
           updated_by: (req as any).user.id
         }
       })
@@ -1260,6 +1260,45 @@ router.patch('/quotations/:id/status', async (req, res) => {
     if (error.code === 'P2025') return res.status(409).json({ success: false, message: 'Conflict: This record has been updated. Please refresh.'  });
     console.error(error);
     res.status(500).json({ success: false, message: 'Internal error'  });
+  }
+});
+
+router.post('/quotations/:id/activity', async (req, res) => {
+  try {
+    const { action, note } = req.body;
+    if (!action || typeof action !== 'string') {
+      return res.status(400).json({ success: false, message: 'Action is required' });
+    }
+
+    const current = await prisma.quotationRequest.findUnique({ where: { id: req.params.id } });
+    if (!current) return res.status(404).json({ success: false, message: 'Not found' });
+
+    const statusText = action.slice(0, 30);
+    const shouldMarkResponded = current.status === 'New';
+
+    const [quote, history] = await prisma.$transaction([
+      prisma.quotationRequest.update({
+        where: { id: req.params.id },
+        data: {
+          ...(shouldMarkResponded ? { status: 'Contacted' } : {}),
+          version: { increment: 1 }
+        }
+      }),
+      prisma.quoteStatusHistory.create({
+        data: {
+          quote_request_id: req.params.id,
+          status: statusText,
+          occurred_at: new Date(),
+          note: note || null,
+          updated_by: (req as any).user?.id || null
+        }
+      })
+    ]);
+
+    res.json({ success: true, data: { quote, history } });
+  } catch (error) {
+    console.error('[QuotationActivityError]', error);
+    res.status(500).json({ success: false, message: 'Failed to record activity' });
   }
 });
 
@@ -1308,7 +1347,7 @@ router.post('/quotations/respond-bulk', async (req, res) => {
         prisma.quoteStatusHistory.createMany({
           data: quotes.map(q => ({
             quote_request_id: q.id,
-            status: 'Contacted',
+            status: 'Marked as Responded',
             occurred_at: new Date(),
             updated_by: (req as any).user.id,
             note: 'Marked as responded'
@@ -1419,7 +1458,43 @@ router.get('/contact-messages/:id', async (req, res) => {
       });
     }
 
-    res.json({ success: true, data: item });
+    let history: any[] = [];
+    try {
+      history = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, status, occurred_at, note, updated_by FROM "contact_status_history" WHERE "contact_submission_id" = $1::uuid ORDER BY "occurred_at" DESC`,
+        req.params.id
+      );
+
+      if (history.length === 0) {
+        // Seed initial history
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "contact_status_history" ("contact_submission_id", "status", "occurred_at", "note") VALUES ($1::uuid, $2, $3, $4)`,
+          req.params.id,
+          'New',
+          item.created_at,
+          'Contact Message Received'
+        );
+
+        if (item.responded && item.responded_at) {
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO "contact_status_history" ("contact_submission_id", "status", "occurred_at", "note") VALUES ($1::uuid, $2, $3, $4)`,
+            req.params.id,
+            'Marked as Responded',
+            item.responded_at,
+            'Marked as responded'
+          );
+        }
+
+        history = await prisma.$queryRawUnsafe<any[]>(
+          `SELECT id, status, occurred_at, note, updated_by FROM "contact_status_history" WHERE "contact_submission_id" = $1::uuid ORDER BY "occurred_at" DESC`,
+          req.params.id
+        );
+      }
+    } catch (hErr) {
+      console.error('Error fetching contact history:', hErr);
+    }
+
+    res.json({ success: true, data: { ...item, history } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -1455,18 +1530,109 @@ router.patch('/contact-messages/read-all', async (_req, res) => {
 
 router.patch('/contact-messages/:id/respond', async (req, res) => {
   try {
-    const { responded } = req.body;
+    const { responded, note } = req.body;
+    const now = new Date();
     const item = await prisma.contactSubmission.update({
       where: { id: req.params.id },
       data: { 
         responded,
-        responded_at: responded ? new Date() : null
+        responded_at: responded ? now : null
       }
     });
-    res.json({ success: true, data: item });
+
+    if (responded) {
+      try {
+        const userId = (req as any).user?.id;
+        let validUserId: string | null = null;
+        if (userId) {
+          const userExists = await prisma.adminUser.findUnique({ where: { id: userId }, select: { id: true } });
+          if (userExists) validUserId = userExists.id;
+        }
+
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "contact_status_history" ("contact_submission_id", "status", "occurred_at", "note", "updated_by") VALUES ($1::uuid, $2, $3, $4, $5::uuid)`,
+          req.params.id,
+          'Marked as Responded',
+          now,
+          note || 'Marked as responded',
+          validUserId
+        );
+      } catch (hErr) {
+        console.error('Error recording responded history:', hErr);
+      }
+    }
+
+    let history: any[] = [];
+    try {
+      history = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, status, occurred_at, note, updated_by FROM "contact_status_history" WHERE "contact_submission_id" = $1::uuid ORDER BY "occurred_at" DESC`,
+        req.params.id
+      );
+    } catch (hErr) {
+      console.error('Error fetching history:', hErr);
+    }
+
+    res.json({ success: true, data: { ...item, history } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Database error'  });
+  }
+});
+
+router.post('/contact-messages/:id/activity', async (req, res) => {
+  try {
+    const { action, note } = req.body;
+    if (!action || typeof action !== 'string') {
+      return res.status(400).json({ success: false, message: 'Action is required' });
+    }
+
+    const current = await prisma.contactSubmission.findUnique({ where: { id: req.params.id } });
+    if (!current) return res.status(404).json({ success: false, message: 'Not found' });
+
+    const statusText = action.slice(0, 30);
+    const shouldMarkResponded = !current.responded && (action === 'Marked as Responded' || action === 'Replied on WhatsApp');
+
+    const item = await prisma.contactSubmission.update({
+      where: { id: req.params.id },
+      data: {
+        ...(shouldMarkResponded ? { responded: true, responded_at: new Date() } : {})
+      }
+    });
+
+    try {
+      const userId = (req as any).user?.id;
+      let validUserId: string | null = null;
+      if (userId) {
+        const userExists = await prisma.adminUser.findUnique({ where: { id: userId }, select: { id: true } });
+        if (userExists) validUserId = userExists.id;
+      }
+
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "contact_status_history" ("contact_submission_id", "status", "occurred_at", "note", "updated_by") VALUES ($1::uuid, $2, $3, $4, $5::uuid)`,
+        req.params.id,
+        statusText,
+        new Date(),
+        note || null,
+        validUserId
+      );
+    } catch (hErr) {
+      console.error('Error inserting contact history:', hErr);
+    }
+
+    let history: any[] = [];
+    try {
+      history = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, status, occurred_at, note, updated_by FROM "contact_status_history" WHERE "contact_submission_id" = $1::uuid ORDER BY "occurred_at" DESC`,
+        req.params.id
+      );
+    } catch (hErr) {
+      console.error('Error fetching history:', hErr);
+    }
+
+    res.json({ success: true, data: { ...item, history } });
+  } catch (error) {
+    console.error('[ContactActivityError]', error);
+    res.status(500).json({ success: false, message: 'Failed to record activity' });
   }
 });
 
@@ -1495,6 +1661,32 @@ router.post('/contact-messages/respond-bulk', async (req, res) => {
         responded_at: responded ? new Date() : null
       }
     });
+
+    if (responded && ids.length > 0) {
+      try {
+        const userId = (req as any).user?.id;
+        let validUserId: string | null = null;
+        if (userId) {
+          const userExists = await prisma.adminUser.findUnique({ where: { id: userId }, select: { id: true } });
+          if (userExists) validUserId = userExists.id;
+        }
+
+        const now = new Date();
+        for (const cid of ids) {
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO "contact_status_history" ("contact_submission_id", "status", "occurred_at", "note", "updated_by") VALUES ($1::uuid, $2, $3, $4, $5::uuid)`,
+            cid,
+            'Marked as Responded',
+            now,
+            'Marked as responded (bulk)',
+            validUserId
+          );
+        }
+      } catch (hErr) {
+        console.error('Error logging bulk respond history:', hErr);
+      }
+    }
+
     res.json({ success: true, data: { success: true } });
   } catch (error) {
     console.error(error);
