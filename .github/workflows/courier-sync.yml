@@ -14,9 +14,9 @@ jobs:
         run: |
           # Use --fail to exit with non-zero on HTTP errors (4xx/5xx)
           # Use --show-error to print error messages if curl fails
-          # Use --silent to hide progress bars and response body output by piping output to /dev/null
+          # Use --silent to hide progress bars (response body will be printed to logs)
           # Use --max-time to enforce a timeout (e.g., 75 seconds since Vercel maxDuration is 60s)
           curl -L --fail --show-error --silent \
                --max-time 75 \
                --request GET "https://www.ksrshipping.com/api/cron/sync-active-shipments" \
-               --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}" > /dev/null
+               --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
