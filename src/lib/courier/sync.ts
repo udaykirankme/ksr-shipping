@@ -78,7 +78,7 @@ export async function syncTracking(shipmentId: string) {
         newEventsInserted++;
         currentHistory.push(newHistoryRecord); // Add to in-memory history
         
-        if (event.occurred_at.getTime() > maxSuccessfulDate.getTime()) {
+        if (event.occurred_at.getTime() >= maxSuccessfulDate.getTime()) {
           maxSuccessfulDate = event.occurred_at;
           latestSuccessfulStatus = event.status;
           latestSuccessfulLocation = event.location || '';
@@ -89,7 +89,7 @@ export async function syncTracking(shipmentId: string) {
       }
     } else {
       // If it is a duplicate, it's a valid event that is already safely persisted.
-      if (event.occurred_at.getTime() > maxSuccessfulDate.getTime()) {
+      if (event.occurred_at.getTime() >= maxSuccessfulDate.getTime()) {
         maxSuccessfulDate = event.occurred_at;
         latestSuccessfulStatus = event.status;
         latestSuccessfulLocation = event.location || '';
@@ -98,14 +98,18 @@ export async function syncTracking(shipmentId: string) {
   }
 
   // 10. Update Shipment.current_status safely
-  // ONLY overwrite if the successful events represent an event newer than what we had.
+  // ONLY overwrite if the successful events represent an event newer than what we had,
+  // OR if the latest event has the exact same timestamp but the shipment status is desynchronized.
   const updateData: any = {};
   
   if (trackingData.estimated_delivery) {
     updateData.estimated_delivery = trackingData.estimated_delivery;
   }
 
-  if (maxSuccessfulDate.getTime() > maxDbDate.getTime()) {
+  if (
+    maxSuccessfulDate.getTime() > maxDbDate.getTime() ||
+    (maxSuccessfulDate.getTime() === maxDbDate.getTime() && latestSuccessfulStatus !== shipment.current_status)
+  ) {
     updateData.current_status = latestSuccessfulStatus;
     if (latestSuccessfulLocation) {
       updateData.current_location = latestSuccessfulLocation;
