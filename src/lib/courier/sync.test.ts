@@ -40,6 +40,7 @@ describe('Courier Sync: Status Desynchronization Healing', () => {
     service: 'delhiveryb2c',
     official_tracking_id: 'AWB123',
     current_location: 'City',
+    customer_update: 'Stale note',
   };
 
   it('CASE A: Heals desynchronized current_status when exactly matching latest history timestamp', async () => {
@@ -70,7 +71,8 @@ describe('Courier Sync: Status Desynchronization Healing', () => {
     expect(prisma.shipment.update).toHaveBeenCalledWith({
       where: { id: 'shipment-123' },
       data: expect.objectContaining({
-        current_status: 'Delivered'
+        current_status: 'Delivered',
+        customer_update: 'Delivered note',
       })
     });
     expect(result.current_status).toBe('Delivered');
@@ -80,6 +82,7 @@ describe('Courier Sync: Status Desynchronization Healing', () => {
     vi.mocked(prisma.shipment.findUnique).mockResolvedValue({
       ...baseShipment,
       current_status: 'Delivered',
+      customer_update: 'Delivered note',
       history: [
         { id: 'h1', occurred_at: timestampT, status: 'Delivered', location: 'City', note: 'Delivered note', raw_status: 'Del' }
       ]
@@ -161,7 +164,8 @@ describe('Courier Sync: Status Desynchronization Healing', () => {
     expect(prisma.shipment.update).toHaveBeenCalledWith({
       where: { id: 'shipment-123' },
       data: expect.objectContaining({
-        current_status: 'Delivered'
+        current_status: 'Delivered',
+        customer_update: 'Del note',
       })
     });
     expect(result.current_status).toBe('Delivered');

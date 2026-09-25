@@ -43,10 +43,10 @@ export async function syncTracking(shipmentId: string) {
 
   let newEventsInserted = 0;
   
-  // Track the latest date among successfully inserted or confirmed duplicate events
   let maxSuccessfulDate = maxDbDate;
   let latestSuccessfulStatus = shipment.current_status;
   let latestSuccessfulLocation = shipment.current_location;
+  let latestSuccessfulNote = shipment.customer_update;
 
   // 7. Compare incoming tracking events with existing ShipmentStatusHistory
   // Maintain an up-to-date in-memory list of events to check against
@@ -82,6 +82,7 @@ export async function syncTracking(shipmentId: string) {
           maxSuccessfulDate = event.occurred_at;
           latestSuccessfulStatus = event.status;
           latestSuccessfulLocation = event.location || '';
+          latestSuccessfulNote = event.note || '';
         }
       } catch (err: any) {
         console.error(`[Sync Error] Failed to insert event for ${shipment.official_tracking_id}:`, err.message);
@@ -93,6 +94,7 @@ export async function syncTracking(shipmentId: string) {
         maxSuccessfulDate = event.occurred_at;
         latestSuccessfulStatus = event.status;
         latestSuccessfulLocation = event.location || '';
+        latestSuccessfulNote = event.note || '';
       }
     }
   }
@@ -113,6 +115,9 @@ export async function syncTracking(shipmentId: string) {
     updateData.current_status = latestSuccessfulStatus;
     if (latestSuccessfulLocation) {
       updateData.current_location = latestSuccessfulLocation;
+    }
+    if (latestSuccessfulNote && latestSuccessfulNote.trim() !== '') {
+      updateData.customer_update = latestSuccessfulNote.trim();
     }
   }
 
