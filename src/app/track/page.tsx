@@ -5,6 +5,7 @@ import { Headset } from "lucide-react";
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/seo/site";
 import { prisma } from "@/lib/db";
+import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from "@/lib/courier/identity";
 
 type TrackPageProps = {
   searchParams: Promise<{ id?: string }>;
@@ -46,7 +47,16 @@ async function getInitialTrackingData(id?: string) {
       },
     });
 
-    return shipment ? JSON.parse(JSON.stringify(shipment)) : null;
+    if (!shipment) return null;
+
+    const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
+    const cleanedCustomerUpdate = shipment.customer_update ? sanitizeCustomerHistoryNote(shipment.customer_update) : null;
+
+    return JSON.parse(JSON.stringify({
+      ...shipment,
+      customer_update: cleanedCustomerUpdate,
+      history: cleanedHistory,
+    }));
   } catch (err) {
     console.error("Server tracking fetch fallback:", err);
     return null;

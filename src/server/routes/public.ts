@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { pushService } from '../push-service';
+import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from '@/lib/courier/identity';
 
 const router = Router();
 
@@ -82,7 +83,17 @@ router.post('/track', apiLimiter, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Shipment not found' });
     }
 
-    return res.json({ success: true, data: shipment });
+    const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
+    const cleanedCustomerUpdate = shipment.customer_update ? sanitizeCustomerHistoryNote(shipment.customer_update) : null;
+
+    return res.json({
+      success: true,
+      data: {
+        ...shipment,
+        customer_update: cleanedCustomerUpdate,
+        history: cleanedHistory,
+      },
+    });
   } catch (error) {
     console.error('Track error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });

@@ -3,6 +3,21 @@ import { describe, it, expect } from 'vitest';
 import { normalizeDelhiveryStatus } from './normalization';
 
 describe('Delhivery Status Normalization', () => {
+  it('Dispatched + Out for delivery → Out For Delivery', () => {
+    expect(normalizeDelhiveryStatus('Dispatched', 'Out for delivery')).toBe('Out For Delivery');
+  });
+
+  it('Dispatched + OUT FOR DELIVERY → Out For Delivery (case-insensitive)', () => {
+    expect(normalizeDelhiveryStatus('Dispatched', 'OUT FOR DELIVERY')).toBe('Out For Delivery');
+  });
+
+  it('out for delivery as raw status → Out For Delivery', () => {
+    expect(normalizeDelhiveryStatus('out for delivery', '')).toBe('Out For Delivery');
+  });
+
+  it('Dispatched + unrelated instruction → Dispatched', () => {
+    expect(normalizeDelhiveryStatus('Dispatched', 'Vehicle Departed')).toBe('Dispatched');
+  });
   it('Pending + Trip Arrived → In Transit', () => {
     expect(normalizeDelhiveryStatus('Pending', 'Trip Arrived')).toBe('In Transit');
   });

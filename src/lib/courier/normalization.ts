@@ -9,7 +9,12 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
   const statusLower = status.toLowerCase();
   const noteLower = note.toLowerCase();
 
-  // 1. Pending Normalizations
+  // 1. Out For Delivery Normalizations
+  if (noteLower.includes('out for delivery') || statusLower === 'out for delivery') {
+    return 'Out For Delivery';
+  }
+
+  // 2. Pending Normalizations
   if (statusLower === 'pending') {
     if (
       noteLower.includes('trip arrived') ||

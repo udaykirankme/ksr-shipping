@@ -63,7 +63,7 @@ const getStatusColor = (status: string) => {
     case 'Dispatched': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'In Transit': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'At Hub': return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'Out For Delivery': return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'Out For Delivery': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'Delivered': return 'bg-green-100 text-green-800 border-green-200';
     case 'Cancelled': return 'bg-red-100 text-red-800 border-red-200';
     case 'Returned': return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -130,14 +130,16 @@ const getStageIndex = (status: string): number => {
       return 1;
     case 'In Transit':
     case 'At Hub':
-    case 'Out For Delivery':
       return 2;
-    case 'Delivered':
+    case 'Out For Delivery':
       return 3;
+    case 'Delivered':
+      return 4;
     default: {
       const s = status.toLowerCase();
-      if (s.includes('out for delivery') || s.includes('transit') || s.includes('hub')) return 2;
-      if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 3;
+      if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 4;
+      if (s.includes('out for delivery')) return 3;
+      if (s.includes('transit') || s.includes('hub')) return 2;
       if (s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest')) return 1;
       return 0;
     }
@@ -164,9 +166,17 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
     // In Transit
     matched = history.find(e => {
       const s = e.status.toLowerCase();
-      return s.includes('transit') || s.includes('hub') || s.includes('out for delivery');
+      const n = (e.note || '').toLowerCase();
+      return (s.includes('transit') || s.includes('hub')) && !s.includes('out for delivery') && !n.includes('out for delivery');
     });
   } else if (stageIndex === 3) {
+    // Out for Delivery
+    matched = history.find(e => {
+      const s = e.status.toLowerCase();
+      const n = (e.note || '').toLowerCase();
+      return s.includes('out for delivery') || n.includes('out for delivery');
+    });
+  } else if (stageIndex === 4) {
     // Delivered (exclude 'out for delivery')
     matched = history.find(e => {
       const s = e.status.toLowerCase();
@@ -195,7 +205,7 @@ interface HorizontalShipmentTrackerProps {
 function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTrackerProps) {
   const isAir = isAirShipment(data);
   const finalStageIdx = getStageIndex(data.current_status);
-  const isDelivered = data.current_status === 'Delivered' || finalStageIdx === 3;
+  const isDelivered = data.current_status === 'Delivered' || finalStageIdx === 4;
   const destinationCity = data.receiver_city || data.destination || "Destination";
   const currentLocation = data.history[0]?.location || data.current_location || data.sender_city || "Current Facility";
 
@@ -203,19 +213,22 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
     { label: "Shipment Created", key: "created" },
     { label: "Shipped", key: "shipped" },
     { label: "In Transit", key: "in_transit" },
+    { label: "Out for Delivery", key: "out_for_delivery" },
     { label: "Delivered", key: "delivered" },
   ];
 
-  // Target fill along the connector track (from 0% to 100%):
+  // Target fill along the connector track (from 0% to 100% across the 4 segments connecting the 5 nodes):
   // - Stage 0 (Shipment Created): 0%
-  // - Stage 1 (Shipped): 50% (halfway between Shipped at 33.33% and In Transit at 66.66%)
-  // - Stage 2 (In Transit): 83.333% (halfway between In Transit at 66.66% and Delivered at 100%)
-  // - Stage 3 (Delivered): 100%
+  // - Stage 1 (Shipped): 37.5% (halfway between Shipped at 25% and In Transit at 50%)
+  // - Stage 2 (In Transit): 62.5% (halfway between In Transit at 50% and Out for Delivery at 75%)
+  // - Stage 3 (Out for Delivery): 87.5% (halfway between Out for Delivery at 75% and Delivered at 100%)
+  // - Stage 4 (Delivered): 100%
   let targetPercent = 0;
   if (finalStageIdx === 0) targetPercent = 0;
-  else if (finalStageIdx === 1) targetPercent = 50;
-  else if (finalStageIdx === 2) targetPercent = 83.333;
-  else if (finalStageIdx === 3) targetPercent = 100;
+  else if (finalStageIdx === 1) targetPercent = 37.5;
+  else if (finalStageIdx === 2) targetPercent = 62.5;
+  else if (finalStageIdx === 3) targetPercent = 87.5;
+  else if (finalStageIdx === 4) targetPercent = 100;
 
   const [trackPercent, setTrackPercent] = useState(0);
 
@@ -230,8 +243,8 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
     let animationFrameId: number;
     let startTime: number | null = null;
     
-    // Duration: 1800ms for Shipped, 2400ms for In Transit, 2600ms for Delivered
-    const duration = finalStageIdx === 1 ? 1800 : finalStageIdx === 2 ? 2400 : 2600;
+    // Duration: 1600ms for Shipped, 2200ms for In Transit, 2500ms for Out for Delivery, 2800ms for Delivered
+    const duration = finalStageIdx === 1 ? 1600 : finalStageIdx === 2 ? 2200 : finalStageIdx === 3 ? 2500 : 2800;
 
     // Gentle, natural sine ease-out: steady natural glide, softly easing into arrival
     const easeOutSine = (t: number) => Math.sin((t * Math.PI) / 2);
@@ -262,17 +275,18 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
     };
   }, [finalStageIdx, data.tracking_id, targetPercent]);
 
-  // Synchronous tick marks: a circle turns to [✓] the exact instant the leading edge touches it
+  // Synchronous tick marks: a circle activates the instant the leading edge touches it
   const isStageCompleted = (idx: number) => {
     if (idx === 0) return true;
-    if (idx === 1) return trackPercent >= 33.333;
-    if (idx === 2) return trackPercent >= 66.666;
-    if (idx === 3) return trackPercent >= 99.5;
+    if (idx === 1) return trackPercent >= 25;
+    if (idx === 2) return trackPercent >= 50;
+    if (idx === 3) return trackPercent >= 75;
+    if (idx === 4) return trackPercent >= 99.5;
     return false;
   };
 
   const renderStageIcon = (idx: number, isCompleted: boolean) => {
-    const iconSize = "w-4 h-4 sm:w-5 sm:h-5 md:w-5.5 md:h-5.5";
+    const iconSize = "w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-5.5 md:h-5.5";
     const iconColor = isCompleted ? "text-white" : "text-gray-400";
 
     // Stage 0: Shipment Created
@@ -294,8 +308,17 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
       );
     }
 
-    // Stage 3: Delivered
+    // Stage 3: Out for Delivery
     if (idx === 3) {
+      return isAir ? (
+        <Plane className={cn(iconSize, iconColor, "-rotate-12")} />
+      ) : (
+        <Truck className={cn(iconSize, iconColor)} />
+      );
+    }
+
+    // Stage 4: Delivered
+    if (idx === 4) {
       return <CheckCircle2 className={cn(iconSize, iconColor)} />;
     }
 
@@ -307,7 +330,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
       <div className="relative w-full">
         {/* Background connector track passing directly through node circle centers */}
         <div 
-          className="absolute top-[18px] sm:top-[26px] md:top-[28px] -translate-y-1/2 left-[12.5%] right-[12.5%] h-[2.5px] sm:h-[3px] bg-gray-200/90 rounded-full z-0"
+          className="absolute top-[18px] sm:top-[26px] md:top-[28px] -translate-y-1/2 left-[10%] right-[10%] h-[2.5px] sm:h-[3px] bg-gray-200/90 rounded-full z-0"
         >
           {/* Active progress fill */}
           <div 
@@ -321,11 +344,11 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                 <div 
                   className={cn(
                     "absolute bottom-full mb-1.5 sm:mb-2 flex flex-col pointer-events-auto transition-opacity duration-300",
-                    trackPercent > (finalStageIdx === 0 ? -1 : (finalStageIdx === 1 ? 20 : 35)) ? "opacity-100" : "opacity-0 pointer-events-none",
+                    trackPercent > (finalStageIdx === 0 ? -1 : (finalStageIdx === 1 ? 15 : 25)) ? "opacity-100" : "opacity-0 pointer-events-none",
                     trackPercent < 20 
                       ? "left-1/2 translate-x-[-15%] items-start" 
                       : trackPercent > 75 
-                        ? "left-1/2 translate-x-[-70%] sm:translate-x-[-50%] items-end sm:items-center" 
+                        ? "left-1/2 translate-x-[-75%] sm:translate-x-[-50%] items-end sm:items-center"
                         : "left-1/2 -translate-x-1/2 items-center"
                   )}
                 >
@@ -380,7 +403,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
           </div>
         </div>
 
-        {/* 4 Stage Nodes */}
+        {/* 5 Stage Nodes */}
         <div className="relative z-10 flex justify-between items-start w-full">
           {stages.map((stage, i) => {
             const isCompleted = isStageCompleted(i);
@@ -389,13 +412,13 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
             return (
               <div 
                 key={stage.key}
-                className="flex flex-col items-center text-center w-1/4 px-0.5 sm:px-1 relative"
+                className="flex flex-col items-center text-center w-1/5 px-0.5 sm:px-1 relative"
               >
-                {/* Node Circle - 36px on mobile, 52-56px on desktop */}
+                {/* Node Circle - 36px on mobile, 48-56px on desktop */}
                 <div 
                   className={cn(
                     "rounded-full flex items-center justify-center transition-colors duration-300",
-                    "w-9 h-9 sm:w-13 sm:h-13 md:w-14 md:h-14",
+                    "w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14",
                     isCompleted 
                       ? "bg-orange-500 text-white shadow-sm shadow-orange-500/30" 
                       : "bg-gray-100 border border-gray-200 text-gray-400"
@@ -408,7 +431,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                 {/* Stage Label */}
                 <p className={cn(
                   "mt-1.5 sm:mt-2.5 leading-tight tracking-tight text-center transition-colors duration-300",
-                  "text-[10px] sm:text-sm",
+                  "text-[9px] xs:text-[10px] sm:text-xs md:text-sm",
                   isCompleted ? "font-bold text-gray-900" : "font-semibold text-gray-400"
                 )}>
                   {stage.label}
@@ -417,7 +440,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                 {/* Stage Timestamp - Compact single date on mobile, full timestamp on desktop */}
                 {isCompleted && timestamp && (
                   <p className={cn(
-                    "text-[8.5px] sm:text-xs mt-0.5 font-medium leading-tight text-center whitespace-normal",
+                    "text-[7.5px] xs:text-[8.5px] sm:text-xs mt-0.5 font-medium leading-tight text-center whitespace-normal",
                     isCompleted ? "text-gray-600" : "text-gray-400"
                   )}>
                     <span className="sm:hidden">{timestamp.date}</span>
@@ -425,12 +448,12 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                   </p>
                 )}
 
-                {/* If Stage 3 (Delivered): Show Destination underneath */}
-                {i === 3 && (
+                {/* If Stage 4 (Delivered): Show Destination underneath */}
+                {i === 4 && (
                   <div className="mt-0.5 sm:mt-1 flex flex-col items-center max-w-full">
                     <div className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-bold text-gray-700">
                       <MapPin className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-orange-500 shrink-0" />
-                      <span className="truncate max-w-[65px] sm:max-w-[140px] uppercase font-bold text-gray-800">
+                      <span className="truncate max-w-[55px] xs:max-w-[70px] sm:max-w-[140px] uppercase font-bold text-gray-800">
                         {destinationCity}
                       </span>
                     </div>
@@ -511,7 +534,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
   };
 
   const isAir = data ? isAirShipment(data) : false;
-  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || getStageIndex(data.current_status) === 3) : false;
+  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || getStageIndex(data.current_status) === 4) : false;
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
