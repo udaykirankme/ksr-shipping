@@ -125,10 +125,9 @@ export function buildQuoteReplyMessage(customerName?: string): string {
 
 Thank you for your quotation request.
 
-Based on the details you shared, here is your shipping quotation. If you have any questions or would like to proceed with the booking, please let me know. We'll be happy to assist you.
+We'll be happy to assist you.
 
-Regards,
-KSR Shipping Services - A Courier Service`;
+Regards, KSR Shipping Services - A Courier Service`;
 }
 
 export function openWhatsAppShare(phone: string, message: string) {

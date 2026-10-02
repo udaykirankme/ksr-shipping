@@ -266,7 +266,7 @@ export function MessageListClient() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900">{msg.contact_id || 'N/A'}</span>
                         {!msg.opened_at && (
-                          <Badge variant="destructive" className="bg-red-500 text-[10px] px-1.5 py-0">New</Badge>
+                          <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-transparent text-[10px] px-1.5 py-0">New</Badge>
                         )}
                       </div>
                     </TableCell>

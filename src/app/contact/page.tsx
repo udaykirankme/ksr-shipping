@@ -159,19 +159,19 @@ export default function ContactPage() {
 
                            <div>
                               <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Full Name *</label>
-                              <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" />
+                              <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" placeholder="Enter your name" />
                            </div>
                            <div>
                               <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Phone Number *</label>
-                              <input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" />
+                              <input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" placeholder="Enter your phone number" />
                            </div>
                            <div>
                               <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Email Address</label>
-                              <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" />
+                              <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow text-sm sm:text-base" placeholder="Enter your email" />
                            </div>
                            <div>
                               <label className="block text-xs sm:text-sm font-semibold text-gray-800 mb-1 sm:mb-1.5">Message *</label>
-                              <textarea required rows={3} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow resize-none text-sm sm:text-base"></textarea>
+                              <textarea required rows={3} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border border-gray-200/80 bg-white/80 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-shadow resize-none text-sm sm:text-base" placeholder="Enter your query"></textarea>
                            </div>
 
                            <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl flex items-center justify-center transition-colors active:scale-95 disabled:opacity-50 shadow-[0_4px_14px_rgba(249,115,22,0.35)] mt-2">

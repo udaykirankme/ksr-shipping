@@ -228,7 +228,8 @@ export function MessageDetailClient({ messageId }: { messageId: string }) {
               type="button"
               onClick={handleReplyWhatsApp}
               disabled={!message.phone?.trim()}
-              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white rounded-xl shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold w-full sm:w-auto"
+              style={{ background: '#25D366', color: 'white' }}
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold w-full sm:w-auto hover:opacity-90 border-transparent"
             >
               <Share2 className="w-4 h-4 shrink-0" />
               <span>Reply on WhatsApp</span>

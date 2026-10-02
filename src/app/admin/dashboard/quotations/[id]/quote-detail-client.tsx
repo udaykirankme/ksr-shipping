@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
-  ArrowLeft, Save, Box, MapPin, Phone, Clock, RefreshCw, AlertTriangle, Trash2, CheckCircle, Share2
+  ArrowLeft, Save, Box, MapPin, Phone, Clock, RefreshCw, AlertTriangle, Trash2, CheckCircle, Share2, Copy
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -237,7 +237,8 @@ export function QuoteDetailClient({ id }: { id: string }) {
               type="button"
               onClick={handleReplyWhatsApp}
               disabled={!quote.phone?.trim()}
-              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#25D366] hover:bg-[#1fb855] text-white rounded-xl shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold w-full sm:w-auto"
+              style={{ background: '#25D366', color: 'white' }}
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold w-full sm:w-auto hover:opacity-90 border-transparent"
             >
               <Share2 className="w-4 h-4 shrink-0" />
               <span>Reply on WhatsApp</span>
@@ -358,11 +359,39 @@ export function QuoteDetailClient({ id }: { id: string }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-500 mb-1">Pickup Location (Origin)</label>
-                <p className="text-gray-900 font-medium text-sm sm:text-base">{quote.pickup_location || "—"}</p>
+                <div className="flex items-center gap-2 group">
+                  <p className="text-gray-900 font-medium text-sm sm:text-base">{quote.pickup_location || "—"}</p>
+                  {quote.pickup_location && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(quote.pickup_location || "");
+                        toast.success("Pickup location copied!");
+                      }}
+                      className="p-1 text-gray-400 hover:text-orange-500 transition-colors"
+                      title="Copy Pickup Location"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-500 mb-1">Drop Location (Destination)</label>
-                <p className="text-gray-900 font-medium text-sm sm:text-base">{quote.drop_location || "—"}</p>
+                <div className="flex items-center gap-2 group">
+                  <p className="text-gray-900 font-medium text-sm sm:text-base">{quote.drop_location || "—"}</p>
+                  {quote.drop_location && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(quote.drop_location || "");
+                        toast.success("Drop location copied!");
+                      }}
+                      className="p-1 text-gray-400 hover:text-orange-500 transition-colors"
+                      title="Copy Drop Location"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

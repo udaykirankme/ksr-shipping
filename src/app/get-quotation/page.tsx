@@ -150,15 +150,15 @@ export default function GetQuotationPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                      <div className="sm:col-span-2 group">
                         <label className="block text-sm font-bold text-gray-700 mb-2 pl-1 group-focus-within:text-orange-600 transition-colors">Full Name *</label>
-                        <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputClasses} placeholder="Srinivas Rao" />
+                        <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputClasses} placeholder="Enter your name" />
                      </div>
                      <div className="group">
                         <label className="block text-sm font-bold text-gray-700 mb-2 pl-1 group-focus-within:text-orange-600 transition-colors">Phone Number *</label>
-                        <input type="tel" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className={inputClasses} placeholder="+91 99638 14267" />
+                        <input type="tel" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className={inputClasses} placeholder="Enter your phone number" />
                      </div>
                      <div className="group">
                         <label className="block text-sm font-bold text-gray-700 mb-2 pl-1 group-focus-within:text-orange-600 transition-colors">Email Address</label>
-                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputClasses} placeholder="ksrshippingservice@gmail.com" />
+                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputClasses} placeholder="Enter your email" />
                      </div>
                   </div>
                </div>

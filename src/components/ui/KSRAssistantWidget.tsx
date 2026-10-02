@@ -337,13 +337,13 @@ export function KSRAssistantWidget() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           aria-label={isOpen ? "Close KSR Assistant" : "Open KSR Assistant"}
-          className="relative w-[68px] h-[68px] sm:w-[82px] sm:h-[82px] rounded-full shadow-[0_10px_28px_rgba(249,115,22,0.28),0_2px_10px_rgba(0,0,0,0.08)] hover:shadow-[0_14px_34px_rgba(249,115,22,0.38)] focus:outline-none focus:ring-4 focus:ring-orange-500/30 transition-shadow border-2 border-white cursor-pointer overflow-hidden flex items-center justify-center bg-[#FFE8D6]"
+          className="relative w-[68px] h-[68px] sm:w-[82px] sm:h-[82px] rounded-full shadow-[0_10px_28px_rgba(249,115,22,0.28),0_2px_10px_rgba(0,0,0,0.08)] hover:shadow-[0_14px_34px_rgba(249,115,22,0.38)] focus:outline-none focus:ring-4 focus:ring-orange-500/30 transition-shadow border-2 border-white cursor-pointer flex items-center justify-center bg-[#FFE8D6]"
         >
           {/* Mascot Image with state toggle */}
           <img
             src={isOpen ? "/mascot/mascot_cutout_happy.png" : "/mascot/mascot_cutout_idle.png"}
             alt="KSR Assistant Mascot"
-            className="w-full h-full object-contain p-1 transition-transform duration-200"
+            className="w-[115%] h-[115%] object-contain origin-bottom transition-transform duration-200 brightness-[1.15] contrast-[1.05] drop-shadow-sm"
             draggable={false}
           />
         </motion.button>

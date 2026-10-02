@@ -15,7 +15,16 @@ export function PublicLayoutWrapper({ children }: { children: React.ReactNode })
     return (
       <div className="min-h-screen w-full">
         {children}
-        <Toaster position="top-right" richColors />
+        <Toaster 
+          position="top-right" 
+          richColors 
+          closeButton 
+          toastOptions={{
+            classNames: {
+              closeButton: '!absolute !right-4 !left-auto !top-[50%] !-translate-y-[50%] !mt-2 !bg-transparent !border-0 !shadow-none !text-current opacity-70 hover:opacity-100 !w-6 !h-6 [&_svg]:!w-4 [&_svg]:!h-4 flex justify-center items-center transition-opacity'
+            }
+          }}
+        />
       </div>
     );
   }
@@ -35,7 +44,16 @@ export function PublicLayoutWrapper({ children }: { children: React.ReactNode })
       <Footer />
       <KSRAssistantWidget />
       <BackToTopButton />
-      <Toaster position="top-right" richColors />
+      <Toaster 
+        position="top-right" 
+        richColors 
+        closeButton 
+        toastOptions={{
+          classNames: {
+            closeButton: '!absolute !right-4 !left-auto !top-[50%] !-translate-y-[50%] !mt-2 !bg-transparent !border-0 !shadow-none !text-current opacity-70 hover:opacity-100 !w-6 !h-6 [&_svg]:!w-4 [&_svg]:!h-4 flex justify-center items-center transition-opacity'
+          }
+        }}
+      />
     </>
   );
 }
