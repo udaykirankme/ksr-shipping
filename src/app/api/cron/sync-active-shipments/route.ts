@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
         pendingProcessed: pendingEvents.length,
         pendingSuccess: pendingSuccess
       },
-      { status: success ? 200 : 500 }
+      { status: 200 }
     );
 
   } catch (err: any) {
