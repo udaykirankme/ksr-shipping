@@ -297,4 +297,122 @@ describe('Delhivery B2C Webhook End-to-End Audit & Verification', () => {
       expect(instant.toISOString()).toBe('2026-09-25T14:38:27.777Z');
     });
   });
+
+  describe('Milestone Regression Protection', () => {
+    let regressionShipmentId: string;
+    let regressionAWB = 'TEST_REGRESSION_AWB_100';
+
+    beforeAll(async () => {
+      await prisma.shipment.deleteMany({ where: { official_tracking_id: regressionAWB } });
+      const created = await prisma.shipment.create({
+        data: {
+          tracking_id: 'KSR_TEST_REG',
+          official_tracking_id: regressionAWB,
+          tracking_type: 'B2C',
+          service: 'delhiveryb2c',
+          sender_name: 'Test Sender',
+          sender_phone: '9999999999',
+          receiver_name: 'Test Receiver',
+          receiver_phone: '8888888888',
+          origin: 'Kolkata',
+          destination: 'Kolkata',
+          sender_city: 'Kolkata',
+          receiver_city: 'Kolkata',
+          current_status: 'Out For Delivery', // High milestone
+          weight: 1.0,
+        }
+      });
+      regressionShipmentId = created.id;
+    });
+
+    afterAll(async () => {
+      await prisma.shipment.deleteMany({ where: { official_tracking_id: regressionAWB } });
+    });
+
+    it('prevents a newer Pending event from downgrading an Out For Delivery milestone, but updates notes', async () => {
+      const { processWebhookEventCore } = await import('./webhooks');
+      
+      const res = await processWebhookEventCore(
+        regressionAWB,
+        'delhiveryb2c',
+        'Pending', // raw status
+        'Location A', // location
+        new Date().toISOString(), // time
+        'Consignee Unavailable', // customer update note
+        undefined,
+        {}
+      );
+
+      expect(res.status).toBe(200);
+
+      const updated = await prisma.shipment.findUnique({ where: { id: regressionShipmentId } });
+      
+      // Milestone should NOT regress
+      expect(updated?.current_status).toBe('Out For Delivery');
+      
+      // Note and location SHOULD update
+      expect(updated?.customer_update).toBe('Consignee Unavailable');
+      expect(updated?.current_location).toBe('Location A');
+    });
+
+    it('upgrades a Pending milestone to Out For Delivery even if the OFD event arrives late', async () => {
+      const lateAWB = 'TEST_LATE_AWB_100';
+      await prisma.shipment.deleteMany({ where: { official_tracking_id: lateAWB } });
+      const created = await prisma.shipment.create({
+        data: {
+          tracking_id: 'KSR_TEST_LATE',
+          official_tracking_id: lateAWB,
+          tracking_type: 'B2C',
+          service: 'delhiveryb2c',
+          sender_name: 'Test Sender',
+          sender_phone: '9999999999',
+          receiver_name: 'Test Receiver',
+          receiver_phone: '8888888888',
+          origin: 'Kolkata',
+          destination: 'Kolkata',
+          sender_city: 'Kolkata',
+          receiver_city: 'Kolkata',
+          current_status: 'Pending', // Low milestone
+          customer_update: 'Consignee Unavailable',
+          weight: 1.0,
+        }
+      });
+
+      // Insert an existing Pending history record with NEW timestamp
+      const now = new Date();
+      await prisma.shipmentStatusHistory.create({
+        data: {
+          shipment_id: created.id,
+          status: 'Pending',
+          note: 'Consignee Unavailable',
+          occurred_at: now
+        }
+      });
+
+      const { processWebhookEventCore } = await import('./webhooks');
+      
+      const oldTime = new Date(now.getTime() - 60000); // 1 minute older
+
+      const res = await processWebhookEventCore(
+        lateAWB,
+        'delhiveryb2c',
+        'Out For Delivery', // raw status
+        'Location B', // location
+        oldTime.toISOString(), // OLDER time
+        'Out For Delivery Note', // customer update note
+        undefined,
+        {}
+      );
+
+      expect(res.status).toBe(200);
+
+      const updated = await prisma.shipment.findUnique({ where: { id: created.id } });
+      
+      // Milestone SHOULD upgrade despite older timestamp
+      expect(updated?.current_status).toBe('Out For Delivery');
+      
+      // Note and location SHOULD remain the newer ones
+      expect(updated?.customer_update).toBe('Consignee Unavailable');
+    });
+  });
 });

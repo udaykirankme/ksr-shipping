@@ -9,7 +9,29 @@ export type KSRTrackingStatus =
   | 'Out For Delivery' 
   | 'Delivered' 
   | 'Cancelled' 
-  | 'Returned';
+  | 'Returned'
+  | 'RTO';
+
+export const STATUS_RANKS: Record<KSRTrackingStatus, number> = {
+  'Shipment Created': 10,
+  'Picked Up': 20,
+  'Shipment Bagged': 30,
+  'Shipment Received': 40,
+  'Dispatched': 50,
+  'In Transit': 60,
+  'At Hub': 70,
+  'Out For Delivery': 80,
+  'Delivered': 100,
+  'Cancelled': 100,
+  'Returned': 100,
+  'RTO': 100,
+};
+
+export function getStatusRank(status: string | null | undefined): number {
+  if (!status) return 0;
+  // Unknown or unmapped statuses like 'Pending' default to rank 0
+  return STATUS_RANKS[status as KSRTrackingStatus] || 0;
+}
 
 export interface TrackingEvent {
   status: KSRTrackingStatus;

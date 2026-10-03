@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { parseBusinessDateTime } from '@/lib/datetime';
 import { isDuplicateEvent } from '@/lib/courier/identity';
 import { normalizeDelhiveryStatus } from '@/lib/courier/normalization';
+import { getStatusRank } from '@/lib/courier/types';
 import { registerBackgroundTask } from '@/lib/background-tasks';
 
 const router = Router();
@@ -133,7 +134,7 @@ export const processWebhookEventCore = async (
     // 1. Load the shipment using the official tracking ID (AWB / LR)
     const shipment = await prisma.shipment.findUnique({
       where: { official_tracking_id: officialTrackingId },
-      select: { id: true, service: true }
+      select: { id: true, service: true, current_status: true }
     });
 
     if (!shipment) {
@@ -196,21 +197,33 @@ export const processWebhookEventCore = async (
       }
     };
 
-    // ONLY update main shipment state if this event is chronologically the newest
-    if (isNewerOrEqual) {
+    const currentRank = getStatusRank(shipment.current_status);
+    const newRank = getStatusRank(normalizedStatus);
+
+    let shouldUpdateStatus = false;
+    if (newRank > currentRank) {
+       shouldUpdateStatus = true; // Always upgrade to a higher milestone, even if event is chronologically older
+    } else if (newRank === currentRank) {
+       // Tie-breaker goes to the chronologically newer event, EXCEPT if it's a different terminal status
+       if (isNewerOrEqual && (newRank < 100 || normalizedStatus === shipment.current_status)) {
+           shouldUpdateStatus = true; 
+       }
+    }
+
+    if (shouldUpdateStatus) {
       updateData.current_status = normalizedStatus;
       updateData.version = { increment: 1 };
+      if (normalizedStatus.toLowerCase() === 'delivered') {
+         updateData.delivered_at = occurredAt;
+      }
+    }
 
+    if (isNewerOrEqual) {
       if (eventLocation) {
         updateData.current_location = eventLocation;
       }
-
       if (eventCustomerUpdate && eventCustomerUpdate.trim() !== '') {
         updateData.customer_update = eventCustomerUpdate.trim();
-      }
-
-      if (normalizedStatus.toLowerCase() === 'delivered') {
-         updateData.delivered_at = occurredAt;
       }
     }
 

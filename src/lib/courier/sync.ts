@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import { getCourierProvider } from './index';
 import { isDuplicateEvent } from './identity';
-import { TrackingEvent } from './types';
+import { TrackingEvent, getStatusRank } from './types';
 
 export async function syncTracking(shipmentId: string) {
   // 1. Load the shipment
@@ -43,11 +43,6 @@ export async function syncTracking(shipmentId: string) {
 
   let newEventsInserted = 0;
   
-  let maxSuccessfulDate = maxDbDate;
-  let latestSuccessfulStatus = shipment.current_status;
-  let latestSuccessfulLocation = shipment.current_location;
-  let latestSuccessfulNote = shipment.customer_update;
-
   // 7. Compare incoming tracking events with existing ShipmentStatusHistory
   // Maintain an up-to-date in-memory list of events to check against
   const currentHistory = [...shipment.history];
@@ -77,47 +72,64 @@ export async function syncTracking(shipmentId: string) {
 
         newEventsInserted++;
         currentHistory.push(newHistoryRecord); // Add to in-memory history
-        
-        if (event.occurred_at.getTime() >= maxSuccessfulDate.getTime()) {
-          maxSuccessfulDate = event.occurred_at;
-          latestSuccessfulStatus = event.status;
-          latestSuccessfulLocation = event.location || '';
-          latestSuccessfulNote = event.note || '';
-        }
       } catch (err: any) {
         console.error(`[Sync Error] Failed to insert event for ${shipment.official_tracking_id}:`, err.message);
         // Continue to the next event
       }
+    }
+  }
+
+  // 10. Determine highest milestone and latest chronological update from ALL history
+  let highestAchievedEvent: any = null;
+  let chronologicallyLatestEvent: any = null;
+
+  for (const event of currentHistory) {
+    if (!event) continue;
+
+    // Track chronologically latest for note/location
+    if (!chronologicallyLatestEvent || event.occurred_at.getTime() >= chronologicallyLatestEvent.occurred_at.getTime()) {
+      chronologicallyLatestEvent = event;
+    }
+
+    // Track highest milestone rank
+    if (!highestAchievedEvent) {
+      highestAchievedEvent = event;
     } else {
-      // If it is a duplicate, it's a valid event that is already safely persisted.
-      if (event.occurred_at.getTime() >= maxSuccessfulDate.getTime()) {
-        maxSuccessfulDate = event.occurred_at;
-        latestSuccessfulStatus = event.status;
-        latestSuccessfulLocation = event.location || '';
-        latestSuccessfulNote = event.note || '';
+      const currentRank = getStatusRank(highestAchievedEvent.status);
+      const newRank = getStatusRank(event.status);
+
+      if (newRank > currentRank) {
+        highestAchievedEvent = event;
+      } else if (newRank === currentRank && event.occurred_at.getTime() > highestAchievedEvent.occurred_at.getTime()) {
+        // Tie-breaker: Protect terminal statuses (rank 100) from overwriting each other
+        if (newRank < 100 || event.status === highestAchievedEvent.status) {
+          highestAchievedEvent = event;
+        }
       }
     }
   }
 
-  // 10. Update Shipment.current_status safely
-  // ONLY overwrite if the successful events represent an event newer than what we had,
-  // OR if the latest event has the exact same timestamp but the shipment status is desynchronized.
   const updateData: any = {};
   
   if (trackingData.estimated_delivery) {
     updateData.estimated_delivery = trackingData.estimated_delivery;
   }
 
-  if (
-    maxSuccessfulDate.getTime() > maxDbDate.getTime() ||
-    (maxSuccessfulDate.getTime() === maxDbDate.getTime() && latestSuccessfulStatus !== shipment.current_status)
-  ) {
-    updateData.current_status = latestSuccessfulStatus;
-    if (latestSuccessfulLocation) {
-      updateData.current_location = latestSuccessfulLocation;
+  // Check if we need to update the status (highest achieved)
+  const existingRank = getStatusRank(shipment.current_status);
+  const highestRank = highestAchievedEvent ? getStatusRank(highestAchievedEvent.status) : 0;
+
+  if (highestAchievedEvent && (highestRank > existingRank || (highestRank === existingRank && highestAchievedEvent.status !== shipment.current_status))) {
+    updateData.current_status = highestAchievedEvent.status;
+  }
+
+  // Update note/location from the chronologically latest event if newer than maxDbDate or if it's our first sync
+  if (chronologicallyLatestEvent && (chronologicallyLatestEvent.occurred_at.getTime() >= maxDbDate.getTime() || currentHistory.length === newEventsInserted)) {
+    if (chronologicallyLatestEvent.location && chronologicallyLatestEvent.location !== shipment.current_location) {
+      updateData.current_location = chronologicallyLatestEvent.location;
     }
-    if (latestSuccessfulNote && latestSuccessfulNote.trim() !== '') {
-      updateData.customer_update = latestSuccessfulNote.trim();
+    if (chronologicallyLatestEvent.note && chronologicallyLatestEvent.note.trim() !== shipment.customer_update) {
+      updateData.customer_update = chronologicallyLatestEvent.note.trim();
     }
   }
 
