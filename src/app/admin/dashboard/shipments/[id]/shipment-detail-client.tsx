@@ -661,15 +661,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                       </button>
                     )}
                  </div>
-                 {!isDelivered && isEditing && (
-                   <button 
-                     type="submit"
-                     disabled={loading}
-                     className="flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] transition-all disabled:opacity-50"
-                   >
-                     <Save className="w-4 h-4" /> Save
-                   </button>
-                 )}
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -892,6 +883,18 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 </div>
               </div>
             </div>
+            
+            {!isDelivered && isEditing && (
+              <div className="flex justify-end pt-4">
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center gap-2 rounded-xl bg-green-600 px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] transition-all disabled:opacity-50"
+                >
+                  <Save className="w-5 h-5" /> Save Changes
+                </button>
+              </div>
+            )}
             
           </form>
         </div>

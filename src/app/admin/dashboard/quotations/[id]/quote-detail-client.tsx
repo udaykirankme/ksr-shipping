@@ -346,7 +346,17 @@ export function QuoteDetailClient({ id }: { id: string }) {
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs sm:text-sm font-medium text-gray-500 mb-1">Email</label>
-                <p className="text-gray-900 font-medium text-sm sm:text-base">{quote.email || "—"}</p>
+                {quote.email ? (
+                  <a
+                    href={`mailto:${quote.email}`}
+                    className="text-gray-900 hover:text-orange-600 font-medium inline-flex items-center gap-1.5 transition-colors text-sm sm:text-base hover:underline"
+                    title={`Send email to ${quote.email}`}
+                  >
+                    {quote.email}
+                  </a>
+                ) : (
+                  <p className="text-gray-900 font-medium text-sm sm:text-base">—</p>
+                )}
               </div>
             </div>
           </div>

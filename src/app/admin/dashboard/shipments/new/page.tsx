@@ -325,14 +325,6 @@ export default function NewShipmentPage() {
             </p>
           </div>
         </div>
-        <button 
-          onClick={handleSubmit}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-xl bg-green-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] transition-all disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          {loading ? 'Saving...' : entryType === 'packing' ? 'Save Packing' : 'Save Shipment'}
-        </button>
       </div>
 
       {error && (
@@ -718,6 +710,17 @@ export default function NewShipmentPage() {
             </div>
           </>
         )}
+
+        <div className="flex justify-end pt-4">
+          <button 
+            type="submit"
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl bg-green-600 px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)] transition-all disabled:opacity-50"
+          >
+            <Save className="w-5 h-5" />
+            {loading ? 'Saving...' : entryType === 'packing' ? 'Save Packing' : 'Save Shipment'}
+          </button>
+        </div>
 
       </form>
     </div>

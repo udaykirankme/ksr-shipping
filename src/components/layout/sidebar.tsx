@@ -86,20 +86,31 @@ function SidebarContent({
           "group flex items-center rounded-xl py-2.5 text-sm font-medium transition-all duration-200 relative overflow-hidden",
           collapsed ? "justify-center px-0 mx-2" : "px-3",
           isActive
-            ? "bg-gradient-to-r from-orange-50 to-transparent text-orange-600 shadow-[inset_2px_0_0_0_#FF6A00]"
+            ? (collapsed 
+                ? "bg-gradient-to-r from-orange-50 to-transparent text-orange-600 shadow-[inset_2px_0_0_0_#FF6A00]" 
+                : "bg-gradient-to-r from-[#FF6A00]/15 to-transparent text-orange-600")
             : "text-gray-600 hover:bg-orange-50/50 hover:text-gray-900"
         )}
         title={collapsed ? item.name : undefined}
       >
+        {!collapsed && isActive && (
+          <div 
+            className="absolute inset-0 rounded-xl border-2 border-[#FF6A00] pointer-events-none" 
+            style={{ 
+              WebkitMaskImage: 'linear-gradient(to right, black 0%, transparent 70%)',
+              maskImage: 'linear-gradient(to right, black 0%, transparent 70%)'
+            }} 
+          />
+        )}
         <item.icon
           className={cn(
-            "h-5 w-5 shrink-0 transition-colors duration-200",
+            "h-5 w-5 shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-0.5",
             collapsed ? "mx-auto" : "mr-3",
             isActive ? "text-orange-600" : "text-gray-400 group-hover:text-orange-500/70"
           )}
           aria-hidden="true"
         />
-        {!collapsed && <span className="relative z-10 flex-1">{item.name}</span>}
+        {!collapsed && <span className="relative z-10 flex-1 transition-transform duration-300 group-hover:translate-x-1">{item.name}</span>}
         {badgeCount > 0 && !collapsed && (
           <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
             {badgeCount > 99 ? '99+' : badgeCount}
@@ -173,8 +184,8 @@ function SidebarContent({
           )}
           title={collapsed ? "Sign Out" : undefined}
         >
-          <LogOut className={cn("h-5 w-5 shrink-0 transition-colors duration-200", collapsed ? "mx-auto text-gray-400 group-hover:text-red-500" : "mr-3 text-gray-400 group-hover:text-red-500")} />
-          {!collapsed && "Sign Out"}
+          <LogOut className={cn("h-5 w-5 shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-0.5", collapsed ? "mx-auto text-gray-400 group-hover:text-red-500" : "mr-3 text-gray-400 group-hover:text-red-500")} />
+          {!collapsed && <span className="transition-transform duration-300 group-hover:translate-x-1">Sign Out</span>}
         </button>
       </div>
     </>
