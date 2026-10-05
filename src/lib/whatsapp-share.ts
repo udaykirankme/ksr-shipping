@@ -31,16 +31,16 @@ export function buildShipmentCreatedShareMessage(
 
   return `${greeting}
 
-Your shipment has been created successfully with ${business.name}.
+Your shipment has been created successfully with *KSR Shipping Services*.
 
-Tracking Number: ${trackingId}
+Tracking Number: *${trackingId}*
 
 You can track your shipment and view real-time status updates here:
 ${trackUrl}
 
-Thank you for choosing ${business.name}. We appreciate your trust in us.
+Thank you for choosing *KSR Shipping Services*. We appreciate your trust in us.
 
-— Team ${business.name}`;
+— Team *KSR Shipping Services*`;
 }
 
 export function buildPackingCreatedShareMessage(
@@ -52,14 +52,14 @@ export function buildPackingCreatedShareMessage(
 
   return `${greeting}
 
-Thank you for choosing ${business.name}. Your packing service has been recorded successfully.
+Thank you for choosing *KSR Shipping Services*. Your packing service has been recorded successfully.
 
 Receipt / Ref: ${receiptId}
 Amount Received: ₹${amount}
 
 We appreciate your trust in us.
 
-— Team ${business.name}`;
+— Team *KSR Shipping Services*`;
 }
 
 
@@ -87,18 +87,18 @@ export function buildStatusUpdateShareMessage(details: StatusUpdateShareDetails)
 
   return `${greeting}
 
-We have an update on your shipment with ${business.name}.
+We have an update on your shipment with *KSR Shipping Services*.
 
-Tracking Number: ${details.trackingId}
+Tracking Number: *${details.trackingId}*
 
-Current Status: ${details.status}
+Current Status: *${details.status}*
 ${locationLine}Updated On: ${updatedOn}
 ${noteBlock}You can track your shipment and view further status updates here:
 ${trackUrl}
 
-Thank you for choosing ${business.name}.
+Thank you for choosing *KSR Shipping Services*.
 
-— Team ${business.name}`;
+— Team *KSR Shipping Services*`;
 }
 
 export function buildContactReplyMessage(customerName?: string): string {
@@ -108,12 +108,12 @@ export function buildContactReplyMessage(customerName?: string): string {
 
   return `${greeting}
 
-Thank you for contacting KSR Shipping Services.
+Thank you for contacting *KSR Shipping Services*.
 
 We're here to assist you.
 
 Regards,
-KSR Shipping Services - A Courier Service`;
+*KSR Shipping Services* - A Courier Service`;
 }
 
 export function buildQuoteReplyMessage(customerName?: string): string {
@@ -127,7 +127,7 @@ Thank you for your quotation request.
 
 We'll be happy to assist you.
 
-Regards, KSR Shipping Services - A Courier Service`;
+Regards, *KSR Shipping Services* - A Courier Service`;
 }
 
 export function openWhatsAppShare(phone: string, message: string) {
