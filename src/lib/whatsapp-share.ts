@@ -86,11 +86,11 @@ export function buildStatusUpdateShareMessage(details: StatusUpdateShareDetails)
     : '';
 
   const isDelivered = details.status.toLowerCase() === 'delivered';
-  
+
   if (isDelivered) {
     return `${greeting}
 
-We are delighted to inform you that your shipment (Tracking Number: *${details.trackingId}*) was successfully delivered on ${updatedOn}.
+We are delighted to inform you that your shipment (Tracking Number: *${details.trackingId}*) was successfully *DELIVERED on ${updatedOn}.*
 ${noteBlock}We would love to hear about your experience! Please leave us a review on Google:
 ${business.googleReviewUrl}
 
