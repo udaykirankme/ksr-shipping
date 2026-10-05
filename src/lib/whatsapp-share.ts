@@ -40,7 +40,7 @@ ${trackUrl}
 
 Thank you for choosing *KSR Shipping Services*. We appreciate your trust in us.
 
-— Team *KSR Shipping Services*`;
+— Team *KSR*`;
 }
 
 export function buildPackingCreatedShareMessage(
@@ -59,7 +59,7 @@ Amount Received: ₹${amount}
 
 We appreciate your trust in us.
 
-— Team *KSR Shipping Services*`;
+— Team *KSR*`;
 }
 
 
@@ -85,6 +85,20 @@ export function buildStatusUpdateShareMessage(details: StatusUpdateShareDetails)
     ? `Location: ${details.location.trim()}\n`
     : '';
 
+  const isDelivered = details.status.toLowerCase() === 'delivered';
+  
+  if (isDelivered) {
+    return `${greeting}
+
+We are delighted to inform you that your shipment (Tracking Number: *${details.trackingId}*) was successfully delivered on ${updatedOn}.
+${noteBlock}We would love to hear about your experience! Please leave us a review on Google:
+${business.googleReviewUrl}
+
+Thank you for choosing *KSR Shipping Services*.
+
+— Team *KSR*`;
+  }
+
   return `${greeting}
 
 We have an update on your shipment with *KSR Shipping Services*.
@@ -98,7 +112,7 @@ ${trackUrl}
 
 Thank you for choosing *KSR Shipping Services*.
 
-— Team *KSR Shipping Services*`;
+— Team *KSR*`;
 }
 
 export function buildContactReplyMessage(customerName?: string): string {
