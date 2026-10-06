@@ -300,7 +300,7 @@ describe('Delhivery B2C Webhook End-to-End Audit & Verification', () => {
 
   describe('Milestone Regression Protection', () => {
     let regressionShipmentId: string;
-    let regressionAWB = 'TEST_REGRESSION_AWB_100';
+    const regressionAWB = 'TEST_REGRESSION_AWB_100';
 
     beforeAll(async () => {
       await prisma.shipment.deleteMany({ where: { official_tracking_id: regressionAWB } });

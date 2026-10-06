@@ -76,7 +76,7 @@ export function KSRAssistantWidget() {
     {
       icon: Phone,
       title: "Contact Us",
-      subtitle: "Call, email or visit us",
+      subtitle: "Fill out our contact form",
       href: "/contact",
       isExternal: false,
       iconColor: "text-orange-500",

@@ -456,13 +456,17 @@ export default function NewShipmentPage() {
                   </label>
                   <input 
                     required 
-                    type="number" 
-                    step="0.01" 
-                    min="0.01"
+                    type="text" 
+                    inputMode="decimal"
                     name="received_amount" 
                     placeholder="Enter amount received (e.g. 500)"
-                    value={formData.received_amount} 
-                    onChange={handleChange} 
+                    value={formData.received_amount?.toString().length > 0 ? formData.received_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} 
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/,/g, '');
+                      if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
+                        handleChange({ target: { name: 'received_amount', value: raw } } as any);
+                      }
+                    }} 
                     className="w-full rounded-xl border border-emerald-300 px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 text-lg font-bold bg-emerald-50/40" 
                   />
                 </div>
@@ -695,11 +699,11 @@ export default function NewShipmentPage() {
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Received Amount (₹) <span className="text-red-500">*</span></label>
-                    <input required type="number" name="received_amount" value={formData.received_amount} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50" />
+                    <input required type="text" inputMode="decimal" name="received_amount" value={formData.received_amount?.toString().length > 0 ? formData.received_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'received_amount', value: raw } } as any); }} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Paid Amount (₹) <span className="text-red-500">*</span></label>
-                    <input required type="number" name="paid_amount" value={formData.paid_amount} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50" />
+                    <input required type="text" inputMode="decimal" name="paid_amount" value={formData.paid_amount?.toString().length > 0 ? formData.paid_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'paid_amount', value: raw } } as any); }} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50" />
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100">

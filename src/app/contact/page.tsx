@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { business } from "@/lib/config";
-import { MapPin, Phone, Mail } from "lucide-react";
+import { MapPin, Phone, Mail, ShieldCheck } from "lucide-react";
 import { LocationMap } from "@/components/LocationMap";
 
 export default function ContactPage() {
@@ -63,12 +63,16 @@ export default function ContactPage() {
          <div className="absolute top-0 inset-x-0 h-full bg-[url('/grid-pattern.svg')] opacity-[0.03] pointer-events-none bg-center" />
 
          {/* Header */}
-         <div className="pt-3 pb-3 sm:pt-4 sm:pb-4 lg:pt-6 lg:pb-5 px-4 sm:px-6 lg:px-8 text-center relative z-10">
+         <div className="pt-3 pb-3 sm:pt-4 sm:pb-4 lg:pt-5 lg:pb-3 px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="max-w-3xl mx-auto">
                <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 lg:mb-4 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
                <p className="text-base md:text-xl text-gray-600 leading-relaxed">
                   Have a question, feedback, or need help with a shipment? We&apos;re here for you.
                </p>
+               <div className="mt-4 lg:mt-5 flex items-center justify-center gap-2.5 text-sm sm:text-base text-gray-700 bg-white/60 backdrop-blur-md border border-orange-200/60 py-2 px-5 rounded-full w-fit mx-auto shadow-[0_4px_14px_rgba(234,88,12,0.08)]">
+                  <ShieldCheck className="w-5 h-5 text-orange-500" />
+                  <span className="font-medium tracking-wide">100% Privacy Guaranteed. No Spam, No Selling Data.</span>
+               </div>
             </div>
          </div>
 
@@ -177,6 +181,9 @@ export default function ContactPage() {
                            <button type="submit" disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl flex items-center justify-center transition-colors active:scale-95 disabled:opacity-50 shadow-[0_4px_14px_rgba(249,115,22,0.35)] mt-2">
                               {loading ? 'Sending...' : 'Send Message'}
                            </button>
+                           <p className="text-center text-[11px] sm:text-xs text-gray-500 mt-3 sm:mt-4">
+                              We respect your privacy. We won&apos;t spam you or sell your contact info.
+                           </p>
                         </form>
                      )}
                   </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle2, User, MapPin, Package, ArrowRight, Truck } from "lucide-react";
+import { CheckCircle2, User, MapPin, Package, ArrowRight, Truck, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
@@ -26,7 +26,7 @@ export default function GetQuotationPage() {
     shipment_type: "",
     package_type: "",
     approx_weight: "",
-    urgency: "Standard (2-3 days)",
+    urgency: "",
     notes: ""
   });
 
@@ -95,6 +95,41 @@ export default function GetQuotationPage() {
      );
   }
 
+  const handleShipmentTypeChange = (val: string) => {
+    let defaultUrgency = "";
+    if (val === "International Shipment") {
+      defaultUrgency = "International Standard";
+    } else if (val === "Domestic Shipment") {
+      defaultUrgency = "Domestic Standard";
+    } else if (val === "Business to Business (B2B)") {
+      defaultUrgency = "Standard";
+    }
+    setFormData({ ...formData, shipment_type: val, urgency: defaultUrgency });
+  };
+
+  const getUrgencyOptions = () => {
+    if (formData.shipment_type === "International Shipment") {
+      return [
+        { value: "International Standard", label: "International Standard" },
+        { value: "International Priority", label: "International Priority" }
+      ];
+    } else if (formData.shipment_type === "Domestic Shipment") {
+      return [
+        { value: "Domestic Standard", label: "Domestic Standard" },
+        { value: "Express (Next day)", label: "Express (Next day)" },
+        { value: "Domestic Priority", label: "Domestic Priority" },
+        { value: "By Air", label: "By Air" },
+        { value: "By Surface", label: "By Surface" }
+      ];
+    } else if (formData.shipment_type === "Business to Business (B2B)") {
+      return [
+        { value: "Standard", label: "Standard" },
+        { value: "Priority", label: "Priority" }
+      ];
+    }
+    return [];
+  };
+
   const inputClasses = "w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 outline-none text-gray-900 font-medium placeholder:font-normal placeholder:text-gray-400 hover:border-gray-300";
 
   return (
@@ -108,16 +143,20 @@ export default function GetQuotationPage() {
          <motion.div 
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           className="text-center pt-2 sm:pt-4 mb-8 lg:mb-10"
+           className="text-center pt-2 sm:pt-4 mb-6 lg:mb-8"
          >
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-orange-100 text-orange-600 rounded-full text-xs sm:text-sm font-bold mb-4">
               <Truck className="w-4 h-4" />
               Fast & Reliable
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Get a Free <span className="text-orange-500">Quotation</span></h1>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Get a Free <span className="text-orange-500">Quote</span></h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
                Fill out the form below and we&apos;ll get back to you with a competitive shipping rate tailored precisely to your needs.
             </p>
+            <div className="mt-5 lg:mt-6 flex items-center justify-center gap-2.5 text-sm sm:text-base text-gray-700 bg-white/60 backdrop-blur-md border border-orange-200/60 py-2 px-5 rounded-full w-fit mx-auto shadow-[0_4px_14px_rgba(234,88,12,0.08)]">
+               <ShieldCheck className="w-5 h-5 text-orange-500" />
+               <span className="font-medium tracking-wide">100% Privacy Guaranteed. No Spam, No Selling Data.</span>
+            </div>
          </motion.div>
 
          <motion.div 
@@ -207,11 +246,12 @@ export default function GetQuotationPage() {
                         <PremiumSelect 
                            required 
                            value={formData.shipment_type} 
-                           onChange={val => setFormData({...formData, shipment_type: val})}
+                           onChange={handleShipmentTypeChange}
                            placeholder="Select Shipment Type"
                            options={[
                               { value: "International Shipment", label: "International Shipment" },
-                              { value: "Domestic Shipment", label: "Domestic Shipment" }
+                              { value: "Domestic Shipment", label: "Domestic Shipment" },
+                              { value: "Business to Business (B2B)", label: "Business to Business (B2B)" }
                            ]}
                         />
                      </div>
@@ -223,13 +263,11 @@ export default function GetQuotationPage() {
                            onChange={val => setFormData({...formData, package_type: val})}
                            placeholder="Select Package Type"
                            options={[
-                              { value: "Documents", label: "Documents" },
                               { value: "Non-Document", label: "Non-Document" },
+                              { value: "Documents", label: "Documents" },
                               { value: "Medicines", label: "Medicines" },
-                              { value: "Electronics", label: "Electronics" },
-                              { value: "Clothing/Apparel", label: "Clothing/Apparel" },
                               { value: "Fragile Items", label: "Fragile Items" },
-                              { value: "Other Parcel", label: "Other Parcel" }
+                              { value: "Other", label: "Other" }
                            ]}
                         />
                      </div>
@@ -242,12 +280,8 @@ export default function GetQuotationPage() {
                         <PremiumSelect 
                            value={formData.urgency} 
                            onChange={val => setFormData({...formData, urgency: val})}
-                           options={[
-                              { value: "Standard (2-3 days)", label: "Standard (2-3 days)" },
-                              { value: "Express (Next day)", label: "Express (Next day)" },
-                              { value: "International Standard", label: "International Standard" },
-                              { value: "International Priority", label: "International Priority" }
-                           ]}
+                           options={getUrgencyOptions()}
+                           placeholder={formData.shipment_type ? "Select Urgency" : "Select Shipment Type First"}
                         />
                      </div>
                      <div className="sm:col-span-2 group">
@@ -263,6 +297,9 @@ export default function GetQuotationPage() {
                      {!loading && <ArrowRight className="w-6 h-6 relative z-10 group-hover:translate-x-1 transition-transform" />}
                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out rounded-2xl" />
                   </button>
+                  <p className="text-center text-xs sm:text-sm text-gray-500 mt-4">
+                     We respect your privacy. We won&apos;t spam you or sell your contact info.
+                  </p>
                </div>
 
             </form>

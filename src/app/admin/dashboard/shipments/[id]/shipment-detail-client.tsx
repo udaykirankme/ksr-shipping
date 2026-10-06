@@ -852,11 +852,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Received (₹) <span className="text-red-500">*</span></label>
-                    <input required type="number" name="received_amount" value={formData.received_amount ?? ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
+                    <input required type="text" inputMode="decimal" name="received_amount" value={formData.received_amount?.toString().length > 0 ? formData.received_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'received_amount', value: raw } } as any); }} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Paid (₹) <span className="text-red-500">*</span></label>
-                    <input required type="number" name="paid_amount" value={formData.paid_amount ?? ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
+                    <input required type="text" inputMode="decimal" name="paid_amount" value={formData.paid_amount?.toString().length > 0 ? formData.paid_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'paid_amount', value: raw } } as any); }} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100 mt-6">

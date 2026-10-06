@@ -107,7 +107,7 @@ export function Navbar() {
                        </div>
                        <div>
                          <span className="text-xs font-bold block">{business.phoneSecondary}</span>
-                         <span className="text-[10px] text-gray-500">Secondary Support</span>
+                         <span className="text-[10px] text-gray-500">Secondary / WhatsApp</span>
                        </div>
                      </a>
                    )}
