@@ -68,8 +68,12 @@ function getCurrentOccurredAt(): string {
 }
 
 function getNextStatusUpdate(currentStatus: string) {
-  const currentIndex = STATUS_WORKFLOW.indexOf(currentStatus);
-  if (currentIndex > -1 && currentIndex < STATUS_WORKFLOW.length - 1) {
+  if (!currentStatus) return { status: '', occurred_at: '' };
+  const normalized = currentStatus.trim().toLowerCase();
+  const currentIndex = STATUS_WORKFLOW.findIndex(s => s.toLowerCase() === normalized);
+  const deliveredIndex = STATUS_WORKFLOW.findIndex(s => s.toLowerCase() === 'delivered');
+  
+  if (currentIndex > -1 && currentIndex < deliveredIndex) {
     return {
       status: STATUS_WORKFLOW[currentIndex + 1],
       occurred_at: '',
@@ -531,7 +535,38 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
   const handleCopy = (textToCopy: string, label: string) => {
     if (!textToCopy) return;
-    navigator.clipboard.writeText(textToCopy);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textToCopy).catch(() => {
+        // Fallback if permission rejected
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = textToCopy;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    } else {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch (e) {
+        console.error(e);
+      }
+    }
     setSuccess(`${label} copied to clipboard!`);
     setTimeout(() => setSuccess(''), 3000);
   };
@@ -555,8 +590,9 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 href={`/track?id=${shipment.tracking_id}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
+                onClick={() => handleCopy(shipment.tracking_id, 'KSR Tracking Number')}
                 className="ml-2 inline-flex items-center gap-1.5 px-3 py-1 text-sm font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 hover:text-orange-700 transition-colors"
-                title="Open KSR tracking page in a new tab"
+                title="Open KSR tracking page and copy tracking number"
               >
                 Track on KSR
               </a>
@@ -578,8 +614,9 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                       href={info.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
+                      onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                      title={`Track on ${info.name} in a new tab`}
+                      title={`Track on ${info.name} and copy tracking number`}
                     >
                       Track on {info.name}
                     </a>

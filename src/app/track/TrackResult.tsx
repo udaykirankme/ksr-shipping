@@ -124,12 +124,12 @@ const getStageIndex = (status?: string | null): number => {
     case 'Shipment Created':
       return 0;
     case 'Picked Up':
+    case 'Shipped':
+      return 1;
     case 'Shipment Bagged':
     case 'Shipment Received':
     case 'Shipment Packed':
     case 'Dispatched':
-    case 'Shipped':
-      return 1;
     case 'In Transit':
     case 'At Hub':
       return 2;
@@ -142,8 +142,8 @@ const getStageIndex = (status?: string | null): number => {
       const s = trimmed.toLowerCase();
       if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 4;
       if (s.includes('out for delivery')) return 3;
-      if (s.includes('transit') || s.includes('hub')) return 2;
-      if (s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest')) return 1;
+      if (s.includes('transit') || s.includes('hub') || s.includes('dispatch') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest')) return 2;
+      if (s.includes('pick') || s.includes('shipped')) return 1;
       return 0;
     }
   }
@@ -160,17 +160,28 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
       return s.includes('creat');
     }) || [...history].reverse()[0];
   } else if (stageIndex === 1) {
-    // Shipped / Dispatched / Bagged / Picked up / Received
-    matched = history.find(e => {
+    // Stage 1: Shipped / Picked up
+    matched = [...history].reverse().find(e => {
       const s = e.status.toLowerCase();
-      return s.includes('dispatch') || s.includes('shipped') || s.includes('pick') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest');
+      return s.includes('pick') || s.includes('shipped');
+    }) || [...history].reverse().find(e => {
+      const s = e.status.toLowerCase();
+      return !s.includes('creat');
     });
   } else if (stageIndex === 2) {
-    // In Transit
+    // Stage 2: In Transit (Shipment Bagged, Received, Dispatched, In Transit, At Hub)
     matched = history.find(e => {
       const s = e.status.toLowerCase();
       const n = (e.note || '').toLowerCase();
-      return (s.includes('transit') || s.includes('hub')) && !s.includes('out for delivery') && !n.includes('out for delivery');
+      return (
+        s.includes('transit') || 
+        s.includes('hub') || 
+        s.includes('dispatch') || 
+        s.includes('bag') || 
+        s.includes('receiv') || 
+        s.includes('pack') || 
+        s.includes('manifest')
+      ) && !s.includes('out for delivery') && !n.includes('out for delivery');
     });
   } else if (stageIndex === 3) {
     // Out for Delivery
