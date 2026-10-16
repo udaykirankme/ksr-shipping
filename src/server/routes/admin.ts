@@ -738,7 +738,7 @@ router.patch('/shipments/:id/status', async (req, res) => {
           status,
           location,
           occurred_at: occurredAt,
-          note,
+          note: note?.trim() || null,
           updated_by: (req as any).user?.id || null
         }
       })

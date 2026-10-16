@@ -718,6 +718,10 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                         const isFirst = groupIdx === 0;
                         const groupKey = String(groupIdx);
                         const isHighlighted = highlightedEventId === groupKey;
+                        const eventsWithNotes = group.events.filter(
+                          (evt) => evt.note && evt.note.trim() && evt.note.trim().toLowerCase() !== 'status updated'
+                        );
+                        const latestEvent = group.events[0];
                         
                         return (
                        <li 
@@ -760,33 +764,48 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                                    <p className={cn("text-xs sm:text-sm md:text-base font-bold transition-colors duration-300", isHighlighted ? "text-orange-950" : isFirst ? "text-gray-900" : "text-gray-700")}>
                                      {group.status}
                                    </p>
+                                   {eventsWithNotes.length === 0 && latestEvent?.occurred_at && (
+                                     <div className="text-right shrink-0 ml-auto flex flex-col items-end gap-0.5">
+                                       <time dateTime={typeof latestEvent.occurred_at === 'string' ? latestEvent.occurred_at : new Date(latestEvent.occurred_at).toISOString()} className="text-[10px] sm:text-[11px] text-gray-500 font-bold tracking-tight">
+                                         {new Date(latestEvent.occurred_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                       </time>
+                                       <div className="flex items-center gap-1">
+                                         <span className="text-[9.5px] sm:text-[10.5px] text-gray-500 font-semibold">
+                                           {new Date(latestEvent.occurred_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                                         </span>
+                                         <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">IST</span>
+                                       </div>
+                                     </div>
+                                   )}
                                  </div>
                                  <div className="mt-0.5 flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-orange-700 bg-orange-50/80 px-2.5 py-0.5 rounded-md w-fit border border-orange-100">
                                    <MapPin className="w-3 h-3 text-orange-500" />
                                    {group.location || "System Update"}
                                  </div>
                                  
-                                 <div className="mt-2.5 p-3 sm:p-4 bg-blue-50/70 border border-blue-100 rounded-xl shadow-sm flex flex-col gap-2.5">
-                                   {group.events.map((evt, evtIdx) => (
-                                     <div key={evtIdx} className={cn("flex justify-between items-start gap-2 sm:gap-4", evtIdx !== group.events.length - 1 && "pb-2.5 border-b border-blue-100/60")}>
-                                       <div className="flex flex-1 items-start gap-2 sm:gap-2.5 text-[11px] sm:text-sm text-blue-950 font-medium leading-relaxed">
-                                         <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                         </svg>
-                                         <p>{evt.note || "Status updated"}</p>
-                                       </div>
-                                       <div className="text-right shrink-0 ml-1 flex flex-col items-end gap-0.5 mt-0.5">
-                                         <time dateTime={evt.occurred_at} className="text-[10px] sm:text-[11px] text-blue-800 font-bold tracking-tight">
-                                           {new Date(evt.occurred_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                         </time>
-                                         <div className="flex items-center gap-1">
-                                            <span className="text-[9.5px] sm:text-[10.5px] text-blue-600 font-semibold">{new Date(evt.occurred_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}</span>
-                                            <span className="text-[8px] sm:text-[9px] text-blue-500/80 font-bold uppercase tracking-wider">IST</span>
+                                 {eventsWithNotes.length > 0 && (
+                                   <div className="mt-2.5 p-3 sm:p-4 bg-blue-50/70 border border-blue-100 rounded-xl shadow-sm flex flex-col gap-2.5">
+                                     {eventsWithNotes.map((evt, evtIdx) => (
+                                       <div key={evtIdx} className={cn("flex justify-between items-start gap-2 sm:gap-4", evtIdx !== eventsWithNotes.length - 1 && "pb-2.5 border-b border-blue-100/60")}>
+                                         <div className="flex flex-1 items-start gap-2 sm:gap-2.5 text-[11px] sm:text-sm text-blue-950 font-medium leading-relaxed">
+                                           <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                           </svg>
+                                           <p>{evt.note}</p>
+                                         </div>
+                                         <div className="text-right shrink-0 ml-1 flex flex-col items-end gap-0.5 mt-0.5">
+                                           <time dateTime={typeof evt.occurred_at === 'string' ? evt.occurred_at : new Date(evt.occurred_at).toISOString()} className="text-[10px] sm:text-[11px] text-blue-800 font-bold tracking-tight">
+                                             {new Date(evt.occurred_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                           </time>
+                                           <div className="flex items-center gap-1">
+                                              <span className="text-[9.5px] sm:text-[10.5px] text-blue-600 font-semibold">{new Date(evt.occurred_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}</span>
+                                              <span className="text-[8px] sm:text-[9px] text-blue-500/80 font-bold uppercase tracking-wider">IST</span>
+                                           </div>
                                          </div>
                                        </div>
-                                     </div>
-                                   ))}
-                                 </div>
+                                     ))}
+                                   </div>
+                                 )}
                                </div>
                              </div>
                            </div>

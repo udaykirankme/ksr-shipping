@@ -16,7 +16,7 @@ describe('Customer History Sanitization & Identity Deduplication', () => {
   it('strips "External Update:" and automated sync prefixes', () => {
     expect(sanitizeCustomerHistoryNote('External Update: Dispatched')).toBe('Dispatched');
     expect(sanitizeCustomerHistoryNote('external update: In Transit')).toBe('In Transit');
-    expect(sanitizeCustomerHistoryNote('Updated by automated sync')).toBe('Status updated');
+    expect(sanitizeCustomerHistoryNote('Updated by automated sync')).toBe('');
     expect(sanitizeCustomerHistoryNote('[ID:abc123xyz] Manifest uploaded')).toBe('Manifest uploaded');
   });
 
@@ -25,8 +25,8 @@ describe('Customer History Sanitization & Identity Deduplication', () => {
     expect(sanitizeCustomerHistoryNote('Package found in Audit')).toBe('Package found in Audit');
     expect(sanitizeCustomerHistoryNote('Package Missing in Audit')).toBe('Package Missing in Audit');
     expect(sanitizeCustomerHistoryNote('Shipment Received at Facility')).toBe('Shipment Received at Facility');
-    expect(sanitizeCustomerHistoryNote('')).toBe('Status updated');
-    expect(sanitizeCustomerHistoryNote(null)).toBe('Status updated');
+    expect(sanitizeCustomerHistoryNote('')).toBe('');
+    expect(sanitizeCustomerHistoryNote(null)).toBe('');
   });
 
   it('deduplicates identical events at the exact same timestamp', () => {

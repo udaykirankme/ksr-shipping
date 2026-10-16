@@ -22,13 +22,13 @@ export function normalizeNoteForComparison(note: string | null | undefined): str
  * Sanitizes internal operational prefixes from history notes before exposing to customers.
  */
 export function sanitizeCustomerHistoryNote(note: string | null | undefined): string {
-  if (!note) return 'Status updated';
+  if (!note) return '';
   let n = note.trim();
   n = n.replace(/^\[id:[^\]]+\]\s*/i, '');
   n = n.replace(/^webhook update:\s*/i, '');
   n = n.replace(/^external update:\s*/i, '');
-  n = n.replace(/^updated by automated sync\s*/i, 'Status updated');
-  return n.trim() || 'Status updated';
+  n = n.replace(/^updated by automated sync\s*/i, '');
+  return n.trim();
 }
 
 /**
@@ -53,7 +53,7 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
     if (!isDuplicate) {
       result.push({
         ...item,
-        note: cleanNote
+        note: cleanNote || null
       });
     }
   }
