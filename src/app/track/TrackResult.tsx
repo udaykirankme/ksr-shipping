@@ -117,8 +117,10 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
   }
 };
 
-const getStageIndex = (status: string): number => {
-  switch (status) {
+const getStageIndex = (status?: string | null): number => {
+  if (!status) return 0;
+  const trimmed = status.trim();
+  switch (trimmed) {
     case 'Shipment Created':
       return 0;
     case 'Picked Up':
@@ -132,11 +134,12 @@ const getStageIndex = (status: string): number => {
     case 'At Hub':
       return 2;
     case 'Out For Delivery':
+    case 'Out for Delivery':
       return 3;
     case 'Delivered':
       return 4;
     default: {
-      const s = status.toLowerCase();
+      const s = trimmed.toLowerCase();
       if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 4;
       if (s.includes('out for delivery')) return 3;
       if (s.includes('transit') || s.includes('hub')) return 2;
@@ -275,13 +278,14 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
     };
   }, [finalStageIdx, data.tracking_id, targetPercent]);
 
-  // Synchronous tick marks: a circle activates the instant the leading edge touches it
+  // Synchronous tick marks: a circle activates the instant the leading edge touches it, or when the milestone target is reached
   const isStageCompleted = (idx: number) => {
     if (idx === 0) return true;
-    if (idx === 1) return trackPercent >= 25;
-    if (idx === 2) return trackPercent >= 50;
-    if (idx === 3) return trackPercent >= 75;
-    if (idx === 4) return trackPercent >= 99.5;
+    if (idx > finalStageIdx) return false;
+    if (idx === 1) return trackPercent >= 25 || trackPercent >= targetPercent;
+    if (idx === 2) return trackPercent >= 50 || trackPercent >= targetPercent;
+    if (idx === 3) return trackPercent >= 75 || trackPercent >= targetPercent;
+    if (idx === 4) return trackPercent >= 99.5 || trackPercent >= targetPercent;
     return false;
   };
 

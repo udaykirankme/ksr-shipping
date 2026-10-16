@@ -1,4 +1,4 @@
-import { Package, Truck, TrendingUp } from "lucide-react";
+import { Package, Scale, TrendingUp } from "lucide-react";
 import { CircularKpi } from "@/components/dashboard/circular-kpi";
 import { ShipmentOverview } from "@/components/dashboard/shipment-overview";
 import { RecentShipments } from "@/components/dashboard/recent-shipments";
@@ -22,6 +22,7 @@ export default async function DashboardPage() {
       deliveredShipments: 0,
       monthlyRevenue: 0,
       monthlyProfit: 0,
+      monthlyWeight: 0,
       recentShipments: [],
       statusCounts: {},
     };
@@ -29,6 +30,11 @@ export default async function DashboardPage() {
 
   const formatRupee = (val: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  };
+
+  const formatWeight = (val: number) => {
+    const formatted = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(val);
+    return `${formatted} kg`;
   };
 
   return (
@@ -51,10 +57,10 @@ export default async function DashboardPage() {
           colorClass="text-blue-500"
         />
         <CircularKpi 
-          title="Delivered" 
-          value={stats.deliveredShipments?.toString() || "0"} 
-          subtitle="Completed shipments this month"
-          icon={Truck} 
+          title="Weight This Month" 
+          value={formatWeight(stats.monthlyWeight || 0)} 
+          subtitle="Total weight shipped this month"
+          icon={Scale} 
           progress={100}
           colorClass="text-orange-500"
         />

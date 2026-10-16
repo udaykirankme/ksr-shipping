@@ -11,6 +11,9 @@ type TrackPageProps = {
   searchParams: Promise<{ id?: string }>;
 };
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getInitialTrackingData(id?: string) {
   if (!id?.trim()) return null;
   try {

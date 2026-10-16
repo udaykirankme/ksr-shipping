@@ -6,6 +6,7 @@ export type DashboardStats = {
   deliveredShipments: number;
   monthlyRevenue: number;
   monthlyProfit: number;
+  monthlyWeight: number;
   recentShipments: unknown[];
   statusCounts: Record<string, number>;
 };
@@ -32,7 +33,7 @@ export async function getDashboardStats(month?: number, year?: number): Promise<
     }),
     prisma.shipment.aggregate({
       where: monthWhere,
-      _sum: { received_amount: true, profit: true },
+      _sum: { received_amount: true, profit: true, weight: true },
     }),
     prisma.shipment.groupBy({
       by: ['current_status'],
@@ -61,11 +62,15 @@ export async function getDashboardStats(month?: number, year?: number): Promise<
     return acc;
   }, {});
 
+  const rawWeight = financials._sum.weight ?? 0;
+  const monthlyWeight = Math.round(rawWeight * 100) / 100;
+
   return {
     createdShipments,
     deliveredShipments,
     monthlyRevenue: financials._sum.received_amount ?? 0,
     monthlyProfit: financials._sum.profit ?? 0,
+    monthlyWeight,
     recentShipments: JSON.parse(JSON.stringify(recentShipments)),
     statusCounts,
   };
