@@ -680,31 +680,33 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                      )}
                   </div>
 
-                  {/* Sub-info Row: IST Timing Note & Customer Update / Shipment Update */}
-                  <div className="mt-2.5 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
-                     <div className="bg-white border border-gray-200/80 rounded-lg px-2.5 py-1 sm:px-3 sm:py-1.5 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-600 shadow-2xs shrink-0">
-                        <Clock className="w-3 h-3 text-orange-500 shrink-0" />
-                        <span>All timings in <span className="font-semibold text-gray-800">IST (Indian Standard Time)</span>.</span>
-                     </div>
-                     {data.customer_update && data.customer_update.trim() !== '' && (
-                        <div className="w-full sm:w-auto bg-white border border-gray-200/80 rounded-lg px-3 py-1.5 flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 text-xs shadow-2xs">
-                           <span className="font-bold text-orange-600 text-[10.5px] sm:text-[11.5px] uppercase tracking-wider shrink-0">
+                  {/* Shipment Update Banner - Aligned with Customer Message Banner */}
+                  {data.customer_update && data.customer_update.trim() !== '' && (
+                     <div className="mt-2.5 sm:mt-3 border border-orange-200/80 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 bg-white shadow-xs transition-all w-full">
+                        <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800 break-words">
+                           <span className="font-bold text-orange-600 uppercase tracking-wider underline underline-offset-2 mr-1.5 sm:mr-2">
                               Shipment Update:
                            </span>
-                           <span className="font-semibold text-gray-800 text-xs sm:text-[13px] leading-snug break-words">
+                           <span className="font-semibold text-gray-800">
                               {data.customer_update}
                            </span>
-                        </div>
-                     )}
-                  </div>
+                        </p>
+                     </div>
+                  )}
                </div>
             </div>
 
             {/* Timeline */}
             <div className="px-4 py-4 sm:px-7 sm:py-6 bg-white" id="tracking-history-section">
-               <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-                 Tracking History
-               </h3>
+               <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3 md:justify-between">
+                 <h3 className="text-base sm:text-lg font-bold text-gray-900 shrink-0">
+                   Tracking History
+                 </h3>
+                 <div className="bg-white border border-gray-200/80 rounded-lg px-2 py-0.5 sm:px-2.5 sm:py-1 flex items-center gap-1 sm:gap-1.5 text-[9.5px] xs:text-[10px] sm:text-[11px] text-gray-600 shadow-2xs md:ml-auto">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500 shrink-0" />
+                    <span>All timings in <span className="font-semibold text-gray-800">IST (Indian Standard Time)</span>.</span>
+                 </div>
+               </div>
                
                <div className="flow-root relative">
                  <ul role="list" className="-mb-4">
