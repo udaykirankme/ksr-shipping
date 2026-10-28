@@ -282,4 +282,45 @@ describe('Courier Sync: Status Desynchronization Healing', () => {
     // The returned status should be Delivered
     expect(result.current_status).toBe('Delivered');
   });
+
+  it('B2B Regression: Stores Manifested status and original scan instruction into history, never UD', async () => {
+    vi.mocked(prisma.shipment.findUnique).mockResolvedValue({
+      ...baseShipment,
+      service: 'delhiveryb2b',
+      current_status: 'Booked',
+      history: []
+    } as any);
+
+    // Provider produces normalized event from B2B API
+    mockTrackShipment.mockResolvedValue({
+      current_status: 'Manifested',
+      current_location: 'Hyderabad_BalanagarPhase2_L (Telangana)',
+      estimated_delivery: null,
+      events: [
+        {
+          occurred_at: timestampT,
+          status: 'Manifested',
+          location: 'Hyderabad_BalanagarPhase2_L (Telangana)',
+          note: 'Manifest uploaded',
+          raw_status: 'Manifested'
+        }
+      ]
+    });
+
+    const result = await syncTracking('shipment-123');
+
+    // Should create history record with status "Manifested"
+    expect(prisma.shipmentStatusHistory.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status: 'Manifested',
+        location: 'Hyderabad_BalanagarPhase2_L (Telangana)',
+        note: 'Manifest uploaded',
+        occurred_at: timestampT,
+      })
+    });
+
+    // Shipment current_status should be Manifested, not UD
+    expect(result.current_status).toBe('Manifested');
+    expect(result.current_status).not.toBe('UD');
+  });
 });

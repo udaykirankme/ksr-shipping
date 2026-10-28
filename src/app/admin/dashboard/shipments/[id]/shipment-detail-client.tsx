@@ -139,6 +139,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [syncing, setSyncing] = useState(false);
   
   const [isEditing, setIsEditing] = useState(false);
   
@@ -506,9 +507,10 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     }
   };
 
-  const refreshData = async () => {
+  const refreshData = async (preserveSuccessMsg: boolean | React.MouseEvent = false) => {
+    const shouldPreserve = preserveSuccessMsg === true;
     try {
-      setError('');
+      if (!shouldPreserve) setError('');
       setLoading(true);
       const data = await shipmentService.getShipment(shipmentId);
       setShipment(data);
@@ -525,11 +527,54 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       setDbServices(s.filter(i => i.is_enabled));
       setDbServiceThrough(st.filter(i => i.is_enabled));
       
-      setSuccess('Data refreshed');
+      if (!shouldPreserve) {
+        setSuccess('Data refreshed');
+      }
     } catch(err) {
       console.error(err);
+      if (shouldPreserve) {
+        throw err;
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncTracking = async () => {
+    if (syncing) return;
+    if (!shipment.official_tracking_id) {
+      setError('Cannot sync tracking: No official tracking ID (AWB/LR) assigned to this shipment.');
+      return;
+    }
+
+    setSyncing(true);
+    setError('');
+    setSuccess('');
+
+    let syncResult: any = null;
+    try {
+      const res = await shipmentService.syncTracking(shipmentId) as any;
+      syncResult = res?.data || res;
+    } catch (err: any) {
+      console.error('[Sync Error]', err);
+      setError(err.message || 'Courier synchronization failed');
+      setSyncing(false);
+      return;
+    }
+
+    const statusText = syncResult?.current_status || 'Updated';
+    const eventCount = syncResult?.new_events ?? 0;
+    const successMsg = `Tracking synced successfully: ${statusText} (${eventCount} update${eventCount === 1 ? '' : 's'} recorded)`;
+    setSuccess(successMsg);
+
+    try {
+      await refreshData(true);
+      setSuccess(successMsg);
+    } catch (refreshErr: any) {
+      console.error('[Refresh Error after Sync]', refreshErr);
+      setError('Tracking synced successfully, but the page could not refresh automatically. Please refresh manually.');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -627,6 +672,16 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+          <button 
+            type="button"
+            onClick={handleSyncTracking}
+            disabled={syncing || !shipment.official_tracking_id}
+            className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            title={shipment.official_tracking_id ? "Sync tracking events from courier partner" : "No official tracking ID assigned to sync"}
+          >
+            <RefreshCw className={`w-4 h-4 text-orange-500 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? 'Syncing...' : 'Sync Tracking'}</span>
+          </button>
           <button onClick={refreshData} className="p-2 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200" title="Refresh">
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>

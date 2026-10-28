@@ -123,5 +123,12 @@ export const shipmentService = {
       body: JSON.stringify({ ids }),
       credentials: 'include'
     });
+  },
+
+  async syncTracking(id: string) {
+    return apiFetch(`${API_BASE}/shipments/${id}/sync`, {
+      method: 'POST',
+      credentials: 'include'
+    });
   }
 };

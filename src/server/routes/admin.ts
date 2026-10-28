@@ -170,7 +170,7 @@ router.post('/shipments/:id/sync', async (req, res) => {
   try {
     const { syncTracking } = await import('@/lib/courier/sync');
     const result = await syncTracking(req.params.id);
-    res.json(result);
+    res.json({ success: true, data: result });
   } catch (err: any) {
     console.error(`Admin Sync Error for ${req.params.id}:`, err);
     res.status(500).json({ success: false, message: err.message || 'Courier synchronization failed' });

@@ -123,12 +123,33 @@ export class DelhiveryB2BProvider implements CourierProvider {
 
     const latest = data.wbns[0];
     
-    if (!latest.status) {
+    // Resolve human-readable status, distinguishing actual status from status-type/direction code (e.g. "UD")
+    const statusType = (latest.StatusType || latest.status_type || '').trim();
+    const rawStatus = (
+      (latest.Status && latest.Status !== 'UD' && latest.Status !== statusType ? latest.Status : '') ||
+      (latest.status && latest.status !== 'UD' && latest.status !== statusType ? latest.status : '') ||
+      latest.Status ||
+      latest.status ||
+      ''
+    ).trim();
+
+    if (!rawStatus) {
       throw new Error("Delhivery B2B API returned missing status field.");
     }
 
-    // Extract fields
-    const current_status = normalizeDelhiveryStatus(latest.status, latest.scan_remark) as KSRTrackingStatus;
+    // Extract fields using established normalization logic.
+    // If rawStatus is a bare status-type code (e.g. "UD") with no human-readable status provided,
+    // evaluate via established normalizeDelhiveryStatus mappings; if still "UD", safely default
+    // to generic 'In Transit' rather than inventing a milestone from ambiguous remark text.
+    let normalized = normalizeDelhiveryStatus(rawStatus, latest.scan_remark);
+    if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
+      normalized = normalizeDelhiveryStatus('In Transit', latest.scan_remark);
+      if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
+        normalized = 'In Transit';
+      }
+    }
+
+    const current_status = (normalized as KSRTrackingStatus) || 'In Transit';
     const current_location = latest.location || '';
     
     // Attempt to parse the timestamp safely. If missing, fallback to current time since it's the latest known state.
@@ -164,7 +185,7 @@ export class DelhiveryB2BProvider implements CourierProvider {
         location: current_location,
         occurred_at,
         note: latest.scan_remark || '',
-        raw_status: latest.status
+        raw_status: rawStatus.toUpperCase() !== 'UD' ? rawStatus : current_status
       }
     ];
 
