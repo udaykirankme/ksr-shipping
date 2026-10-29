@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { parseBusinessDateTime } from '@/lib/datetime';
 import { isDuplicateEvent } from '@/lib/courier/identity';
 import { normalizeDelhiveryStatus } from '@/lib/courier/normalization';
+import { mapDelhiveryB2BStatus } from '@/lib/courier/providers/delhivery-b2b';
 import { getStatusRank } from '@/lib/courier/types';
 import { registerBackgroundTask } from '@/lib/background-tasks';
 
@@ -100,7 +101,10 @@ export const processWebhookEventCore = async (
   return runWithShipmentLock(officialTrackingId, async () => {
   try {
     // 0. Normalize the status strictly using the shared function
-    const normalizedStatus = normalizeDelhiveryStatus(eventStatus, eventCustomerUpdate);
+    const statusType = payload?.StatusType || payload?.status_type || payload?.statustype;
+    const normalizedStatus = expectedServiceNormalized === 'delhiveryb2b'
+      ? mapDelhiveryB2BStatus(eventStatus, eventCustomerUpdate, statusType)
+      : normalizeDelhiveryStatus(eventStatus, eventCustomerUpdate);
 
     if (!officialTrackingId) {
       console.warn('[Webhook] Received payload without a valid tracking identifier.');

@@ -1,6 +1,8 @@
 export type KSRTrackingStatus = 
   | 'Shipment Created' 
+  | 'Manifested'
   | 'Picked Up' 
+  | 'Vehicle Departed'
   | 'Shipment Bagged' 
   | 'Shipment Received' 
   | 'Dispatched' 
@@ -14,10 +16,12 @@ export type KSRTrackingStatus =
 
 export const STATUS_RANKS: Record<KSRTrackingStatus, number> = {
   'Shipment Created': 10,
+  'Manifested': 15,
   'Picked Up': 20,
   'Shipment Bagged': 30,
   'Shipment Received': 40,
   'Dispatched': 50,
+  'Vehicle Departed': 55,
   'In Transit': 60,
   'At Hub': 70,
   'Out For Delivery': 80,
@@ -29,8 +33,14 @@ export const STATUS_RANKS: Record<KSRTrackingStatus, number> = {
 
 export function getStatusRank(status: string | null | undefined): number {
   if (!status) return 0;
-  // Unknown or unmapped statuses like 'Pending' default to rank 0
-  return STATUS_RANKS[status as KSRTrackingStatus] || 0;
+  if (STATUS_RANKS[status as KSRTrackingStatus]) {
+    return STATUS_RANKS[status as KSRTrackingStatus];
+  }
+  const lower = status.toLowerCase().trim();
+  for (const [key, rank] of Object.entries(STATUS_RANKS)) {
+    if (key.toLowerCase() === lower) return rank;
+  }
+  return 0;
 }
 
 export interface TrackingEvent {

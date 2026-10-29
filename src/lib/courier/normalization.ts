@@ -34,6 +34,43 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
     }
   }
 
+  const statusUpper = status.toUpperCase();
+
+  // 3. Delivered Normalization
+  if (statusUpper === 'DELIVERED' || statusUpper === 'DL' || noteLower.includes('delivered to') || noteLower === 'delivered') {
+    return 'Delivered';
+  }
+
+  // 4. Returned / RTO Normalization
+  if (statusUpper === 'RETURNED' || statusUpper === 'RTO' || statusUpper === 'RT' || noteLower.includes('returned to origin')) {
+    return 'RTO';
+  }
+
+  // 5. Cancelled Normalization
+  if (statusUpper === 'CANCELLED' || statusUpper === 'CAN' || noteLower.includes('cancelled')) {
+    return 'Cancelled';
+  }
+
+  // 6. Picked Up Normalization
+  if (noteLower.includes('picked up') || statusUpper === 'PICKED_UP' || statusUpper === 'PICKED UP' || statusUpper === 'PU' || statusUpper === 'PUD') {
+    return 'Picked Up';
+  }
+
+  // 7. Dispatched Normalization (preserve legitimate courier status)
+  if (statusLower === 'dispatched') {
+    return 'Dispatched';
+  }
+
+  // 8. Vehicle Departed Normalization (for UD/pickup events where vehicle departed)
+  if (noteLower.includes('vehicle departed')) {
+    return 'Vehicle Departed';
+  }
+
+  // 9. Resolve bare internal courier codes like "UD" or short unmapped status types
+  if (statusUpper === 'UD' || /^[A-Z0-9]{1,3}$/.test(statusUpper)) {
+    return 'In Transit';
+  }
+
   // Preserve all other statuses as-is to avoid destroying legitimate provider states (e.g. Delivered, RTO)
   return status;
 }

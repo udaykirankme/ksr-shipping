@@ -1,5 +1,76 @@
 import { CourierProvider, TrackingResponse, TrackingEvent, KSRTrackingStatus } from '../types';
-import { normalizeDelhiveryStatus } from '../normalization';
+
+/**
+ * Maps Delhivery B2B tracking status and scan remark to a human-readable KSR tracking status.
+ *
+ * Rules:
+ * 1. Use the actual human-readable status supplied by Delhivery whenever available.
+ * 2. Correctly map valid B2B event statuses across all events (Manifested, Picked Up, Vehicle Departed, In Transit, Out For Delivery, Delivered).
+ * 3. Never hardcode UD to Manifested.
+ * 4. Never blindly convert every UD event to In Transit when a more accurate event status is available.
+ * 5. If an event has only a status code (e.g. UD), use explicit, verified remark mappings. Do not invent milestones from ambiguous remarks.
+ */
+export function mapDelhiveryB2BStatus(
+  statusCandidate: string | null | undefined,
+  scanRemark: string | null | undefined,
+  statusType?: string | null
+): KSRTrackingStatus {
+  const candidate = (statusCandidate || '').trim();
+  const remark = (scanRemark || '').trim().toLowerCase();
+  const stType = (statusType || '').trim().toUpperCase();
+  const candidateUpper = candidate.toUpperCase();
+
+  // Distinguish actual human-readable status from status direction code (e.g. "UD") or status_type
+  const isBareDirectionCode = !candidate || candidateUpper === 'UD' || candidateUpper === stType;
+
+  // 1. Explicit mappings for known status strings and courier abbreviations
+  if (candidateUpper === 'DELIVERED' || candidateUpper === 'DL') return 'Delivered';
+  if (candidateUpper === 'OUT_FOR_DELIVERY' || candidateUpper === 'OUT FOR DELIVERY' || candidateUpper === 'OFD') return 'Out For Delivery';
+  if (candidateUpper === 'RETURNED' || candidateUpper === 'RTO' || candidateUpper === 'RT') return 'Returned';
+  if (candidateUpper === 'CANCELLED' || candidateUpper === 'CAN') return 'Cancelled';
+  if (candidateUpper === 'MANIFESTED') return 'Manifested';
+  if (
+    candidateUpper === 'PICKED_UP' ||
+    candidateUpper === 'PICKED UP' ||
+    candidateUpper === 'SHIPMENT PICKED UP' ||
+    candidateUpper === 'PU' ||
+    candidateUpper === 'PUD'
+  ) {
+    if (remark.includes('vehicle departed')) {
+      return 'Vehicle Departed';
+    }
+    return 'Picked Up';
+  }
+  if (candidateUpper === 'IN_TRANSIT' || candidateUpper === 'IN TRANSIT') return 'In Transit';
+  if (candidateUpper === 'DISPATCHED') return 'Dispatched';
+  if (candidateUpper === 'AT HUB' || candidateUpper === 'AT_HUB') return 'At Hub';
+  if (candidate.toLowerCase().includes('vehicle departed')) return 'Vehicle Departed';
+
+  // 2. If status was only an internal direction code (e.g. "UD") or missing, use explicit verified mappings:
+  if (remark.includes('vehicle departed')) {
+    return 'Vehicle Departed';
+  }
+
+  if (remark === 'shipment picked up' || remark.startsWith('shipment picked up') || remark === 'picked up') {
+    return 'Picked Up';
+  }
+
+  if (remark === 'manifest uploaded' || remark === 'manifested') {
+    return 'Manifested';
+  }
+
+  if (remark.includes('out for delivery')) {
+    return 'Out For Delivery';
+  }
+
+  if (remark === 'delivered' || remark.startsWith('delivered to')) {
+    return 'Delivered';
+  }
+
+  // 3. Ambiguous notes with bare UD code (e.g. "Manifest error - returned to warehouse", "Delivery attempted - customer absent"):
+  // Fall back to generic 'In Transit' rather than inventing a milestone like Manifested or Delivered.
+  return 'In Transit';
+}
 
 // Module-level cache for the JWT, kept only in server memory.
 let cachedJwt: string | null = null;
@@ -137,19 +208,7 @@ export class DelhiveryB2BProvider implements CourierProvider {
       throw new Error("Delhivery B2B API returned missing status field.");
     }
 
-    // Extract fields using established normalization logic.
-    // If rawStatus is a bare status-type code (e.g. "UD") with no human-readable status provided,
-    // evaluate via established normalizeDelhiveryStatus mappings; if still "UD", safely default
-    // to generic 'In Transit' rather than inventing a milestone from ambiguous remark text.
-    let normalized = normalizeDelhiveryStatus(rawStatus, latest.scan_remark);
-    if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
-      normalized = normalizeDelhiveryStatus('In Transit', latest.scan_remark);
-      if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
-        normalized = 'In Transit';
-      }
-    }
-
-    const current_status = (normalized as KSRTrackingStatus) || 'In Transit';
+    const current_status = mapDelhiveryB2BStatus(rawStatus, latest.scan_remark, statusType);
     const current_location = latest.location || '';
     
     // Attempt to parse the timestamp safely. If missing, fallback to current time since it's the latest known state.

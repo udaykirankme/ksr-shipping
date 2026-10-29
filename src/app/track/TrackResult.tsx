@@ -24,7 +24,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatCustomerHistoryStatus, toTitleCase } from "@/lib/format";
 import Link from "next/link";
 import { business } from "@/lib/config/business";
 
@@ -57,7 +57,9 @@ interface TrackingData {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'Shipment Created': return 'bg-gray-100 text-gray-800 border-gray-200';
+    case 'Manifested': return 'bg-blue-100 text-blue-800 border-blue-200';
     case 'Picked Up': return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'Vehicle Departed': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'Shipment Bagged': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'Shipment Received': return 'bg-teal-100 text-teal-800 border-teal-200';
     case 'Dispatched': return 'bg-orange-100 text-orange-800 border-orange-200';
@@ -82,7 +84,9 @@ const isAirShipment = (data: TrackingData): boolean => {
 const getStatusIcon = (status: string, className = "w-5 h-5", isAir = false) => {
   switch (status) {
     case 'Shipment Created': return <Box className={className} />;
+    case 'Manifested': return <Box className={className} />;
     case 'Picked Up': return <Hand className={className} />;
+    case 'Vehicle Departed': return isAir ? <Plane className={className} /> : <Truck className={className} />;
     case 'Shipment Bagged': return <Package className={className} />;
     case 'Shipment Received': return <Inbox className={className} />;
     case 'Dispatched': return isAir ? <Plane className={className} /> : <Truck className={className} />;
@@ -103,7 +107,9 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
   
   switch(status) {
     case 'Shipment Created': return <>Your shipment has been registered successfully and is awaiting pickup.</>;
+    case 'Manifested': return <>Your shipment has been registered with the carrier and manifest uploaded.</>;
     case 'Picked Up': return <>Great news! Your shipment from {fromName} to {toName} has been picked up successfully.</>;
+    case 'Vehicle Departed': return <>Your shipment from {fromName} to {toName} has departed and is on the way.</>;
     case 'Shipment Bagged': return <>Your shipment from {fromName} to {toName} has been bagged and is being prepared for dispatch.</>;
     case 'Shipment Received': return <>Your shipment from {fromName} to {toName} has been received at our facility and is being processed.</>;
     case 'Dispatched': return <>Your shipment from {fromName} to {toName} has been dispatched and is on its way.</>;
@@ -117,84 +123,145 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
   }
 };
 
-const getStageIndex = (status?: string | null): number => {
-  if (!status) return 0;
-  const trimmed = status.trim();
-  switch (trimmed) {
-    case 'Shipment Created':
-      return 0;
-    case 'Picked Up':
-    case 'Shipped':
-      return 1;
-    case 'Shipment Bagged':
-    case 'Shipment Received':
-    case 'Shipment Packed':
-    case 'Dispatched':
-    case 'In Transit':
-    case 'At Hub':
-      return 2;
-    case 'Out For Delivery':
-    case 'Out for Delivery':
-      return 3;
-    case 'Delivered':
-      return 4;
-    default: {
-      const s = trimmed.toLowerCase();
-      if (s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'))) return 4;
-      if (s.includes('out for delivery')) return 3;
-      if (s.includes('transit') || s.includes('hub') || s.includes('dispatch') || s.includes('bag') || s.includes('receiv') || s.includes('pack') || s.includes('manifest')) return 2;
-      if (s.includes('pick') || s.includes('shipped')) return 1;
-      return 0;
-    }
-  }
+/**
+ * Normalizes a status string by removing special characters, underscores, hyphens,
+ * and collapsing whitespace to allow consistent case-insensitive comparison.
+ */
+export const normalizeStatusKey = (status?: string | null): string => {
+  if (!status) return '';
+  return status.toLowerCase().replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
 };
 
-const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]): { date: string; full: string } | null => {
+/**
+ * Maps a tracking status string to one of the 5 visual shipment stages:
+ * - Stage 0: Shipment Created (Shipment Created, Booked, Manifested)
+ * - Stage 1: Shipped (Picked Up, Shipped)
+ * - Stage 2: In Transit (In Transit, Vehicle Departed, Dispatched, Bagged, Received, At Hub)
+ * - Stage 3: Out for Delivery (Out for Delivery)
+ * - Stage 4: Delivered (Delivered)
+ *
+ * Ambiguous status codes like "UD" alone map to Stage 0 and do not infer an advanced milestone.
+ */
+export const getStageIndex = (status?: string | null): number => {
+  if (!status) return 0;
+  const norm = normalizeStatusKey(status);
+  if (!norm) return 0;
+
+  // 1. Delivered (Stage 4)
+  if (norm === 'delivered' || (norm.startsWith('deliver') && !norm.includes('out for delivery'))) {
+    return 4;
+  }
+
+  // 2. Out for Delivery (Stage 3)
+  if (norm === 'out for delivery' || norm.includes('out for delivery')) {
+    return 3;
+  }
+
+  // 3. In Transit (Stage 2)
+  // Vehicle Departed, In Transit, Dispatched, Bagged, Received, Packed, At Hub
+  if (
+    norm === 'in transit' ||
+    norm.includes('transit') ||
+    norm === 'vehicle departed' ||
+    norm.includes('depart') ||
+    norm.includes('dispatch') ||
+    norm.includes('hub') ||
+    norm.includes('bag') ||
+    norm.includes('receiv') ||
+    norm.includes('pack')
+  ) {
+    return 2;
+  }
+
+  // 4. Shipped / Picked Up (Stage 1)
+  if (
+    norm === 'picked up' ||
+    norm.includes('picked up') ||
+    norm.includes('pickup') ||
+    norm === 'shipped' ||
+    norm.includes('shipped')
+  ) {
+    return 1;
+  }
+
+  // 5. Shipment Created / Booked / Manifested (Stage 0)
+  // Keeps the first stage active until pickup is confirmed
+  return 0;
+};
+
+/**
+ * Determines the active milestone stage index using the latest valid shipment event
+ * and protecting against milestone regression from older or ambiguous events.
+ */
+export const getActiveMilestoneStage = (
+  currentStatus?: string | null,
+  history?: TrackingHistoryEvent[]
+): number => {
+  let highestStage = getStageIndex(currentStatus);
+
+  if (history && history.length > 0) {
+    for (const event of history) {
+      const stage = getStageIndex(event.status);
+      if (stage > highestStage) {
+        highestStage = stage;
+      }
+    }
+  }
+
+  return highestStage;
+};
+
+export const getStageTimestamp = (
+  stageIndex: number,
+  history: TrackingHistoryEvent[]
+): { date: string; full: string } | null => {
   if (!history || history.length === 0) return null;
 
   let matched: TrackingHistoryEvent | undefined;
+
   if (stageIndex === 0) {
-    // Shipment Created event
+    // Stage 0: Shipment Created / Booked / Manifested (earliest registered event)
     matched = [...history].reverse().find(e => {
-      const s = e.status.toLowerCase();
-      return s.includes('creat');
+      const norm = normalizeStatusKey(e.status);
+      return norm.includes('creat') || norm.includes('manifest') || norm.includes('book');
     }) || [...history].reverse()[0];
   } else if (stageIndex === 1) {
-    // Stage 1: Shipped / Picked up
+    // Stage 1: Shipped / Picked up (earliest pickup/shipped event)
     matched = [...history].reverse().find(e => {
-      const s = e.status.toLowerCase();
-      return s.includes('pick') || s.includes('shipped');
-    }) || [...history].reverse().find(e => {
-      const s = e.status.toLowerCase();
-      return !s.includes('creat');
+      const norm = normalizeStatusKey(e.status);
+      const noteNorm = (e.note || '').toLowerCase();
+      return norm.includes('pick') || norm.includes('shipped') || noteNorm.includes('picked up');
     });
   } else if (stageIndex === 2) {
-    // Stage 2: In Transit (Shipment Bagged, Received, Dispatched, In Transit, At Hub)
+    // Stage 2: In Transit / Vehicle Departed / Dispatched / At Hub (most recent departure/transit scan)
     matched = history.find(e => {
-      const s = e.status.toLowerCase();
-      const n = (e.note || '').toLowerCase();
-      return (
-        s.includes('transit') || 
-        s.includes('hub') || 
-        s.includes('dispatch') || 
-        s.includes('bag') || 
-        s.includes('receiv') || 
-        s.includes('pack') || 
-        s.includes('manifest')
-      ) && !s.includes('out for delivery') && !n.includes('out for delivery');
+      const norm = normalizeStatusKey(e.status);
+      const noteNorm = (e.note || '').toLowerCase();
+      const isTransitOrDeparted = (
+        norm.includes('transit') ||
+        norm.includes('depart') ||
+        norm.includes('dispatch') ||
+        norm.includes('hub') ||
+        norm.includes('bag') ||
+        norm.includes('receiv') ||
+        norm.includes('pack') ||
+        noteNorm.includes('depart')
+      );
+      const isNotTerminal = !norm.includes('out for delivery') && !norm.includes('deliver');
+      return isTransitOrDeparted && isNotTerminal;
     });
   } else if (stageIndex === 3) {
-    // Out for Delivery
+    // Stage 3: Out for Delivery
     matched = history.find(e => {
-      const s = e.status.toLowerCase();
-      const n = (e.note || '').toLowerCase();
-      return s.includes('out for delivery') || n.includes('out for delivery');
+      const norm = normalizeStatusKey(e.status);
+      const noteNorm = (e.note || '').toLowerCase();
+      return norm.includes('out for delivery') || noteNorm.includes('out for delivery');
     });
   } else if (stageIndex === 4) {
-    // Delivered (exclude 'out for delivery')
+    // Stage 4: Delivered
     matched = history.find(e => {
-      const s = e.status.toLowerCase();
-      return s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'));
+      const norm = normalizeStatusKey(e.status);
+      return norm === 'delivered' || (norm.includes('deliver') && !norm.includes('out for delivery'));
     });
   }
 
@@ -218,8 +285,8 @@ interface HorizontalShipmentTrackerProps {
 
 function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTrackerProps) {
   const isAir = isAirShipment(data);
-  const finalStageIdx = getStageIndex(data.current_status);
-  const isDelivered = data.current_status === 'Delivered' || finalStageIdx === 4;
+  const finalStageIdx = getActiveMilestoneStage(data.current_status, data.history);
+  const isDelivered = data.current_status?.toLowerCase().trim() === 'delivered' || finalStageIdx === 4;
   const destinationCity = data.receiver_city || data.destination || "Destination";
   const currentLocation = data.history[0]?.location || data.current_location || data.sender_city || "Current Facility";
 
@@ -549,7 +616,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
   };
 
   const isAir = data ? isAirShipment(data) : false;
-  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || getStageIndex(data.current_status) === 4) : false;
+  const isDelivered = data ? (data.current_status?.toLowerCase().trim() === 'delivered' || getActiveMilestoneStage(data.current_status, data.history) === 4) : false;
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
@@ -610,8 +677,17 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                        <h2 className="text-lg xs:text-xl sm:text-3xl font-black tracking-tight text-gray-900 truncate">{data.tracking_id}</h2>
                        <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0 shadow-2xs", getStatusColor(data.current_status))}>
                          {getStatusIcon(data.current_status, "w-3 h-3 sm:w-3.5 sm:h-3.5", isAir)}
-                         {data.current_status}
+                         {toTitleCase(data.current_status)}
                        </div>
+                       {(() => {
+                         const badgeStatus = formatCustomerHistoryStatus(data.current_status, data.customer_update || data.history[0]?.note);
+                         return (
+                           <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0 shadow-2xs", getStatusColor(badgeStatus))}>
+                             {getStatusIcon(badgeStatus, "w-3 h-3 sm:w-3.5 sm:h-3.5", isAir)}
+                             {badgeStatus}
+                           </div>
+                         );
+                       })()}
                      </div>
                   </div>
                   <div className="text-right bg-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-orange-200/80 shadow-xs shrink-0">
@@ -655,6 +731,11 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                         </div>
                         <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800">
                            {getDynamicMessage(data.current_status, data.sender_name, data.receiver_name)}
+                           {getDynamicMessage(
+                             formatCustomerHistoryStatus(data.current_status, data.customer_update || data.history[0]?.note),
+                             data.sender_name,
+                             data.receiver_name
+                           )}
                         </p>
                      </div>
 
@@ -711,15 +792,17 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                <div className="flow-root relative">
                  <ul role="list" className="-mb-4">
                    {(() => {
-                      const groupedHistory: { status: string; location: string; events: typeof data.history }[] = [];
+                      const groupedHistory: { status: string; displayStatus: string; location: string; events: typeof data.history }[] = [];
                       data.history.forEach((event) => {
+                        const displayStatus = formatCustomerHistoryStatus(event.status, event.note);
                         const lastGroup = groupedHistory[groupedHistory.length - 1];
-                        // Group events only if BOTH the status and location are identical
-                        if (lastGroup && lastGroup.status === event.status && lastGroup.location === event.location) {
+                        // Group events only if BOTH the displayStatus and location are identical
+                        if (lastGroup && lastGroup.displayStatus === displayStatus && lastGroup.location === event.location) {
                           lastGroup.events.push(event);
                         } else {
                           groupedHistory.push({
                             status: event.status,
+                            displayStatus,
                             location: event.location,
                             events: [event]
                           });
@@ -731,9 +814,19 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                         const isFirst = groupIdx === 0;
                         const groupKey = String(groupIdx);
                         const isHighlighted = highlightedEventId === groupKey;
-                        const eventsWithNotes = group.events.filter(
+                        const rawEventsWithNotes = group.events.filter(
                           (evt) => evt.note && evt.note.trim() && evt.note.trim().toLowerCase() !== 'status updated'
                         );
+                        // Deduplicate within the group if the exact same note and timestamp occur more than once
+                        const eventsWithNotes = rawEventsWithNotes.filter((evt, idx, arr) => {
+                          const evtTime = new Date(evt.occurred_at).getTime();
+                          const evtNote = (evt.note || '').trim().toLowerCase();
+                          return idx === arr.findIndex((other) => {
+                            const otherTime = new Date(other.occurred_at).getTime();
+                            const otherNote = (other.note || '').trim().toLowerCase();
+                            return otherNote === evtNote && Math.abs(evtTime - otherTime) <= 1000;
+                          });
+                        });
                         const latestEvent = group.events[0];
                         
                         return (
@@ -769,13 +862,13 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                                        ? "ring-white bg-orange-500 text-white shadow-xs shadow-orange-500/40" 
                                        : "ring-white bg-orange-500/85 text-white shadow-2xs"
                                  )}>
-                                   {getStatusIcon(group.status, "w-4 h-4 sm:w-4.5 sm:h-4.5", isAir)}
+                                   {getStatusIcon(group.displayStatus, "w-4 h-4 sm:w-4.5 sm:h-4.5", isAir)}
                                  </span>
                                </div>
                                <div className="flex min-w-0 flex-1 pt-0.5 flex-col">
                                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                                    <p className={cn("text-xs sm:text-sm md:text-base font-bold transition-colors duration-300", isHighlighted ? "text-orange-950" : isFirst ? "text-gray-900" : "text-gray-700")}>
-                                     {group.status}
+                                     {group.displayStatus}
                                    </p>
                                    {eventsWithNotes.length === 0 && latestEvent?.occurred_at && (
                                      <div className="text-right shrink-0 ml-auto flex flex-col items-end gap-0.5">
