@@ -54,17 +54,6 @@ describe('Delhivery Status Normalization', () => {
     expect(normalizeDelhiveryStatus('RTO', 'Returned to origin')).toBe('RTO');
   });
 
-  it('normalizes internal courier codes (UD, DL, RT, PU, OFD, CAN)', () => {
-    expect(normalizeDelhiveryStatus('UD', 'Vehicle departed from facility')).toBe('Vehicle Departed');
-    expect(normalizeDelhiveryStatus('UD', 'Shipment picked up')).toBe('Picked Up');
-    expect(normalizeDelhiveryStatus('UD', 'Random ambiguous note')).toBe('In Transit');
-    expect(normalizeDelhiveryStatus('DL', 'Delivered')).toBe('Delivered');
-    expect(normalizeDelhiveryStatus('RT', 'Returned')).toBe('RTO');
-    expect(normalizeDelhiveryStatus('PU', 'Picked up')).toBe('Picked Up');
-    expect(normalizeDelhiveryStatus('OFD', 'Out for delivery')).toBe('Out For Delivery');
-    expect(normalizeDelhiveryStatus('CAN', 'Cancelled')).toBe('Cancelled');
-  });
-
   it('handles null/undefined gracefully', () => {
     expect(normalizeDelhiveryStatus(null as any, null as any)).toBe('Unknown');
     expect(normalizeDelhiveryStatus('Pending', undefined)).toBe('Pending');

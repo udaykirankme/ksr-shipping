@@ -1,5 +1,3 @@
-import { formatCustomerHistoryStatus } from '../format';
-
 export interface IncomingTrackingEvent {
   status: string;
   location?: string | null;
@@ -34,13 +32,9 @@ export function sanitizeCustomerHistoryNote(note: string | null | undefined): st
 }
 
 /**
- * Prepares history for customer display:
- * 1. Resolves internal courier status codes (e.g. "UD") and legacy all-caps statuses (e.g. "MANIFESTED")
- *    into clean, Title Case human-readable statuses using formatCustomerHistoryStatus.
- * 2. Cleans internal operational prefixes from notes.
- * 3. Deduplicates identical events (same resolved status, same location, same note, timestamp <= 1000ms),
- *    protecting against duplicate webhook/sync ingestion.
- * 4. Preserves distinct scans (e.g. multiple package pickup scans occurring seconds apart).
+ * Prepares history for customer display by removing internal prefixes and
+ * deduplicating exact identical events occurring at the exact same timestamp.
+ * Preserves all distinct events (different timestamp, note, location, or status).
  */
 export function sanitizeHistoryForCustomer<T extends { status: string; location?: string | null; note?: string | null; occurred_at: Date | string }>(
   history: T[]
@@ -48,30 +42,17 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
   const result: T[] = [];
   for (const item of history) {
     const cleanNote = sanitizeCustomerHistoryNote(item.note);
-    const resolvedStatus = formatCustomerHistoryStatus(item.status, cleanNote);
-    const itemTime = new Date(item.occurred_at).getTime();
-    const itemLoc = (item.location || '').trim().toLowerCase();
-    const itemNoteNorm = cleanNote.toLowerCase();
+    const last = result[result.length - 1];
 
-    // Check if an identical event has already been recorded
-    const isDuplicate = result.some(prev => {
-      const prevTime = new Date(prev.occurred_at).getTime();
-      const prevLoc = (prev.location || '').trim().toLowerCase();
-      const prevNoteNorm = (prev.note || '').trim().toLowerCase();
-      const prevStatusNorm = (prev.status || '').trim().toLowerCase();
-
-      return (
-        prevStatusNorm === resolvedStatus.trim().toLowerCase() &&
-        prevLoc === itemLoc &&
-        prevNoteNorm === itemNoteNorm &&
-        Math.abs(prevTime - itemTime) <= 1000
-      );
-    });
+    const isDuplicate = last &&
+      (last.status || '').trim().toLowerCase() === (item.status || '').trim().toLowerCase() &&
+      (last.location || '').trim().toLowerCase() === (item.location || '').trim().toLowerCase() &&
+      new Date(last.occurred_at).getTime() === new Date(item.occurred_at).getTime() &&
+      (last.note || '').trim().toLowerCase() === cleanNote.toLowerCase();
 
     if (!isDuplicate) {
       result.push({
         ...item,
-        status: resolvedStatus,
         note: cleanNote || null
       });
     }
@@ -97,14 +78,11 @@ export function isDuplicateEvent(
   }
 
   // 2. Deterministic composite identity fallback
-  const diffMs = Math.abs(existingEvent.occurred_at.getTime() - incomingEvent.occurred_at.getTime());
-
-  // Check if either timestamp was truncated to the exact minute (:00.000)
-  const isTruncatedMinute = (d: Date) => d.getSeconds() === 0 && d.getMilliseconds() === 0;
-  const eitherTruncated = isTruncatedMinute(existingEvent.occurred_at) || isTruncatedMinute(incomingEvent.occurred_at);
-
-  const timeMatches = diffMs <= 1000 || (eitherTruncated && diffMs < 60000);
+  const timeMatches = Math.abs(existingEvent.occurred_at.getTime() - incomingEvent.occurred_at.getTime()) < 60000;
   if (!timeMatches) return false;
+
+  const statusMatches = (existingEvent.status || '').trim().toLowerCase() === (incomingEvent.status || '').trim().toLowerCase();
+  if (!statusMatches) return false;
 
   const existingLoc = (existingEvent.location || '').trim().toLowerCase();
   const incomingLoc = (incomingEvent.location || '').trim().toLowerCase();
@@ -113,20 +91,9 @@ export function isDuplicateEvent(
   const normalizedExistingNote = normalizeNoteForComparison(existingEvent.note);
   const normalizedIncomingNote = normalizeNoteForComparison(incomingEvent.note || incomingEvent.raw_status);
 
+  // Both notes are empty (or were just prefixes), rely on time/status/loc
+  if (!normalizedExistingNote && !normalizedIncomingNote) return true;
+
   // If the core instructions differ, they are distinctly different events (e.g. "Added to Bag" vs "Bag Added To Trip")
-  if (normalizedExistingNote !== normalizedIncomingNote) {
-    if (normalizedExistingNote || normalizedIncomingNote) {
-      return false;
-    }
-  }
-
-  // Check status matching: direct equality or resolved human-readable match (e.g. "UD" vs "Vehicle Departed")
-  const existingStatus = (existingEvent.status || '').trim().toLowerCase();
-  const incomingStatus = (incomingEvent.status || '').trim().toLowerCase();
-  if (existingStatus === incomingStatus) return true;
-
-  const existingResolved = formatCustomerHistoryStatus(existingEvent.status, existingEvent.note).trim().toLowerCase();
-  const incomingResolved = formatCustomerHistoryStatus(incomingEvent.status, incomingEvent.note || incomingEvent.raw_status).trim().toLowerCase();
-
-  return existingResolved === incomingResolved;
+  return normalizedExistingNote === normalizedIncomingNote;
 }
