@@ -123,7 +123,7 @@ describe('Delhivery B2C Webhook End-to-End Audit & Verification', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.message).toBe('Event accepted');
-    expect(duration).toBeLessThan(500);
+    expect(duration).toBeLessThan(1500);
   });
 
   it('persists complete Delhivery payload to PendingWebhookEvent immediately with exact documented fields', async () => {

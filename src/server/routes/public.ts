@@ -6,6 +6,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { pushService } from '../push-service';
 import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from '@/lib/courier/identity';
+import { normalizeOperationalStatus } from '@/lib/courier/normalization';
 
 const router = Router();
 
@@ -62,6 +63,7 @@ router.post('/track', apiLimiter, async (req, res) => {
         receiver_city: true,
         booked_date: true,
         medium: true,
+        num_packages: true,
         current_location: true,
         customer_update: true,
         history: {
@@ -85,11 +87,13 @@ router.post('/track', apiLimiter, async (req, res) => {
 
     const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
     const cleanedCustomerUpdate = shipment.customer_update ? sanitizeCustomerHistoryNote(shipment.customer_update) : null;
+    const normalizedCurrentStatus = normalizeOperationalStatus(shipment.current_status, shipment.customer_update);
 
     return res.json({
       success: true,
       data: {
         ...shipment,
+        current_status: normalizedCurrentStatus,
         customer_update: cleanedCustomerUpdate,
         history: cleanedHistory,
       },

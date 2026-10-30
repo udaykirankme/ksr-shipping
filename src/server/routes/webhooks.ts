@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@/lib/db';
 import { parseBusinessDateTime } from '@/lib/datetime';
-import { isDuplicateEvent } from '@/lib/courier/identity';
+import { isDuplicateEvent, sanitizeCustomerHistoryNote, extractPackageIdentifier } from '@/lib/courier/identity';
 import { normalizeDelhiveryStatus } from '@/lib/courier/normalization';
 import { getStatusRank } from '@/lib/courier/types';
 import { registerBackgroundTask } from '@/lib/background-tasks';
@@ -159,6 +159,7 @@ export const processWebhookEventCore = async (
     });
 
     const finalNote = eventCustomerUpdate?.trim() || eventStatus?.trim() || 'Status updated';
+    const packageId = extractPackageIdentifier(eventCustomerUpdate) || (payload?.wbn ? String(payload.wbn).trim() : (payload?.package_id ? String(payload.package_id).trim() : undefined));
 
     const incomingEventForDedup = {
       status: normalizedStatus,
@@ -166,6 +167,7 @@ export const processWebhookEventCore = async (
       occurred_at: occurredAt,
       note: finalNote,
       raw_status: eventStatus,
+      package_id: packageId,
     };
 
     const duplicateCheck = potentialDuplicates.find(existing =>
@@ -223,7 +225,10 @@ export const processWebhookEventCore = async (
         updateData.current_location = eventLocation;
       }
       if (eventCustomerUpdate && eventCustomerUpdate.trim() !== '') {
-        updateData.customer_update = eventCustomerUpdate.trim();
+        const cleanUpdate = sanitizeCustomerHistoryNote(eventCustomerUpdate).trim();
+        if (cleanUpdate) {
+          updateData.customer_update = cleanUpdate;
+        }
       }
     }
 
@@ -428,7 +433,9 @@ router.post('/delhivery/b2b', verifyWebhookAuth('b2b'), async (req: Request, res
     const eventLocation = payload.location;
     // B2B provides a unix timestamp or formatted string, handle safely
     const eventTimeStr = payload.timestamp ? (typeof payload.timestamp === 'number' ? new Date(payload.timestamp).toISOString() : payload.timestamp) : null;
-    const eventCustomerUpdate = payload.shipment_remark;
+    const b2bPkgId = payload.wbn ? String(payload.wbn).trim() : (payload.package_id ? String(payload.package_id).trim() : undefined);
+    const rawRemark = payload.shipment_remark || '';
+    const eventCustomerUpdate = b2bPkgId ? `[PKG:${b2bPkgId}] ${rawRemark}`.trim() : rawRemark;
 
     if (!eventStatus) {
        console.warn(`[Webhook B2B] Missing Status in payload for LR ${lrnum}.`);

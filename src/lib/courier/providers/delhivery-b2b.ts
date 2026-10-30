@@ -177,17 +177,60 @@ export class DelhiveryB2BProvider implements CourierProvider {
         estimated_delivery = d;
       }
     }
-    // We yield a single event for the sync engine because the API only gives the latest state.
-    // Sync logic will deduplicate based on time/status/location.
-    const events: TrackingEvent[] = [
-      {
+    // Generate events for each package scan present in data.wbns
+    const events: TrackingEvent[] = [];
+    for (const wbnItem of data.wbns) {
+      if (!wbnItem) continue;
+      const wbnStatusType = (wbnItem.StatusType || wbnItem.status_type || '').trim();
+      const wbnRawStatus = (
+        (wbnItem.Status && wbnItem.Status !== 'UD' && wbnItem.Status !== wbnStatusType ? wbnItem.Status : '') ||
+        (wbnItem.status && wbnItem.status !== 'UD' && wbnItem.status !== wbnStatusType ? wbnItem.status : '') ||
+        wbnItem.Status ||
+        wbnItem.status ||
+        rawStatus
+      ).trim();
+
+      let itemNormalized = normalizeDelhiveryStatus(wbnRawStatus, wbnItem.scan_remark || latest.scan_remark);
+      if (typeof itemNormalized === 'string' && itemNormalized.toUpperCase() === 'UD') {
+        itemNormalized = normalizeDelhiveryStatus('In Transit', wbnItem.scan_remark || latest.scan_remark);
+        if (typeof itemNormalized === 'string' && itemNormalized.toUpperCase() === 'UD') {
+          itemNormalized = 'In Transit';
+        }
+      }
+
+      let itemOccurredAt = occurred_at;
+      if (wbnItem.scan_timestamp) {
+        let ts = wbnItem.scan_timestamp;
+        if (typeof ts === 'string' && !/(Z|[+-]\d{2}:?\d{2})$/i.test(ts)) {
+          ts += '+05:30';
+        }
+        const parsed = new Date(ts);
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1970) {
+          itemOccurredAt = parsed;
+        }
+      }
+
+      const cleanRemark = wbnItem.scan_remark || latest.scan_remark || '';
+
+      events.push({
+        status: (itemNormalized as KSRTrackingStatus) || current_status,
+        location: wbnItem.location || current_location,
+        occurred_at: itemOccurredAt,
+        note: cleanRemark,
+        raw_status: wbnRawStatus.toUpperCase() !== 'UD' ? wbnRawStatus : current_status,
+        provider_event_id: wbnItem.wbn || undefined
+      });
+    }
+
+    if (events.length === 0) {
+      events.push({
         status: current_status,
         location: current_location,
         occurred_at,
         note: latest.scan_remark || '',
         raw_status: rawStatus.toUpperCase() !== 'UD' ? rawStatus : current_status
-      }
-    ];
+      });
+    }
 
     return {
       current_status,
