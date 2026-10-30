@@ -15,7 +15,7 @@ export function getCourierProvider(serviceName: string | null | undefined): Cour
     return new DelhiveryB2BProvider();
   }
 
-  if (normalizedService === 'delhiveryb2c') {
+  if (normalizedService === 'delhiveryb2c' || normalizedService === 'delhivery') {
     return new DelhiveryB2CProvider();
   }
 

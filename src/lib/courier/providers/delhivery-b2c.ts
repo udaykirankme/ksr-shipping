@@ -3,16 +3,21 @@ import { normalizeDelhiveryStatus } from '../normalization';
 
 export class DelhiveryB2CProvider implements CourierProvider {
   async trackShipment(awb: string): Promise<TrackingResponse> {
-    const apiKey = process.env.DELHIVERY_B2C_API_KEY;
-    if (!apiKey) {
+    const rawApiKey = process.env.DELHIVERY_B2C_API_KEY;
+    if (!rawApiKey) {
       throw new Error("DELHIVERY_B2C_API_KEY environment variable is not configured.");
+    }
+    const apiKey = rawApiKey.trim().replace(/^["']|["']$/g, '').trim();
+    if (!apiKey) {
+      throw new Error("DELHIVERY_B2C_API_KEY environment variable is empty.");
     }
 
     if (!awb || awb.trim() === '') {
       throw new Error("Delhivery B2C requires a valid AWB Number.");
     }
 
-    const url = `https://track.delhivery.com/api/v1/packages/json/?waybill=${encodeURIComponent(awb.trim())}`;
+    const baseUrl = process.env.DELHIVERY_B2C_API_URL || 'https://track.delhivery.com/api/v1/packages/json/';
+    const url = `${baseUrl.replace(/\/+$/, '')}/?waybill=${encodeURIComponent(awb.trim())}`;
     
     let response: Response;
     try {
@@ -69,8 +74,9 @@ export class DelhiveryB2CProvider implements CourierProvider {
         if (!scan || !scan.Scan) continue;
         
         let occurred_at = new Date();
-        if (scan.ScanDateTime) {
-          let dt = scan.ScanDateTime;
+        const rawDate = scan.ScanDateTime || scan.StatusDateTime;
+        if (rawDate) {
+          let dt = rawDate;
           if (!dt.includes('Z') && !dt.includes('+')) {
             dt += '+05:30';
           }
@@ -119,7 +125,10 @@ export class DelhiveryB2CProvider implements CourierProvider {
     // though the DB will sort by occurred_at desc for display anyway.
     events.sort((a, b) => a.occurred_at.getTime() - b.occurred_at.getTime());
 
-    const current_status = shipmentInfo.Status?.Status || events[events.length - 1]?.status || 'Unknown';
+    const rawCurrentStatus = shipmentInfo.Status?.Status;
+    const current_status = (rawCurrentStatus
+      ? (normalizeDelhiveryStatus(rawCurrentStatus, shipmentInfo.Status?.Instructions) as KSRTrackingStatus)
+      : events[events.length - 1]?.status) || 'In Transit';
     const current_location = shipmentInfo.Status?.StatusLocation || events[events.length - 1]?.location || '';
     
     let estimated_delivery: Date | null = null;

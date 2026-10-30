@@ -215,6 +215,8 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
   const canSubmitStatusUpdate = isStatusFormComplete(statusUpdate);
   const canShareStatusUpdate = shareableStatus !== null;
+  const normalizedCourierService = (shipment.service || '').toLowerCase().replace(/[\s\-_]+/g, '');
+  const canSyncCourierTracking = normalizedCourierService === 'delhiveryb2b' || normalizedCourierService === 'delhiveryb2c' || normalizedCourierService === 'delhivery';
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -542,6 +544,10 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
   const handleSyncTracking = async () => {
     if (syncing) return;
+    if (!canSyncCourierTracking) {
+      setError('Sync tracking is only supported for Delhivery B2B and Delhivery B2C shipments.');
+      return;
+    }
     if (!shipment.official_tracking_id) {
       setError('Cannot sync tracking: No official tracking ID (AWB/LR) assigned to this shipment.');
       return;
@@ -672,16 +678,18 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-          <button 
-            type="button"
-            onClick={handleSyncTracking}
-            disabled={syncing || !shipment.official_tracking_id}
-            className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            title={shipment.official_tracking_id ? "Sync tracking events from courier partner" : "No official tracking ID assigned to sync"}
-          >
-            <RefreshCw className={`w-4 h-4 text-orange-500 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Syncing...' : 'Sync Tracking'}</span>
-          </button>
+          {canSyncCourierTracking && (
+            <button 
+              type="button"
+              onClick={handleSyncTracking}
+              disabled={syncing || !shipment.official_tracking_id}
+              className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              title={shipment.official_tracking_id ? "Sync tracking events from courier partner" : "No official tracking ID assigned to sync"}
+            >
+              <RefreshCw className={`w-4 h-4 text-orange-500 ${syncing ? 'animate-spin' : ''}`} />
+              <span>{syncing ? 'Syncing...' : 'Sync Tracking'}</span>
+            </button>
+          )}
           <button onClick={refreshData} className="p-2 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200" title="Refresh">
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
