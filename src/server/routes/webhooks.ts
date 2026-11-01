@@ -134,7 +134,7 @@ export const processWebhookEventCore = async (
     // 1. Load the shipment using the official tracking ID (AWB / LR)
     const shipment = await prisma.shipment.findUnique({
       where: { official_tracking_id: officialTrackingId },
-      select: { id: true, service: true, current_status: true }
+      select: { id: true, service: true, current_status: true, customer_update: true }
     });
 
     if (!shipment) {
@@ -199,8 +199,8 @@ export const processWebhookEventCore = async (
       }
     };
 
-    const currentRank = getStatusRank(shipment.current_status);
-    const newRank = getStatusRank(normalizedStatus);
+    const currentRank = getStatusRank(shipment.current_status, shipment.customer_update);
+    const newRank = getStatusRank(normalizedStatus, finalNote);
 
     let shouldUpdateStatus = false;
     if (newRank > currentRank) {

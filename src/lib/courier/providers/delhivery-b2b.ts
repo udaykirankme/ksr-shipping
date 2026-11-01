@@ -138,18 +138,34 @@ export class DelhiveryB2BProvider implements CourierProvider {
     }
 
     // Extract fields using established normalization logic.
-    // If rawStatus is a bare status-type code (e.g. "UD") with no human-readable status provided,
-    // evaluate via established normalizeDelhiveryStatus mappings; if still "UD", safely default
-    // to generic 'In Transit' rather than inventing a milestone from ambiguous remark text.
     let normalized = normalizeDelhiveryStatus(rawStatus, latest.scan_remark);
     if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
-      normalized = normalizeDelhiveryStatus('In Transit', latest.scan_remark);
-      if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
+      const remarkLower = (latest.scan_remark || '').toLowerCase();
+      if (
+        remarkLower.includes('manifest uploaded') ||
+        remarkLower.includes('ready to ship') ||
+        (remarkLower.includes('manifest') && !remarkLower.includes('error'))
+      ) {
+        normalized = 'Manifested';
+      } else if (remarkLower.includes('pick') || remarkLower.includes('collected')) {
+        normalized = 'Picked Up';
+      } else if (remarkLower.includes('depart')) {
+        normalized = 'Vehicle Departed';
+      } else if (remarkLower.includes('out for delivery') || remarkLower.includes('ofd')) {
+        normalized = 'Out For Delivery';
+      } else if (
+        (remarkLower === 'delivered' || remarkLower.includes('delivered successfully') || remarkLower.includes('successfully delivered')) &&
+        !remarkLower.includes('attempt') &&
+        !remarkLower.includes('failed') &&
+        !remarkLower.includes('undeliver')
+      ) {
+        normalized = 'Delivered';
+      } else {
         normalized = 'In Transit';
       }
     }
 
-    const current_status = (normalized as KSRTrackingStatus) || 'In Transit';
+    const current_status = (normalized as KSRTrackingStatus) || 'Shipment Created';
     const current_location = latest.location || '';
     
     // Attempt to parse the timestamp safely. If missing, fallback to current time since it's the latest known state.
@@ -177,6 +193,7 @@ export class DelhiveryB2BProvider implements CourierProvider {
         estimated_delivery = d;
       }
     }
+
     // Generate events for each package scan present in data.wbns
     const events: TrackingEvent[] = [];
     for (const wbnItem of data.wbns) {
@@ -192,8 +209,27 @@ export class DelhiveryB2BProvider implements CourierProvider {
 
       let itemNormalized = normalizeDelhiveryStatus(wbnRawStatus, wbnItem.scan_remark || latest.scan_remark);
       if (typeof itemNormalized === 'string' && itemNormalized.toUpperCase() === 'UD') {
-        itemNormalized = normalizeDelhiveryStatus('In Transit', wbnItem.scan_remark || latest.scan_remark);
-        if (typeof itemNormalized === 'string' && itemNormalized.toUpperCase() === 'UD') {
+        const itemRemarkLower = (wbnItem.scan_remark || latest.scan_remark || '').toLowerCase();
+        if (
+          itemRemarkLower.includes('manifest uploaded') ||
+          itemRemarkLower.includes('ready to ship') ||
+          (itemRemarkLower.includes('manifest') && !itemRemarkLower.includes('error'))
+        ) {
+          itemNormalized = 'Manifested';
+        } else if (itemRemarkLower.includes('pick') || itemRemarkLower.includes('collected')) {
+          itemNormalized = 'Picked Up';
+        } else if (itemRemarkLower.includes('depart')) {
+          itemNormalized = 'Vehicle Departed';
+        } else if (itemRemarkLower.includes('out for delivery') || itemRemarkLower.includes('ofd')) {
+          itemNormalized = 'Out For Delivery';
+        } else if (
+          (itemRemarkLower === 'delivered' || itemRemarkLower.includes('delivered successfully') || itemRemarkLower.includes('successfully delivered')) &&
+          !itemRemarkLower.includes('attempt') &&
+          !itemRemarkLower.includes('failed') &&
+          !itemRemarkLower.includes('undeliver')
+        ) {
+          itemNormalized = 'Delivered';
+        } else {
           itemNormalized = 'In Transit';
         }
       }

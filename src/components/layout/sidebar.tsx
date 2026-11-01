@@ -225,13 +225,23 @@ export function Sidebar({ mobileOpen = false, onMobileClose, desktopCollapsed = 
     }
     fetchCounts();
     
-    const intervalId = setInterval(() => {
-      if (isMounted.current) fetchCounts();
-    }, 15000);
+    const pollCounts = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && isMounted.current) {
+        fetchCounts();
+      }
+    };
+    const intervalId = setInterval(pollCounts, 45000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        pollCounts();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
     
     return () => {
       isMounted.current = false;
       clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

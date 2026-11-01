@@ -2,8 +2,21 @@
 
 import { motion } from "framer-motion";
 import { TrackingWidget } from "@/components/TrackingWidget";
-import { WhyChooseCarousel } from "@/components/WhyChooseCarousel";
-import { WhatWeShipCarousel } from "@/components/WhatWeShipCarousel";
+import dynamic from "next/dynamic";
+
+const WhyChooseCarousel = dynamic(
+  () => import("@/components/WhyChooseCarousel").then((m) => m.WhyChooseCarousel),
+  {
+    loading: () => <section className="py-20 bg-orange-50 min-h-[420px]" />,
+  }
+);
+
+const WhatWeShipCarousel = dynamic(
+  () => import("@/components/WhatWeShipCarousel").then((m) => m.WhatWeShipCarousel),
+  {
+    loading: () => <section className="py-24 bg-gray-50 min-h-[460px]" />,
+  }
+);
 import { business } from "@/lib/config";
 import Image from "next/image";
 import Link from "next/link";

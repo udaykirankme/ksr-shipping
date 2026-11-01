@@ -95,8 +95,8 @@ export async function syncTracking(shipmentId: string) {
     if (!highestAchievedEvent) {
       highestAchievedEvent = event;
     } else {
-      const currentRank = getStatusRank(highestAchievedEvent.status);
-      const newRank = getStatusRank(event.status);
+      const currentRank = getStatusRank(highestAchievedEvent.status, highestAchievedEvent.note);
+      const newRank = getStatusRank(event.status, event.note);
 
       if (newRank > currentRank) {
         highestAchievedEvent = event;
@@ -116,8 +116,8 @@ export async function syncTracking(shipmentId: string) {
   }
 
   // Check if we need to update the status (highest achieved)
-  const existingRank = getStatusRank(shipment.current_status);
-  const highestRank = highestAchievedEvent ? getStatusRank(highestAchievedEvent.status) : 0;
+  const existingRank = getStatusRank(shipment.current_status, shipment.customer_update);
+  const highestRank = highestAchievedEvent ? getStatusRank(highestAchievedEvent.status, highestAchievedEvent.note) : 0;
 
   if (highestAchievedEvent && (highestRank > existingRank || (highestRank === existingRank && highestAchievedEvent.status !== shipment.current_status))) {
     updateData.current_status = highestAchievedEvent.status;

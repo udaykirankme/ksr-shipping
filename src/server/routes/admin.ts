@@ -1041,6 +1041,22 @@ router.get('/quotations', async (req, res) => {
     const [items, total] = await Promise.all([
       prisma.quotationRequest.findMany({
         where,
+        select: {
+          id: true,
+          quote_id: true,
+          name: true,
+          phone: true,
+          email: true,
+          pickup_location: true,
+          drop_location: true,
+          package_type: true,
+          approx_weight: true,
+          urgency: true,
+          status: true,
+          is_starred: true,
+          opened_at: true,
+          created_at: true,
+        },
         orderBy: { created_at: 'desc' },
         skip,
         take: Number(limit)
@@ -1424,6 +1440,18 @@ router.get('/contact-messages', async (req, res) => {
     const [items, total] = await Promise.all([
       prisma.contactSubmission.findMany({
         where,
+        select: {
+          id: true,
+          contact_id: true,
+          name: true,
+          email: true,
+          phone: true,
+          subject: true,
+          responded: true,
+          is_starred: true,
+          opened_at: true,
+          created_at: true,
+        },
         orderBy: { created_at: 'desc' },
         skip,
         take: Number(limit)
@@ -1925,7 +1953,7 @@ router.get('/reports/analytics', async (req, res) => {
     const shipmentWhere = shipmentDateWhere ? { booked_date: shipmentDateWhere } : {};
     const standardWhere = standardDateWhere ? { created_at: standardDateWhere } : {};
 
-    // 1. Shipment Analytics
+    // Unified Parallel Analytics Queries (Shipment, Quote, Contact, Notification)
     const [
       totalShipments,
       shipmentsWithProfit,
@@ -1933,7 +1961,15 @@ router.get('/reports/analytics', async (req, res) => {
       shipmentCourierGroup,
       shipmentServiceGroup,
       shipmentTypeGroup,
+      totalQuotes,
+      totalContacts,
+      contactsByStatus,
+      contactsTimeSeriesRaw,
+      totalNotifications,
+      notificationsByType,
+      unreadNotifications,
     ] = await Promise.all([
+      // 1. Shipment Analytics
       prisma.shipment.count({ where: shipmentWhere }),
       prisma.shipment.findMany({ 
         where: { ...shipmentWhere, is_active: true },
@@ -1942,7 +1978,17 @@ router.get('/reports/analytics', async (req, res) => {
       prisma.shipment.groupBy({ by: ['current_status'], _count: { _all: true }, where: shipmentWhere }),
       prisma.shipment.groupBy({ by: ['courier'], _count: { _all: true }, where: shipmentWhere }),
       prisma.shipment.groupBy({ by: ['service'], _count: { _all: true }, where: shipmentWhere }),
-      prisma.shipment.groupBy({ by: ['tracking_type'], _count: { _all: true }, where: shipmentWhere })
+      prisma.shipment.groupBy({ by: ['tracking_type'], _count: { _all: true }, where: shipmentWhere }),
+      // 2. Quote Analytics
+      prisma.quotationRequest.count({ where: standardWhere }),
+      // 3. Contact Analytics
+      prisma.contactSubmission.count({ where: standardWhere }),
+      prisma.contactSubmission.groupBy({ by: ['responded'], _count: { _all: true }, where: standardWhere }),
+      prisma.contactSubmission.findMany({ where: standardWhere, select: { created_at: true } }),
+      // 4. Notification Analytics
+      prisma.notification.count({ where: standardWhere }),
+      prisma.notification.groupBy({ by: ['type'], _count: { _all: true }, where: standardWhere }),
+      prisma.notification.count({ where: { ...standardWhere, read_at: null } }),
     ]);
 
     const totalRevenue = shipmentsWithProfit.reduce((acc: number, s: { received_amount: number | null; profit: number | null; }) => acc + (s.received_amount || 0), 0);
@@ -1962,24 +2008,6 @@ router.get('/reports/analytics', async (req, res) => {
       ...data
     })).sort((a, b) => a.date.localeCompare(b.date));
 
-    // 2. Quote Analytics
-    const [
-      totalQuotes
-    ] = await Promise.all([
-      prisma.quotationRequest.count({ where: standardWhere })
-    ]);
-
-    // 3. Contact Analytics
-    const [
-      totalContacts,
-      contactsByStatus,
-      contactsTimeSeriesRaw
-    ] = await Promise.all([
-      prisma.contactSubmission.count({ where: standardWhere }),
-      prisma.contactSubmission.groupBy({ by: ['responded'], _count: { _all: true }, where: standardWhere }),
-      prisma.contactSubmission.findMany({ where: standardWhere, select: { created_at: true } })
-    ]);
-
     const contactStatusCounts = {
       responded: contactsByStatus.find((c: { responded: boolean; _count: { _all: number; } }) => c.responded)?._count._all || 0,
       pending: contactsByStatus.find((c: { responded: boolean; _count: { _all: number; } }) => !c.responded)?._count._all || 0
@@ -1992,17 +2020,6 @@ router.get('/reports/analytics', async (req, res) => {
     });
 
     const contactsTimeSeries = Object.entries(contactsByDate).map(([date, total]) => ({ date, total })).sort((a, b) => a.date.localeCompare(b.date));
-
-    // 4. Notification Analytics
-    const [
-      totalNotifications,
-      notificationsByType,
-      unreadNotifications
-    ] = await Promise.all([
-      prisma.notification.count({ where: standardWhere }),
-      prisma.notification.groupBy({ by: ['type'], _count: { _all: true }, where: standardWhere }),
-      prisma.notification.count({ where: { ...standardWhere, read_at: null } })
-    ]);
 
     res.json({ success: true, data: {
       shipments: {

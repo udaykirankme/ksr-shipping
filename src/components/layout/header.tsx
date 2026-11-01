@@ -76,12 +76,24 @@ export function Header({ onMenuClick, mobileSidebarOpen = false, onDesktopMenuCl
     }
   };
 
-  // Poll unread count periodically for fast response
+  // Poll unread count periodically only when tab is visible
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (isMounted.current) fetchUnreadCount();
-    }, 15000);
-    return () => clearInterval(interval);
+    const poll = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && isMounted.current) {
+        fetchUnreadCount();
+      }
+    };
+    const interval = setInterval(poll, 45000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        poll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   useEffect(() => {

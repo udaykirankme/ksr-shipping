@@ -32,21 +32,55 @@ export interface NotificationFilters {
   endDate?: string;
 }
 
+interface UnreadCounts {
+  unreadCount: number;
+  unreadQuotes: number;
+  unreadContacts: number;
+}
+
+let cachedUnreadCounts: UnreadCounts | null = null;
+let lastUnreadFetchTime = 0;
+let inFlightUnreadPromise: Promise<UnreadCounts> | null = null;
+const UNREAD_CACHE_TTL_MS = 10000; // 10 seconds cache to deduplicate simultaneous requests
+
 export const notificationService = {
-  async getUnreadCounts(): Promise<{ unreadCount: number, unreadQuotes: number, unreadContacts: number }> {
-    try {
-      const data = await apiFetch(`${API_BASE}/notifications/unread-count`, {
-        credentials: 'include',
-      });
-      const resData = data as any;
-      return {
-        unreadCount: resData?.unreadCount ?? 0,
-        unreadQuotes: resData?.unreadQuotes ?? 0,
-        unreadContacts: resData?.unreadContacts ?? 0,
-      };
-    } catch {
-      return { unreadCount: 0, unreadQuotes: 0, unreadContacts: 0 };
+  invalidateCache() {
+    cachedUnreadCounts = null;
+    lastUnreadFetchTime = 0;
+  },
+
+  async getUnreadCounts(): Promise<UnreadCounts> {
+    const now = Date.now();
+    if (cachedUnreadCounts && now - lastUnreadFetchTime < UNREAD_CACHE_TTL_MS) {
+      return cachedUnreadCounts;
     }
+
+    if (inFlightUnreadPromise) {
+      return inFlightUnreadPromise;
+    }
+
+    inFlightUnreadPromise = (async () => {
+      try {
+        const data = await apiFetch(`${API_BASE}/notifications/unread-count`, {
+          credentials: 'include',
+        });
+        const resData = data as any;
+        const result: UnreadCounts = {
+          unreadCount: resData?.unreadCount ?? 0,
+          unreadQuotes: resData?.unreadQuotes ?? 0,
+          unreadContacts: resData?.unreadContacts ?? 0,
+        };
+        cachedUnreadCounts = result;
+        lastUnreadFetchTime = Date.now();
+        return result;
+      } catch {
+        return cachedUnreadCounts || { unreadCount: 0, unreadQuotes: 0, unreadContacts: 0 };
+      } finally {
+        inFlightUnreadPromise = null;
+      }
+    })();
+
+    return inFlightUnreadPromise;
   },
 
   async getNotifications(filters?: NotificationFilters): Promise<NotificationResponse> {
@@ -78,6 +112,7 @@ export const notificationService = {
   },
 
   async markAsRead(id: string) {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/${id}/read`, {
       method: 'PATCH',
       credentials: 'include'
@@ -85,6 +120,7 @@ export const notificationService = {
   },
 
   async markAllAsRead() {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/read-all`, {
       method: 'PATCH',
       credentials: 'include'
@@ -92,6 +128,7 @@ export const notificationService = {
   },
 
   async markBulkAsRead(ids: string[]) {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/read-bulk`, {
       method: 'PATCH',
       credentials: 'include',
@@ -110,6 +147,7 @@ export const notificationService = {
   },
   
   async deleteNotification(id: string) {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/${id}`, {
       method: 'DELETE',
       credentials: 'include'
@@ -117,6 +155,7 @@ export const notificationService = {
   },
 
   async deleteBulk(ids: string[]) {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/delete-bulk`, {
       method: 'POST',
       credentials: 'include',
@@ -126,6 +165,7 @@ export const notificationService = {
   },
 
   async deleteAllRead() {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/read-all`, {
       method: 'DELETE',
       credentials: 'include'
@@ -133,6 +173,7 @@ export const notificationService = {
   },
 
   async cleanupOld() {
+    this.invalidateCache();
     return apiFetch(`${API_BASE}/notifications/cleanup`, {
       method: 'DELETE',
       credentials: 'include'

@@ -3,21 +3,21 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrackingWidget } from "@/components/TrackingWidget";
-import { 
-  Check, 
-  CheckCircle2, 
-  Clock, 
-  MapPin, 
-  Box, 
-  Hand, 
-  Truck, 
-  Plane, 
-  User, 
-  XCircle, 
-  RotateCcw, 
-  ArrowRight, 
-  PackageSearch, 
-  Package, 
+import {
+  Check,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Box,
+  Hand,
+  Truck,
+  Plane,
+  User,
+  XCircle,
+  RotateCcw,
+  ArrowRight,
+  PackageSearch,
+  Package,
   Inbox,
   Warehouse,
   Info,
@@ -30,7 +30,7 @@ import Link from "next/link";
 import { business } from "@/lib/config/business";
 import { aggregateTrackingHistory } from "@/lib/courier/aggregation";
 import { isInternalCourierCode } from "@/lib/courier/identity";
-import { normalizeOperationalStatus } from "@/lib/courier/normalization";
+import { normalizeOperationalStatus, resolveMilestoneFromHistory, getMilestoneStageIndex } from "@/lib/courier/normalization";
 
 interface TrackingHistoryEvent {
   status: string;
@@ -109,8 +109,8 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
   const highlightClass = "uppercase font-bold text-orange-600 tracking-wide";
   const fromName = sender ? <span className={highlightClass}>{sender}</span> : "the sender";
   const toName = receiver ? <span className={highlightClass}>{receiver}</span> : "the receiver";
-  
-  switch(status) {
+
+  switch (status) {
     case 'Shipment Created':
     case 'Manifest Uploaded': return <>Your shipment has been registered successfully and is awaiting pickup.</>;
     case 'Picked Up': return <>Great news! Your shipment from {fromName} to {toName} has been picked up successfully.</>;
@@ -127,7 +127,11 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
   }
 };
 
-const getStageIndex = (status?: string | null): number => {
+const getStageIndex = (status?: string | null, history?: TrackingHistoryEvent[] | null, customerUpdate?: string | null): number => {
+  return resolveMilestoneFromHistory(status, history, customerUpdate);
+};
+
+const _unusedOldStageIndex = (status?: string | null): number => {
   if (!status) return 0;
   const trimmed = status.trim();
   switch (trimmed) {
@@ -186,12 +190,12 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
       const s = e.status.toLowerCase();
       const n = (e.note || '').toLowerCase();
       return (
-        s.includes('transit') || 
-        s.includes('hub') || 
-        s.includes('dispatch') || 
-        s.includes('bag') || 
-        s.includes('receiv') || 
-        s.includes('pack') || 
+        s.includes('transit') ||
+        s.includes('hub') ||
+        s.includes('dispatch') ||
+        s.includes('bag') ||
+        s.includes('receiv') ||
+        s.includes('pack') ||
         s.includes('manifest')
       ) && !s.includes('out for delivery') && !n.includes('out for delivery');
     });
@@ -230,7 +234,7 @@ interface HorizontalShipmentTrackerProps {
 
 function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTrackerProps) {
   const isAir = isAirShipment(data);
-  const finalStageIdx = getStageIndex(data.current_status);
+  const finalStageIdx = resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update);
   const isDelivered = data.current_status === 'Delivered' || finalStageIdx === 4;
   const destinationCity = data.receiver_city || data.destination || "Destination";
   const currentLocation = data.history[0]?.location || data.current_location || data.sender_city || "Current Facility";
@@ -268,7 +272,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
 
     let animationFrameId: number;
     let startTime: number | null = null;
-    
+
     // Duration: 1600ms for Shipped, 2200ms for In Transit, 2500ms for Out for Delivery, 2800ms for Delivered
     const duration = finalStageIdx === 1 ? 1600 : finalStageIdx === 2 ? 2200 : finalStageIdx === 3 ? 2500 : 2800;
 
@@ -356,11 +360,11 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
     <div className="w-full my-1 sm:my-2 pt-8 sm:pt-11 pb-1 px-1 sm:px-3 select-none overflow-visible">
       <div className="relative w-full">
         {/* Background connector track passing directly through node circle centers */}
-        <div 
+        <div
           className="absolute top-[18px] sm:top-[26px] md:top-[28px] -translate-y-1/2 left-[10%] right-[10%] h-[2.5px] sm:h-[3px] bg-gray-200/90 rounded-full z-0"
         >
           {/* Active progress fill */}
-          <div 
+          <div
             className="h-full bg-orange-500 rounded-full shadow-[0_0_4px_rgba(249,115,22,0.3)] relative"
             style={{ width: `${trackPercent}%` }}
           >
@@ -368,13 +372,13 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
             <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-30">
               {/* Floating location card / tooltip (only when not delivered) */}
               {!isDelivered && (
-                <div 
+                <div
                   className={cn(
                     "absolute bottom-full mb-1.5 sm:mb-2 flex flex-col pointer-events-auto transition-opacity duration-300",
                     trackPercent > (finalStageIdx === 0 ? -1 : (finalStageIdx === 1 ? 15 : 25)) ? "opacity-100" : "opacity-0 pointer-events-none",
-                    trackPercent < 20 
-                      ? "left-1/2 translate-x-[-15%] items-start" 
-                      : trackPercent > 75 
+                    trackPercent < 20
+                      ? "left-1/2 translate-x-[-15%] items-start"
+                      : trackPercent > 75
                         ? "left-1/2 translate-x-[-75%] sm:translate-x-[-50%] items-end sm:items-center"
                         : "left-1/2 -translate-x-1/2 items-center"
                   )}
@@ -399,15 +403,15 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                   </div>
 
                   {/* Pointer triangle matching the orange-300 border */}
-                  <div 
+                  <div
                     className={cn(
                       "w-0 h-0 border-x-[3.5px] sm:border-x-[4px] border-x-transparent border-t-[4px] sm:border-t-[5px] border-t-orange-300 -mt-[1px]",
-                      trackPercent < 20 
-                        ? "ml-3" 
-                        : trackPercent > 75 
-                          ? "mr-3 sm:mr-0 sm:self-center" 
+                      trackPercent < 20
+                        ? "ml-3"
+                        : trackPercent > 75
+                          ? "mr-3 sm:mr-0 sm:self-center"
                           : "self-center"
-                    )} 
+                    )}
                   />
                 </div>
               )}
@@ -415,13 +419,13 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
               {/* Vehicle icon directly on the progress line without a circle container */}
               <div className="flex items-center justify-center pointer-events-none -translate-y-0.5">
                 {isAir ? (
-                  <Plane 
-                    className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-orange-500 fill-white rotate-45 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] transition-transform" 
+                  <Plane
+                    className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-orange-500 fill-white rotate-45 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] transition-transform"
                     strokeWidth={2}
                   />
                 ) : (
-                  <Truck 
-                    className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-orange-500 fill-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] transition-transform" 
+                  <Truck
+                    className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-orange-500 fill-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] transition-transform"
                     strokeWidth={2}
                   />
                 )}
@@ -437,17 +441,17 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
             const timestamp = getStageTimestamp(i, data.history);
 
             return (
-              <div 
+              <div
                 key={stage.key}
                 className="flex flex-col items-center text-center w-1/5 px-0.5 sm:px-1 relative"
               >
                 {/* Node Circle - 36px on mobile, 48-56px on desktop */}
-                <div 
+                <div
                   className={cn(
                     "rounded-full flex items-center justify-center transition-colors duration-300",
                     "w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14",
-                    isCompleted 
-                      ? "bg-orange-500 text-white shadow-sm shadow-orange-500/30" 
+                    isCompleted
+                      ? "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
                       : "bg-gray-100 border border-gray-200 text-gray-400"
                   )}
                   aria-label={`${stage.label}: ${isCompleted ? 'Completed' : 'Upcoming'}`}
@@ -506,11 +510,12 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
   const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
 
   const toggleGroupExpanded = (groupId: string) => {
-    setExpandedGroupIds(prev => ({
+    setExpandedGroupIds((prev) => ({
       ...prev,
-      [groupId]: !prev[groupId]
+      [groupId]: !prev[groupId],
     }));
   };
+
 
   useEffect(() => {
     if (initialData && initialData.tracking_id === trackingId) {
@@ -569,7 +574,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
   };
 
   const isAir = data ? isAirShipment(data) : false;
-  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || getStageIndex(data.current_status) === 4) : false;
+  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update) === 4) : false;
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
@@ -586,254 +591,318 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
       )}
 
       {!trackingId && <TrackingWidget centered={true} />}
-      
+
       {loading && (
-         <div className="bg-white rounded-3xl shadow-lg shadow-orange-100/50 p-12 text-center border border-orange-50/50">
-            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-orange-900 font-medium">Fetching shipment details...</p>
-         </div>
+        <div className="bg-white rounded-3xl shadow-lg shadow-orange-100/50 p-12 text-center border border-orange-50/50">
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-orange-900 font-medium">Fetching shipment details...</p>
+        </div>
       )}
 
       {error && !loading && (
-         <div className="bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-3xl p-10 text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-red-400 opacity-5 rounded-full blur-3xl pointer-events-none"></div>
-            
-            <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-              <PackageSearch className="w-8 h-8 text-red-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Shipment Not Found</h3>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              We couldn&apos;t find a shipment matching the tracking number <span className="font-bold text-gray-900">{trackingId}</span>. Please verify the tracking number or contact our support team for assistance.
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <Link href="/track" className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-xl font-medium transition-colors">
-                Try Again
-              </Link>
-              <Link href="/contact" className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors shadow-lg shadow-orange-500/25">
-                Contact Us
-              </Link>
-            </div>
-         </div>
+        <div className="bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-3xl p-10 text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-red-400 opacity-5 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <PackageSearch className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">Shipment Not Found</h3>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            We couldn&apos;t find a shipment matching the tracking number <span className="font-bold text-gray-900">{trackingId}</span>. Please verify the tracking number or contact our support team for assistance.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <Link href="/track" className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-xl font-medium transition-colors">
+              Try Again
+            </Link>
+            <Link href="/contact" className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors shadow-lg shadow-orange-500/25">
+              Contact Us
+            </Link>
+          </div>
+        </div>
       )}
 
       {data && (
-         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg shadow-orange-900/5 overflow-hidden border border-orange-100/60">
-            {/* Header info */}
-            <div className="bg-gradient-to-br from-orange-50/80 via-white to-orange-50/30 px-4 py-3.5 sm:px-7 sm:py-5 border-b border-orange-100 relative overflow-hidden">
-               {/* Soft glow */}
-               <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-orange-400 opacity-10 rounded-full blur-3xl pointer-events-none"></div>
-               
-               <div className="flex flex-row justify-between items-center gap-2 sm:gap-4 relative z-10">
-                  <div className="min-w-0 flex-1">
-                     <p className="text-[10px] sm:text-xs text-orange-600 uppercase tracking-wider font-bold mb-0.5">Tracking Number</p>
-                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                       <h2 className="text-lg xs:text-xl sm:text-3xl font-black tracking-tight text-gray-900 truncate">{data.tracking_id}</h2>
-                       <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0 shadow-2xs", getStatusColor(normalizeOperationalStatus(data.current_status, data.customer_update)))}>
-                         {getStatusIcon(normalizeOperationalStatus(data.current_status, data.customer_update), "w-3 h-3 sm:w-3.5 sm:h-3.5", isAir)}
-                         {normalizeOperationalStatus(data.current_status, data.customer_update)}
-                       </div>
-                     </div>
-                  </div>
-                  <div className="text-right bg-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-orange-200/80 shadow-xs shrink-0">
-                     <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider font-semibold flex items-center justify-end gap-1">
-                       <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-500" />
-                       <span className="hidden xs:inline">Estimated Delivery</span>
-                       <span className="xs:hidden">Est. Delivery</span>
-                     </p>
-                     <p className="font-bold text-sm sm:text-lg text-gray-900 leading-tight mt-0.5">
-                        {data.estimated_delivery && new Date(data.estimated_delivery).getFullYear() > 1970 
-                          ? new Date(data.estimated_delivery).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : "Processing"}
-                     </p>
-                  </div>
-               </div>
-               
-               <div className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3 border-t border-orange-200/60 relative z-10">
-                  {/* HORIZONTAL SHIPMENT STATUS TRACKER */}
-                  <HorizontalShipmentTracker 
-                    data={data}
-                    onViewDetails={handleViewDetails}
-                  />
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg shadow-orange-900/5 overflow-hidden border border-orange-100/60">
+          {/* Header info */}
+          <div className="bg-gradient-to-br from-orange-50/80 via-white to-orange-50/30 px-4 py-3.5 sm:px-7 sm:py-5 border-b border-orange-100 relative overflow-hidden">
+            {/* Soft glow */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-orange-400 opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 
-                  {/* Customer Message Banner - Synced to Light Theme */}
-                  <div className={cn(
-                    "mt-3 border rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-3.5 shadow-xs transition-all",
-                    isDelivered 
-                      ? "bg-gradient-to-r from-orange-50/90 via-amber-50/60 to-orange-50/90 border-orange-200" 
-                      : "bg-gradient-to-r from-orange-50/90 via-orange-50/50 to-amber-50/70 border-orange-200/80"
-                  )}>
-                     <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
-                        <div className={cn(
-                          "text-white p-2 rounded-xl shrink-0 shadow-xs",
-                          isDelivered ? "bg-emerald-500 shadow-emerald-500/20" : "bg-orange-500 shadow-orange-500/20"
-                        )}>
-                           {isDelivered ? (
-                             <CheckCircle2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
-                           ) : (
-                             <Info className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
-                           )}
-                        </div>
-                        <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800">
-                           {getDynamicMessage(data.current_status, data.sender_name, data.receiver_name)}
-                        </p>
-                     </div>
-
-                     {isDelivered && (
-                        <a
-                          href={business.googleReviewUrl || "https://g.page/r/CdBtDQra-a6oEB0/review"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2 bg-white hover:bg-orange-50 text-gray-800 hover:text-orange-600 font-bold text-xs sm:text-sm rounded-xl border border-orange-200/90 hover:border-orange-300 shadow-2xs hover:shadow-xs transition-all duration-200 shrink-0 group whitespace-nowrap self-start md:self-auto w-full md:w-auto"
-                          id="google-review-btn"
-                        >
-                          <svg viewBox="0 0 24 24" width="16" height="16" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
-                            <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
-                              <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
-                              <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.369 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
-                              <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
-                              <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.109 -17.884 43.989 -14.754 43.989 Z" />
-                            </g>
-                          </svg>
-                          <span>Drop a review on Google</span>
-                          <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-orange-500 transition-colors" />
-                        </a>
-                     )}
+            <div className="flex flex-row justify-between items-center gap-2 sm:gap-4 relative z-10">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] sm:text-xs text-orange-600 uppercase tracking-wider font-bold mb-0.5">Tracking Number</p>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <h2 className="text-lg xs:text-xl sm:text-3xl font-black tracking-tight text-gray-900 truncate">{data.tracking_id}</h2>
+                  <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0 shadow-2xs", getStatusColor(normalizeOperationalStatus(data.current_status, data.customer_update)))}>
+                    {getStatusIcon(normalizeOperationalStatus(data.current_status, data.customer_update), "w-3 h-3 sm:w-3.5 sm:h-3.5", isAir)}
+                    {normalizeOperationalStatus(data.current_status, data.customer_update)}
                   </div>
-
-                  {/* Shipment Update Banner - Aligned with Customer Message Banner */}
-                  {data.customer_update && data.customer_update.trim() !== '' && (
-                     <div className="mt-2.5 sm:mt-3 border border-orange-200/80 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 bg-white shadow-xs transition-all w-full">
-                        <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800 break-words">
-                           <span className="font-bold text-orange-600 uppercase tracking-wider underline underline-offset-2 mr-1.5 sm:mr-2">
-                              Shipment Update:
-                           </span>
-                           <span className="font-semibold text-gray-800">
-                              {data.customer_update}
-                           </span>
-                        </p>
-                     </div>
-                  )}
-               </div>
+                </div>
+              </div>
+              <div className="text-right bg-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-orange-200/80 shadow-xs shrink-0">
+                <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider font-semibold flex items-center justify-end gap-1">
+                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-500" />
+                  <span className="hidden xs:inline">Estimated Delivery</span>
+                  <span className="xs:hidden">Est. Delivery</span>
+                </p>
+                <p className="font-bold text-sm sm:text-lg text-gray-900 leading-tight mt-0.5">
+                  {data.estimated_delivery && new Date(data.estimated_delivery).getFullYear() > 1970
+                    ? new Date(data.estimated_delivery).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : "Processing"}
+                </p>
+              </div>
             </div>
 
-            {/* Timeline */}
-            <div className="px-4 py-4 sm:px-7 sm:py-6 bg-white" id="tracking-history-section">
-               <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3 md:justify-between">
-                 <h3 className="text-base sm:text-lg font-bold text-gray-900 shrink-0">
-                   Tracking History
-                 </h3>
-                 <div className="bg-white border border-gray-200/80 rounded-lg px-2 py-0.5 sm:px-2.5 sm:py-1 flex items-center gap-1 sm:gap-1.5 text-[9.5px] xs:text-[10px] sm:text-[11px] text-gray-600 shadow-2xs md:ml-auto">
-                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500 shrink-0" />
-                    <span>All timings in <span className="font-semibold text-gray-800">IST (Indian Standard Time)</span>.</span>
-                 </div>
-               </div>
-               
-               <div className="flow-root relative">
-                 <ul role="list" className="-mb-4">
-                   {(() => {
-                      const aggregatedGroups = aggregateTrackingHistory(data.history || [], {
-                        maxShipmentPackages: data.num_packages || undefined
-                      });
+            <div className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3 border-t border-orange-200/60 relative z-10">
+              {/* HORIZONTAL SHIPMENT STATUS TRACKER */}
+              <HorizontalShipmentTracker
+                data={data}
+                onViewDetails={handleViewDetails}
+              />
 
-                      return aggregatedGroups.map((group, groupIdx) => {
-                        const isLast = groupIdx === aggregatedGroups.length - 1;
-                        const isFirst = groupIdx === 0;
-                        const groupKey = String(groupIdx);
-                        const isHighlighted = highlightedEventId === groupKey;
-                        const isExpanded = !!expandedGroupIds[group.id];
+              {/* Customer Message Banner - Synced to Light Theme */}
+              <div className={cn(
+                "mt-3 border rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-3.5 shadow-xs transition-all",
+                isDelivered
+                  ? "bg-gradient-to-r from-orange-50/90 via-amber-50/60 to-orange-50/90 border-orange-200"
+                  : "bg-gradient-to-r from-orange-50/90 via-orange-50/50 to-amber-50/70 border-orange-200/80"
+              )}>
+                <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+                  <div className={cn(
+                    "text-white p-2 rounded-xl shrink-0 shadow-xs",
+                    isDelivered ? "bg-emerald-500 shadow-emerald-500/20" : "bg-orange-500 shadow-orange-500/20"
+                  )}>
+                    {isDelivered ? (
+                      <CheckCircle2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+                    ) : (
+                      <Info className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" />
+                    )}
+                  </div>
+                  <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800">
+                    {getDynamicMessage(data.current_status, data.sender_name, data.receiver_name)}
+                  </p>
+                </div>
 
-                        return (
-                          <li 
-                            key={group.id}
-                            id={isFirst ? "latest-tracking-event" : `tracking-event-${groupKey}`}
-                            className="relative pb-5 sm:pb-6"
-                          >
-                            <div>
-                              {!isLast ? (
-                                <span className="absolute left-4 sm:left-4.5 top-4 -ml-px h-full w-0.5 bg-orange-100" aria-hidden="true" />
-                              ) : null}
+                {isDelivered && (
+                  <a
+                    href={business.googleReviewUrl || "https://g.page/r/CdBtDQra-a6oEB0/review"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2 bg-white hover:bg-orange-50 text-gray-800 hover:text-orange-600 font-bold text-xs sm:text-sm rounded-xl border border-orange-200/90 hover:border-orange-300 shadow-2xs hover:shadow-xs transition-all duration-200 shrink-0 group whitespace-nowrap self-start md:self-auto w-full md:w-auto"
+                    id="google-review-btn"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
+                      <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                        <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
+                        <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.369 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
+                        <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
+                        <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.109 -17.884 43.989 -14.754 43.989 Z" />
+                      </g>
+                    </svg>
+                    <span>Drop a review on Google</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-orange-500 transition-colors" />
+                  </a>
+                )}
+              </div>
 
-                              <div className="relative">
-                                {/* Highlight Glow & Border Container */}
-                                <div 
-                                  className={cn(
-                                    "absolute -inset-x-2.5 sm:-inset-x-3 -inset-y-2 sm:-inset-y-2.5 rounded-2xl transition-all duration-500 pointer-events-none",
-                                    isHighlighted 
-                                      ? "bg-orange-50/80 border border-orange-300 shadow-sm shadow-orange-500/10 opacity-100 scale-100 z-0" 
-                                      : "opacity-0 scale-98 border-transparent pointer-events-none"
-                                  )}
-                                  aria-hidden="true"
-                                />
+              {/* Shipment Update Banner - Aligned with Customer Message Banner */}
+              {data.customer_update && data.customer_update.trim() !== '' && (
+                <div className="mt-2.5 sm:mt-3 border border-orange-200/80 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 bg-white shadow-xs transition-all w-full">
+                  <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800 break-words">
+                    <span className="font-bold text-orange-600 uppercase tracking-wider underline underline-offset-2 mr-1.5 sm:mr-2">
+                      Shipment Update:
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {data.customer_update}
+                    </span>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
-                                <div className="relative z-10 flex items-start space-x-3.5 sm:space-x-4">
-                                  <div>
-                                    <span className={cn(
-                                      "h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 transition-all duration-500",
-                                      isHighlighted 
-                                        ? "ring-orange-200 bg-orange-500 text-white shadow-sm shadow-orange-500/30 scale-102" 
-                                        : isFirst 
-                                          ? "ring-white bg-orange-500 text-white shadow-xs shadow-orange-500/40" 
-                                          : "ring-white bg-orange-500/85 text-white shadow-2xs"
-                                    )}>
-                                      {getStatusIcon(group.status, "w-4 h-4 sm:w-4.5 sm:h-4.5", isAir)}
-                                    </span>
+          {/* Timeline */}
+          <div className="px-4 py-4 sm:px-7 sm:py-6 bg-white" id="tracking-history-section">
+            <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3 md:justify-between">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 shrink-0">
+                Tracking History
+              </h3>
+              <div className="bg-white border border-gray-200/80 rounded-lg px-2 py-0.5 sm:px-2.5 sm:py-1 flex items-center gap-1 sm:gap-1.5 text-[9.5px] xs:text-[10px] sm:text-[11px] text-gray-600 shadow-2xs md:ml-auto">
+                <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500 shrink-0" />
+                <span>All timings in <span className="font-semibold text-gray-800">IST (Indian Standard Time)</span>.</span>
+              </div>
+            </div>
+
+            <div className="flow-root relative">
+              <ul role="list" className="-mb-4">
+                {(() => {
+                  const aggregatedGroups = aggregateTrackingHistory(data.history || [], {
+                    maxShipmentPackages: data.num_packages || undefined
+                  });
+
+                  return aggregatedGroups.map((group, groupIdx) => {
+                    const isLast = groupIdx === aggregatedGroups.length - 1;
+                    const isFirst = groupIdx === 0;
+                    const groupKey = String(groupIdx);
+                    const isHighlighted = highlightedEventId === groupKey;
+                    const isExpanded = !!expandedGroupIds[group.id];
+
+                    return (
+                      <li
+                        key={group.id}
+                        id={isFirst ? "latest-tracking-event" : `tracking-event-${groupKey}`}
+                        className="relative pb-5 sm:pb-6"
+                      >
+                        <div>
+                          {!isLast ? (
+                            <span className="absolute left-4 sm:left-4.5 top-4 -ml-px h-full w-0.5 bg-orange-100" aria-hidden="true" />
+                          ) : null}
+
+                          <div className="relative">
+                            {/* Highlight Glow & Border Container */}
+                            <div
+                              className={cn(
+                                "absolute -inset-x-2.5 sm:-inset-x-3 -inset-y-2 sm:-inset-y-2.5 rounded-2xl transition-all duration-500 pointer-events-none",
+                                isHighlighted
+                                  ? "bg-orange-50/80 border border-orange-300 shadow-sm shadow-orange-500/10 opacity-100 scale-100 z-0"
+                                  : "opacity-0 scale-98 border-transparent pointer-events-none"
+                              )}
+                              aria-hidden="true"
+                            />
+
+                            <div className="relative z-10 flex items-start space-x-3.5 sm:space-x-4">
+                              <div>
+                                <span className={cn(
+                                  "h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 transition-all duration-500",
+                                  isHighlighted
+                                    ? "ring-orange-200 bg-orange-500 text-white shadow-sm shadow-orange-500/30 scale-102"
+                                    : isFirst
+                                      ? "ring-white bg-orange-500 text-white shadow-xs shadow-orange-500/40"
+                                      : "ring-white bg-orange-500/85 text-white shadow-2xs"
+                                )}>
+                                  {getStatusIcon(group.status, "w-4 h-4 sm:w-4.5 sm:h-4.5", isAir)}
+                                </span>
+                              </div>
+                              <div className="flex min-w-0 flex-1 pt-0.5 flex-col">
+                                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                  <p className={cn("text-xs sm:text-sm md:text-base font-bold transition-colors duration-300", isHighlighted ? "text-orange-950" : isFirst ? "text-gray-900" : "text-gray-700")}>
+                                    {group.headline || group.status}
+                                  </p>
+
+                                  {/* Timestamp Display */}
+                                  <div className="text-right shrink-0 ml-auto flex flex-col items-end gap-0.5">
+                                    <time dateTime={group.last_occurred_at.toISOString()} className="text-[10px] sm:text-[11px] text-gray-500 font-bold tracking-tight">
+                                      {group.last_occurred_at.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                    </time>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9.5px] sm:text-[10.5px] text-gray-500 font-semibold">
+                                        {group.is_time_range
+                                          ? `${group.first_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()} – ${group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`
+                                          : group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                                      </span>
+                                      <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">IST</span>
+                                    </div>
                                   </div>
-                                  <div className="flex min-w-0 flex-1 pt-0.5 flex-col">
-                                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                                      <p className={cn("text-xs sm:text-sm md:text-base font-bold transition-colors duration-300", isHighlighted ? "text-orange-950" : isFirst ? "text-gray-900" : "text-gray-700")}>
-                                        {group.headline || group.status}
-                                      </p>
-                                      
-                                      {/* Timestamp Display */}
-                                      <div className="text-right shrink-0 ml-auto flex flex-col items-end gap-0.5">
-                                        <time dateTime={group.last_occurred_at.toISOString()} className="text-[10px] sm:text-[11px] text-gray-500 font-bold tracking-tight">
-                                          {group.last_occurred_at.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                        </time>
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-[9.5px] sm:text-[10.5px] text-gray-500 font-semibold">
-                                            {group.is_time_range
-                                              ? `${group.first_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()} – ${group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`
-                                              : group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
-                                          </span>
-                                          <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">IST</span>
-                                        </div>
+                                </div>
+
+                                {/* Location and Milestone Tags */}
+                                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-orange-700 bg-orange-50/80 px-2.5 py-0.5 rounded-md w-fit border border-orange-100">
+                                    <MapPin className="w-3 h-3 text-orange-500 shrink-0" />
+                                    <span>{group.location || "System Update"}</span>
+                                  </div>
+
+                                </div>
+
+                                {/* Multi-package scan summary badge & expandable details */}
+                                {group.scan_count > 1 ? (
+                                  <div className="mt-2.5">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200/70">
+                                        <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                        <span>
+                                          {group.has_package_identifiers && group.distinct_packages > 1
+                                            ? `${group.scan_count} scan records • ${group.distinct_packages} distinct packages`
+                                            : group.has_package_identifiers && group.distinct_packages === 1
+                                              ? `${group.scan_count} scan records • 1 distinct package`
+                                              : `${group.scan_count} scan records`}
+                                        </span>
                                       </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleGroupExpanded(group.id)}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100/80 border border-orange-200/80 rounded-lg transition-colors cursor-pointer"
+                                      >
+                                        <span>{isExpanded ? 'Hide Details' : `View ${group.scan_count} Scans`}</span>
+                                        <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded && "rotate-180")} />
+                                      </button>
                                     </div>
 
-                                    {/* Location and Milestone Tags */}
-                                    <div className="mt-1 flex items-center gap-2 flex-wrap">
-                                      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-orange-700 bg-orange-50/80 px-2.5 py-0.5 rounded-md w-fit border border-orange-100">
-                                        <MapPin className="w-3 h-3 text-orange-500 shrink-0" />
-                                        <span>{group.location || "System Update"}</span>
-                                      </div>
-
-                                      
-                                    </div>
-                                    
-                                    {group.events[0]?.note && 
-                                    group.events[0].note.toLowerCase() !== 'status updated' && 
-                                    group.events[0].note.toLowerCase() !== group.status.toLowerCase() && (
-                                      <div className="mt-2 p-2.5 sm:p-3 bg-blue-50/70 border border-blue-100 rounded-xl shadow-2xs flex justify-between items-start gap-2">
-                                        <div className="flex items-start gap-2 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
-                                          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                          </svg>
-                                          <p>{group.events[0].note}</p>
-                                        </div>
+                                    {/* Expandable Individual Scans Section */}
+                                    {isExpanded && (
+                                      <div className="mt-2 p-3 sm:p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl shadow-xs flex flex-col gap-2">
+                                        {group.events.map((evt, evtIdx) => {
+                                          const scanNumber = group.events.length - evtIdx;
+                                          return (
+                                            <div
+                                              key={evtIdx}
+                                              className={cn(
+                                                "flex justify-between items-start gap-2 sm:gap-4 py-1.5",
+                                                evtIdx !== group.events.length - 1 && "border-b border-blue-100/60"
+                                              )}
+                                            >
+                                              <div className="flex items-start gap-2 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
+                                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <div>
+                                                  <span className="font-semibold text-blue-900 mr-1.5">Scan #{scanNumber}:</span>
+                                                  <span>{evt.note}</span>
+                                                </div>
+                                              </div>
+                                              <div className="text-right shrink-0 ml-1 flex flex-col items-end gap-0.5">
+                                                <time className="text-[10px] sm:text-[11px] text-blue-800 font-bold tracking-tight">
+                                                  {evt.occurred_at.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                                </time>
+                                                <div className="flex items-center gap-1">
+                                                  <span className="text-[9.5px] sm:text-[10.5px] text-blue-600 font-semibold">
+                                                    {evt.occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                                                  </span>
+                                                  <span className="text-[8px] sm:text-[9px] text-blue-500/80 font-bold uppercase tracking-wider">IST</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     )}
                                   </div>
-                                </div>
+                                ) : (
+                                  /* Single Scan: display clean operational note */
+                                  group.events[0]?.note &&
+                                  group.events[0].note.toLowerCase() !== 'status updated' && (
+                                    <div className="mt-2 p-2.5 sm:p-3 bg-blue-50/70 border border-blue-100 rounded-xl shadow-2xs flex justify-between items-start gap-2">
+                                      <div className="flex items-start gap-2 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
+                                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <p>{group.events[0].note}</p>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
                               </div>
                             </div>
-                          </li>
-                        );
-                      });
-                   })()}
-                 </ul>
-               </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  });
+                })()}
+              </ul>
             </div>
-         </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { pushService } from '../push-service';
 import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from '@/lib/courier/identity';
-import { normalizeOperationalStatus } from '@/lib/courier/normalization';
+import { normalizeOperationalStatus, resolveMilestoneFromHistory } from '@/lib/courier/normalization';
 
 const router = Router();
 
@@ -87,7 +87,19 @@ router.post('/track', apiLimiter, async (req, res) => {
 
     const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
     const cleanedCustomerUpdate = shipment.customer_update ? sanitizeCustomerHistoryNote(shipment.customer_update) : null;
-    const normalizedCurrentStatus = normalizeOperationalStatus(shipment.current_status, shipment.customer_update);
+    let normalizedCurrentStatus = normalizeOperationalStatus(shipment.current_status, shipment.customer_update);
+
+    // Ensure milestone consistency: if the complete history reveals that the shipment is only
+    // manifested/created (no pickup or transit has occurred), do not allow stale DB status
+    // like "In Transit" to be exposed to the customer
+    const resolvedStage = resolveMilestoneFromHistory(normalizedCurrentStatus, cleanedHistory, cleanedCustomerUpdate);
+    if (resolvedStage === 0) {
+      if (normalizedCurrentStatus === 'In Transit' || normalizedCurrentStatus === 'Vehicle Departed') {
+        normalizedCurrentStatus = cleanedCustomerUpdate?.toLowerCase().includes('manifest')
+          ? 'Manifest Uploaded'
+          : 'Shipment Created';
+      }
+    }
 
     return res.json({
       success: true,
