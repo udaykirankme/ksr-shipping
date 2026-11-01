@@ -21,8 +21,7 @@ import {
   Inbox,
   Warehouse,
   Info,
-  ExternalLink,
-  ChevronDown
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
@@ -30,7 +29,7 @@ import Link from "next/link";
 import { business } from "@/lib/config/business";
 import { aggregateTrackingHistory } from "@/lib/courier/aggregation";
 import { isInternalCourierCode } from "@/lib/courier/identity";
-import { normalizeOperationalStatus, resolveMilestoneFromHistory, getMilestoneStageIndex } from "@/lib/courier/normalization";
+import { isExceptionStatus, normalizeOperationalStatus, resolveMilestoneFromHistory, getMilestoneStageIndex, resolveCustomerCurrentStatus } from "@/lib/courier/normalization";
 
 interface TrackingHistoryEvent {
   status: string;
@@ -60,6 +59,7 @@ interface TrackingData {
 }
 
 const getStatusColor = (status: string) => {
+  if (isExceptionStatus(status)) return 'bg-amber-100 text-amber-900 border-amber-200';
   switch (status) {
     case 'Shipment Created':
     case 'Manifest Uploaded': return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -87,6 +87,12 @@ const isAirShipment = (data: TrackingData): boolean => {
 };
 
 const getStatusIcon = (status: string, className = "w-5 h-5", isAir = false) => {
+  if (isExceptionStatus(status)) {
+    const s = status.toLowerCase();
+    if (s.includes('cancel') || s.includes('reject')) return <XCircle className={className} />;
+    if (s.includes('return') || s.includes('rto')) return <RotateCcw className={className} />;
+    return <Clock className={className} />;
+  }
   switch (status) {
     case 'Shipment Created':
     case 'Manifest Uploaded': return <Box className={className} />;
@@ -507,14 +513,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
-  const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
 
-  const toggleGroupExpanded = (groupId: string) => {
-    setExpandedGroupIds((prev) => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
-  };
 
 
   useEffect(() => {
@@ -575,6 +574,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
 
   const isAir = data ? isAirShipment(data) : false;
   const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update) === 4) : false;
+  const customerDisplayStatus = data ? resolveCustomerCurrentStatus(data.current_status, data.history, data.customer_update) : "In Transit";
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
@@ -633,9 +633,9 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                 <p className="text-[10px] sm:text-xs text-orange-600 uppercase tracking-wider font-bold mb-0.5">Tracking Number</p>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <h2 className="text-lg xs:text-xl sm:text-3xl font-black tracking-tight text-gray-900 truncate">{data.tracking_id}</h2>
-                  <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0 shadow-2xs", getStatusColor(normalizeOperationalStatus(data.current_status, data.customer_update)))}>
-                    {getStatusIcon(normalizeOperationalStatus(data.current_status, data.customer_update), "w-3 h-3 sm:w-3.5 sm:h-3.5", isAir)}
-                    {normalizeOperationalStatus(data.current_status, data.customer_update)}
+                  <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0 shadow-2xs", getStatusColor(customerDisplayStatus))}>
+                    {getStatusIcon(customerDisplayStatus, "w-3 h-3 sm:w-3.5 sm:h-3.5", isAir)}
+                    {customerDisplayStatus}
                   </div>
                 </div>
               </div>
@@ -706,7 +706,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
               </div>
 
               {/* Shipment Update Banner - Aligned with Customer Message Banner */}
-              {data.customer_update && data.customer_update.trim() !== '' && (
+              {data.customer_update && data.customer_update.trim() !== '' && !isExceptionStatus(data.customer_update) && (
                 <div className="mt-2.5 sm:mt-3 border border-orange-200/80 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 bg-white shadow-xs transition-all w-full">
                   <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800 break-words">
                     <span className="font-bold text-orange-600 uppercase tracking-wider underline underline-offset-2 mr-1.5 sm:mr-2">
@@ -745,7 +745,6 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                     const isFirst = groupIdx === 0;
                     const groupKey = String(groupIdx);
                     const isHighlighted = highlightedEventId === groupKey;
-                    const isExpanded = !!expandedGroupIds[group.id];
 
                     return (
                       <li
@@ -814,79 +813,29 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
 
                                 </div>
 
-                                {/* Multi-package scan summary badge & expandable details */}
+                                {/* Routine Multi-package Scan Group: Clean Aggregated Pill (No Accordion) */}
                                 {group.scan_count > 1 ? (
-                                  <div className="mt-2.5">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200/70">
-                                        <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                        <span>
-                                          {group.has_package_identifiers && group.distinct_packages > 1
-                                            ? `${group.scan_count} scan records • ${group.distinct_packages} distinct packages`
-                                            : group.has_package_identifiers && group.distinct_packages === 1
-                                              ? `${group.scan_count} scan records • 1 distinct package`
-                                              : `${group.scan_count} scan records`}
-                                        </span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleGroupExpanded(group.id)}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100/80 border border-orange-200/80 rounded-lg transition-colors cursor-pointer"
-                                      >
-                                        <span>{isExpanded ? 'Hide Details' : `View ${group.scan_count} Scans`}</span>
-                                        <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded && "rotate-180")} />
-                                      </button>
+                                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200/70">
+                                      <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                      <span>
+                                        {group.has_package_identifiers && group.distinct_packages > 1
+                                          ? `${group.scan_count} package scans recorded • ${group.distinct_packages} distinct packages`
+                                          : group.has_package_identifiers && group.distinct_packages === 1
+                                            ? `${group.scan_count} package scans recorded • 1 distinct package`
+                                            : `${group.scan_count} package scans recorded`}
+                                      </span>
                                     </div>
-
-                                    {/* Expandable Individual Scans Section */}
-                                    {isExpanded && (
-                                      <div className="mt-2 p-3 sm:p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl shadow-xs flex flex-col gap-2">
-                                        {group.events.map((evt, evtIdx) => {
-                                          const scanNumber = group.events.length - evtIdx;
-                                          return (
-                                            <div
-                                              key={evtIdx}
-                                              className={cn(
-                                                "flex justify-between items-start gap-2 sm:gap-4 py-1.5",
-                                                evtIdx !== group.events.length - 1 && "border-b border-blue-100/60"
-                                              )}
-                                            >
-                                              <div className="flex items-start gap-2 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
-                                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                <div>
-                                                  <span className="font-semibold text-blue-900 mr-1.5">Scan #{scanNumber}:</span>
-                                                  <span>{evt.note}</span>
-                                                </div>
-                                              </div>
-                                              <div className="text-right shrink-0 ml-1 flex flex-col items-end gap-0.5">
-                                                <time className="text-[10px] sm:text-[11px] text-blue-800 font-bold tracking-tight">
-                                                  {evt.occurred_at.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                                </time>
-                                                <div className="flex items-center gap-1">
-                                                  <span className="text-[9.5px] sm:text-[10.5px] text-blue-600 font-semibold">
-                                                    {evt.occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
-                                                  </span>
-                                                  <span className="text-[8px] sm:text-[9px] text-blue-500/80 font-bold uppercase tracking-wider">IST</span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
                                   </div>
                                 ) : (
-                                  /* Single Scan: display clean operational note */
-                                  group.events[0]?.note &&
-                                  group.events[0].note.toLowerCase() !== 'status updated' && (
+                                  /* Single Scan or Exception Event: Display customer-readable operational note */
+                                  group.events[0]?.note && group.events[0].note.toLowerCase() !== 'status updated' && (
                                     <div className="mt-2 p-2.5 sm:p-3 bg-blue-50/70 border border-blue-100 rounded-xl shadow-2xs flex justify-between items-start gap-2">
                                       <div className="flex items-start gap-2 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
                                         <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <p>{group.events[0].note}</p>
+                                        <p>{group.events[0]?.note || group.headline}</p>
                                       </div>
                                     </div>
                                   )

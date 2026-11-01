@@ -1,5 +1,5 @@
 import { sanitizeCustomerHistoryNote, sanitizeHistoryForCustomer } from './identity';
-import { normalizeOperationalStatus } from './normalization';
+import { isExceptionStatus, normalizeOperationalStatus } from './normalization';
 
 export interface RawTrackingScan {
   status: string;
@@ -15,6 +15,7 @@ export interface AggregatedTrackingGroup {
   status: string;
   location: string;
   headline: string;
+  is_exception: boolean;
   scan_count: number;
   distinct_packages: number;
   has_package_identifiers: boolean;
@@ -172,6 +173,7 @@ export function aggregateTrackingHistory(
     location: string;
     cleanRemark: string;
     headline: string;
+    isException: boolean;
     anchorTime: number;
     newestTime: number;
     oldestTime: number;
@@ -182,30 +184,38 @@ export function aggregateTrackingHistory(
   const tempGroups: TempGroup[] = [];
 
   for (const scan of parsedScans) {
+    if (isExceptionStatus(scan.status, scan.note)) {
+      continue; // Exclude package-level exception events from customer aggregation
+    }
     const scanTime = scan.occurredAt.getTime();
+    const isScanException = isExceptionStatus(scan.status, scan.note);
 
     // Look for an existing open group within the bounded window that matches status, location, and remark.
-    // Handles interleaved multi-piece operations gracefully.
+    // Exception events (Damaged, Lost, Missing, Held, Cancelled, etc.) MUST NEVER be merged into routine scan groups.
     let matchingGroup: TempGroup | undefined = undefined;
 
-    for (let i = tempGroups.length - 1; i >= 0; i--) {
-      const g = tempGroups[i];
-      // If group is beyond 2x window from scan, stop looking backward
-      if (Math.abs(scanTime - g.anchorTime) > windowMs * 2) {
-        break;
-      }
+    if (!isScanException) {
+      for (let i = tempGroups.length - 1; i >= 0; i--) {
+        const g = tempGroups[i];
+        if (g.isException) continue; // Routine scans must never merge into exception events
 
-      const sameStatus = g.status.toLowerCase() === scan.status.toLowerCase();
-      const sameLocation = g.location.toLowerCase() === scan.location.toLowerCase();
-      const sameRemark = g.cleanRemark === scan.cleanRemark;
-
-      if (sameStatus && sameLocation && sameRemark) {
-        const proposedNewest = Math.max(g.newestTime, scanTime);
-        const proposedOldest = Math.min(g.oldestTime, scanTime);
-        // Strictly bounded window check: span cannot exceed windowMs
-        if ((proposedNewest - proposedOldest) <= windowMs) {
-          matchingGroup = g;
+        // If group is beyond 2x window from scan, stop looking backward
+        if (Math.abs(scanTime - g.anchorTime) > windowMs * 2) {
           break;
+        }
+
+        const sameStatus = g.status.toLowerCase() === scan.status.toLowerCase();
+        const sameLocation = g.location.toLowerCase() === scan.location.toLowerCase();
+        const sameRemark = g.cleanRemark === scan.cleanRemark;
+
+        if (sameStatus && sameLocation && sameRemark) {
+          const proposedNewest = Math.max(g.newestTime, scanTime);
+          const proposedOldest = Math.min(g.oldestTime, scanTime);
+          // Strictly bounded window check: span cannot exceed windowMs
+          if ((proposedNewest - proposedOldest) <= windowMs) {
+            matchingGroup = g;
+            break;
+          }
         }
       }
     }
@@ -231,6 +241,7 @@ export function aggregateTrackingHistory(
         location: scan.location,
         cleanRemark: scan.cleanRemark,
         headline,
+        isException: isScanException,
         anchorTime: scanTime,
         newestTime: scanTime,
         oldestTime: scanTime,
@@ -262,6 +273,7 @@ export function aggregateTrackingHistory(
       status: g.status,
       location: g.location,
       headline: g.headline,
+      is_exception: g.isException,
       scan_count: g.items.length,
       distinct_packages: distinctCount,
       has_package_identifiers: g.packageIds.size > 0,

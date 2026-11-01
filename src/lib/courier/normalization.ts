@@ -1,13 +1,77 @@
 import { KSRTrackingStatus } from './types';
 
+export const EXCEPTION_PATTERNS = [
+  /\bdamag/i,
+  /\bmiss/i,
+  /\blost\b/i,
+  /\bmisplac/i,
+  /\bheld\b/i,
+  /\bhold\b/i,
+  /\bcancel/i,
+  /\breject/i,
+  /\brefus/i,
+  /\bundeliver/i,
+  /\bdelivery\s+exception/i,
+  /\battempt/i,
+  /\brto\b/i,
+  /\breturn/i,
+  /\bfailed\b/i,
+  /\bdestroyed\b/i,
+  /\bconfiscat/i,
+  /\bshort/i,
+  /\bpilfer/i,
+  /\bseiz/i,
+];
+
+export function isExceptionStatus(
+  status: string | null | undefined,
+  note?: string | null | undefined
+): boolean {
+  const s = (status || '').trim();
+  const n = (note || '').trim();
+  const text = `${s} ${n}`;
+  if (!text.trim()) return false;
+  return EXCEPTION_PATTERNS.some(pattern => pattern.test(text));
+}
+
+export function resolveExceptionDescription(
+  status: string | null | undefined,
+  note?: string | null | undefined
+): string {
+  const s = (status || '').trim();
+  const n = (note || '').trim();
+  const text = `${s} ${n}`.toLowerCase();
+
+  if (text.includes('damag')) return 'Shipment Damaged';
+  if (text.includes('miss')) return 'Shipment Missing';
+  if (text.includes('lost')) return 'Shipment Lost';
+  if (text.includes('misplac')) return 'Shipment Misplaced';
+  if (text.includes('held') || text.includes('hold')) return 'Shipment Held';
+  if (text.includes('cancel')) return 'Shipment Cancelled';
+  if (text.includes('reject') || text.includes('refus')) return 'Shipment Rejected';
+  if (text.includes('undeliver') || text.includes('delivery exception') || text.includes('attempt') || text.includes('failed')) return 'Delivery Exception';
+  if (text.includes('rto') || text.includes('return')) return 'Returned';
+
+  return s || 'Delivery Exception';
+}
+
+
 export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, instruction: string | null | undefined): KSRTrackingStatus | string {
   const status = (rawStatus || '').trim();
   const note = (instruction || '').trim();
 
   if (!status) return 'Unknown';
 
+  if (isExceptionStatus(rawStatus, instruction)) {
+    return resolveExceptionDescription(rawStatus, instruction);
+  }
+
   const statusLower = status.toLowerCase();
   const noteLower = note.toLowerCase();
+
+  if (isExceptionStatus(rawStatus, instruction)) {
+    return resolveExceptionDescription(rawStatus, instruction);
+  }
 
   // 1. Stage 1: Shipment Created / Manifested Normalizations
   // Manifested / Ready to Ship / Order Created must NEVER advance to Shipped or In Transit
@@ -217,6 +281,10 @@ export function getMilestoneStageIndex(
   const s = (status || '').trim().toLowerCase();
   const n = (note || '').trim().toLowerCase();
 
+  if (isExceptionStatus(status, note)) {
+    return 0;
+  }
+
   // Stage 0: Shipment Created & Manifested
   // Manifested / Ready to Ship / Order Created must NEVER advance to Shipped or In Transit
   if (
@@ -345,6 +413,9 @@ export function resolveMilestoneFromHistory(
   let hasConfirmedTransit = false;
 
   for (const evt of chronological) {
+    if (isExceptionStatus(evt.status, evt.note)) {
+      continue; // Exception events must never advance progressive milestones
+    }
     const s = (evt.status || '').trim().toLowerCase();
     const n = (evt.note || '').trim().toLowerCase();
 
@@ -472,6 +543,11 @@ export function resolveMilestoneFromHistory(
     return 0;
   }
 
+  // If current status or customer update is an exception, do not let it artificially alter maxStage
+  if (isExceptionStatus(currentStatus, customerUpdate)) {
+    return maxStage;
+  }
+
   // Check current status and customer update with manifest guard
   const isManifestOnly =
     (customerUpdate || '').toLowerCase().includes('manifest') ||
@@ -491,4 +567,73 @@ export function resolveMilestoneFromHistory(
   }
 
   return maxStage;
+}
+
+/**
+ * Resolves the overall customer-facing shipment status for public display.
+ * Guarantees that package-level exceptions (Damaged, Missing, Lost, Misplaced, Held, etc.)
+ * NEVER override the overall physical shipment status.
+ */
+export function resolveCustomerCurrentStatus(
+  rawStatus: string | null | undefined,
+  history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string }> | null,
+  customerUpdate?: string | null | undefined
+): string {
+  const cleanRaw = (rawStatus || '').trim();
+  const isRawException = isExceptionStatus(cleanRaw);
+
+  // 1. If raw status is NOT an exception, normalize it as routine status without letting an exception note override
+  if (!isRawException && cleanRaw) {
+    const normalized = normalizeOperationalStatus(cleanRaw);
+    if (!isExceptionStatus(normalized)) {
+      return normalized;
+    }
+  }
+
+  // 2. If raw status was an exception or empty, derive the true operational status from the highest achieved routine milestone
+  const stage = resolveMilestoneFromHistory(null, history, null);
+  switch (stage) {
+    case 4: return 'Delivered';
+    case 3: return 'Out For Delivery';
+    case 2: return 'In Transit';
+    case 1: return 'Shipped';
+    case 0:
+    default:
+      return 'Shipment Created';
+  }
+}
+
+/**
+ * Resolves the eligible customer update message for the public tracking banner.
+ * Completely excludes package-level exceptions (e.g. "Shipment damaged", "Shipment missing", "Shipment lost").
+ * If the shipment's customer_update is an exception or empty, returns the latest eligible
+ * routine operational update from history.
+ */
+export function resolveCustomerEligibleUpdate(
+  customerUpdate: string | null | undefined,
+  cleanedHistory?: Array<{ status: string; note?: string | null }> | null
+): string | null {
+  const clean = (customerUpdate || '')
+    .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
+    .trim();
+
+  // If customer_update is present and NOT an exception, preserve it (e.g. manual admin note)
+  if (clean && !isExceptionStatus(clean)) {
+    return clean;
+  }
+
+  // If customer_update was an exception (or empty), return the latest eligible routine operational update from history
+  if (cleanedHistory && cleanedHistory.length > 0) {
+    for (const evt of cleanedHistory) {
+      if (!evt) continue;
+      const note = (evt.note || '')
+        .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
+        .trim();
+      if (note && !isExceptionStatus(evt.status, note) && note.toLowerCase() !== 'status updated') {
+        return note;
+      }
+    }
+  }
+
+  return null;
 }

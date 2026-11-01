@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, RefreshCw, ArchiveRestore, Trash2, Download, History, Calendar, X } from "lucide-react";
+import { Plus, Search, Filter, RefreshCw, ArchiveRestore, Trash2, Download, History, Calendar, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -39,16 +39,19 @@ interface ShipmentData {
 export function ShipmentListClient({
   initialShipments = [],
   initialTotal = 0,
+  initialError = null,
 }: {
   initialShipments?: ShipmentData[];
   initialTotal?: number;
+  initialError?: string | null;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
   const hasInitialData = initialShipments.length > 0 || initialTotal > 0;
   const [shipments, setShipments] = useState<ShipmentData[]>(initialShipments);
   const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(!hasInitialData);
+  const [error, setError] = useState<string | null>(initialError);
+  const [loading, setLoading] = useState(!hasInitialData && !initialError);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -104,6 +107,7 @@ export function ShipmentListClient({
 
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await shipmentService.getShipments({
           page: 1,
@@ -119,8 +123,9 @@ export function ShipmentListClient({
           setTotal(resData.total || 0);
           setPage(1);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
+        if (mounted) setError(err?.message || "Failed to load shipments");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -184,6 +189,7 @@ export function ShipmentListClient({
   // Provide manual refresh
   const handleRefresh = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await shipmentService.getShipments({
         page: 1,
@@ -197,8 +203,9 @@ export function ShipmentListClient({
       setShipments(resData.shipments || []);
       setTotal(resData.total || 0);
       setPage(1);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err?.message || "Failed to load shipments");
     } finally {
       setLoading(false);
     }
@@ -476,6 +483,26 @@ export function ShipmentListClient({
         </div>
       )}
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-red-900 text-xs sm:text-sm">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            <div>
+              <p className="font-bold">Database Connection Warning</p>
+              <p className="text-red-700 mt-0.5">{error}. Data could not be loaded from the database.</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            className="border-red-300 text-red-800 hover:bg-red-100 shrink-0 self-start sm:self-auto"
+          >
+            Retry Connection
+          </Button>
+        </div>
+      )}
+
       {/* Table Box */}
       <div className="bg-white border border-gray-100/80 rounded-2xl shadow-sm relative flex flex-col flex-1 min-h-0 overflow-hidden">
         {loading && (
@@ -511,7 +538,21 @@ export function ShipmentListClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {shipments.length === 0 && !loading && (
+              {error && shipments.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={9} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center text-red-600 gap-2 px-4">
+                      <AlertTriangle className="w-8 h-8 text-red-500" />
+                      <p className="font-semibold text-gray-900">Database Connection Error</p>
+                      <p className="text-xs sm:text-sm text-gray-500 max-w-md">Failed to retrieve shipment records from the database. Please verify the database server and click Retry.</p>
+                      <Button size="sm" variant="outline" onClick={handleRefresh} className="mt-2 text-xs border-red-300 text-red-800 hover:bg-red-50">
+                        Retry Now
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!error && shipments.length === 0 && !loading && (
                 <tr>
                   <td colSpan={9} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500 gap-2">

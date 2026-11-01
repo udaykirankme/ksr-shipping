@@ -6,7 +6,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { pushService } from '../push-service';
 import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from '@/lib/courier/identity';
-import { normalizeOperationalStatus, resolveMilestoneFromHistory } from '@/lib/courier/normalization';
+import { normalizeOperationalStatus, resolveMilestoneFromHistory, resolveCustomerCurrentStatus, resolveCustomerEligibleUpdate } from '@/lib/courier/normalization';
 
 const router = Router();
 
@@ -86,8 +86,8 @@ router.post('/track', apiLimiter, async (req, res) => {
     }
 
     const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
-    const cleanedCustomerUpdate = shipment.customer_update ? sanitizeCustomerHistoryNote(shipment.customer_update) : null;
-    let normalizedCurrentStatus = normalizeOperationalStatus(shipment.current_status, shipment.customer_update);
+    const cleanedCustomerUpdate = resolveCustomerEligibleUpdate(shipment.customer_update, cleanedHistory);
+    let normalizedCurrentStatus = resolveCustomerCurrentStatus(shipment.current_status, cleanedHistory, cleanedCustomerUpdate);
 
     // Ensure milestone consistency: if the complete history reveals that the shipment is only
     // manifested/created (no pickup or transit has occurred), do not allow stale DB status

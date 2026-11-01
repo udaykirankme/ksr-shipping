@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/seo/site";
 import { prisma } from "@/lib/db";
 import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from "@/lib/courier/identity";
-import { normalizeOperationalStatus, resolveMilestoneFromHistory } from "@/lib/courier/normalization";
+import { normalizeOperationalStatus, resolveMilestoneFromHistory, resolveCustomerCurrentStatus, resolveCustomerEligibleUpdate } from "@/lib/courier/normalization";
 
 type TrackPageProps = {
   searchParams: Promise<{ id?: string }>;
@@ -54,8 +54,8 @@ async function getInitialTrackingData(id?: string) {
     if (!shipment) return null;
 
     const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
-    const cleanedCustomerUpdate = shipment.customer_update ? sanitizeCustomerHistoryNote(shipment.customer_update) : null;
-    let normalizedCurrentStatus = normalizeOperationalStatus(shipment.current_status, shipment.customer_update);
+    const cleanedCustomerUpdate = resolveCustomerEligibleUpdate(shipment.customer_update, cleanedHistory);
+    let normalizedCurrentStatus = resolveCustomerCurrentStatus(shipment.current_status, cleanedHistory, cleanedCustomerUpdate);
 
     const resolvedStage = resolveMilestoneFromHistory(normalizedCurrentStatus, cleanedHistory, cleanedCustomerUpdate);
     if (resolvedStage === 0) {

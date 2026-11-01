@@ -1,4 +1,4 @@
-import { normalizeOperationalStatus } from './normalization';
+import { isExceptionStatus, normalizeOperationalStatus } from './normalization';
 
 export interface IncomingTrackingEvent {
   status: string;
@@ -114,9 +114,17 @@ export function isDuplicateEvent(
 
   const diffMs = Math.abs(existingEvent.occurred_at.getTime() - incomingEvent.occurred_at.getTime());
 
+  const isException = isExceptionStatus(normalizedExistingStatus, normalizedExistingNote) ||
+                      isExceptionStatus(normalizedIncomingStatus, normalizedIncomingNote);
+
   // If both have the same package identifier:
   if (existingPkgId && incomingPkgId && existingPkgId.toLowerCase() === incomingPkgId.toLowerCase()) {
     return diffMs < 60000;
+  }
+
+  // Deduplicate identical exception events (e.g. Shipment Damaged, Held, Missing) across webhook & API sync
+  if (isException) {
+    return diffMs < 15 * 60 * 1000;
   }
 
   // Without package identifiers:
@@ -139,9 +147,16 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
   const result: T[] = [];
 
   for (const item of history) {
+    // Exclude package-level exception events from public customer consumption
+    if (isExceptionStatus(item.status, item.note)) {
+      continue;
+    }
     const cleanNote = sanitizeCustomerHistoryNote(item.note);
     const itemDate = item.occurred_at instanceof Date ? item.occurred_at : new Date(item.occurred_at);
     const normalizedStatus = normalizeOperationalStatus(item.status, cleanNote);
+    if (isExceptionStatus(normalizedStatus, cleanNote)) {
+      continue;
+    }
 
     const isDuplicate = result.some(existing => {
       const existingDate = existing.occurred_at instanceof Date ? existing.occurred_at : new Date(existing.occurred_at);
