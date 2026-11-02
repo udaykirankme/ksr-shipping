@@ -386,7 +386,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
   };
 
   return (
-    <div className="w-full my-1 sm:my-2 pt-8 sm:pt-11 pb-1 px-1 sm:px-3 select-none overflow-visible">
+    <div className="w-full my-1 sm:my-2 pt-10 sm:pt-14 pb-1 px-1 sm:px-3 select-none overflow-visible">
       <div className="relative w-full">
         {/* Background connector track passing directly through node circle centers */}
         <div
@@ -403,7 +403,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
               {!isDelivered && (
                 <div
                   className={cn(
-                    "absolute bottom-full mb-1.5 sm:mb-2 flex flex-col pointer-events-auto transition-opacity duration-300",
+                    "absolute bottom-full mb-3.5 sm:mb-5 flex flex-col pointer-events-auto transition-opacity duration-300",
                     trackPercent > (finalStageIdx === 0 ? 5 : (finalStageIdx === 1 ? 15 : 25)) ? "opacity-100" : "opacity-0 pointer-events-none",
                     trackPercent < 20
                       ? "left-1/2 translate-x-[-15%] items-start"
@@ -412,29 +412,30 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                         : "left-1/2 -translate-x-1/2 items-center"
                   )}
                 >
-                  {/* Refined status tooltip with active orange accent styling */}
-                  <div className="bg-white/95 backdrop-blur-xs text-gray-800 rounded-md sm:rounded-lg px-2 py-0.5 sm:px-3 sm:py-1 shadow-md shadow-orange-950/5 border border-orange-300 hover:border-orange-400 transition-all flex flex-col items-center whitespace-nowrap">
-                    <div className="flex items-center gap-1 sm:gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
-                      <span className="text-[9px] sm:text-[11px] font-bold tracking-tight uppercase text-gray-800 max-w-[110px] sm:max-w-[160px] truncate">
+                  {/* Refined status tooltip with professional styling and live green indicator */}
+                  <div className="bg-white/98 backdrop-blur-sm text-gray-800 rounded-lg sm:rounded-xl px-2.5 py-1 sm:px-3.5 sm:py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-gray-200/90 hover:border-gray-300 transition-all flex flex-col items-center whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      {/* Crisp live green dot with smooth blinking effect */}
+                      <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shrink-0 animate-smooth-blink" aria-hidden="true" />
+                      <span className="text-[9.5px] sm:text-[11.5px] font-bold tracking-tight uppercase text-gray-900 max-w-[110px] sm:max-w-[160px] lg:max-w-[260px] xl:max-w-[320px] truncate">
                         {currentLocation}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={onViewDetails}
-                      className="group mt-0.5 inline-flex items-center gap-1 text-[8px] sm:text-[9.5px] font-semibold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer focus:outline-none"
+                      className="group mt-0.5 inline-flex items-center gap-1 text-[8.5px] sm:text-[10px] font-semibold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer focus:outline-none"
                       title="Scroll to latest tracking history update"
                     >
                       <span className="hover:underline">View Details</span>
-                      <ArrowRight className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </div>
 
-                  {/* Pointer triangle matching the orange-300 border */}
+                  {/* Pointer triangle matching the refined border */}
                   <div
                     className={cn(
-                      "w-0 h-0 border-x-[3.5px] sm:border-x-[4px] border-x-transparent border-t-[4px] sm:border-t-[5px] border-t-orange-300 -mt-[1px]",
+                      "w-0 h-0 border-x-[4px] sm:border-x-[5px] border-x-transparent border-t-[4.5px] sm:border-t-[5.5px] border-t-gray-200 -mt-[1px]",
                       trackPercent < 20
                         ? "ml-3"
                         : trackPercent > 75
@@ -513,7 +514,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                   <div className="mt-0.5 sm:mt-1 flex flex-col items-center max-w-full">
                     <div className="inline-flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-bold text-gray-700">
                       <MapPin className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-orange-500 shrink-0" />
-                      <span className="truncate max-w-[55px] xs:max-w-[70px] sm:max-w-[140px] uppercase font-bold text-gray-800">
+                      <span className="truncate max-w-[55px] xs:max-w-[70px] sm:max-w-[140px] lg:max-w-[200px] xl:max-w-[240px] uppercase font-bold text-gray-800">
                         {destinationCity}
                       </span>
                     </div>

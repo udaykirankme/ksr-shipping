@@ -28,6 +28,7 @@
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-glow: glow 3s ease-in-out infinite alternate;
+  --animate-blink: smoothBlink 1.4s ease-in-out infinite;
 
   --color-primary: #FF6A00;
   --color-secondary: #FF8C3A;
@@ -42,6 +43,19 @@
 @keyframes glow {
   from { box-shadow: 0 0 10px rgba(249, 115, 22, 0.1); }
   to { box-shadow: 0 0 20px rgba(249, 115, 22, 0.3); }
+}
+
+@keyframes smoothBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.animate-smooth-blink {
+  animation: smoothBlink 1.4s ease-in-out infinite;
 }
 
 @keyframes marquee {
@@ -243,4 +257,3 @@ nextjs-portal,
 [data-nextjs-toast-wrapper] {
   display: none !important;
 }
-
