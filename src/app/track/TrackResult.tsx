@@ -241,9 +241,9 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[], 
   const d = new Date(matched.occurred_at);
   if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return null;
 
-  const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  const yearStr = d.getFullYear();
-  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+  const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+  const yearStr = d.toLocaleDateString('en-GB', { year: 'numeric', timeZone: 'Asia/Kolkata' });
+  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase();
   return {
     date: dateStr,
     full: `${dateStr} ${yearStr}, ${timeStr}`
@@ -671,7 +671,7 @@ export default function TrackResult({
       serviceThrough: data.service_through,
       courier: data.courier,
     });
-  }, [data?.history, data?.num_packages, isDelhivery, data?.service, data?.service_through, data?.courier]);
+  }, [data, isDelhivery]);
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
@@ -879,13 +879,11 @@ export default function TrackResult({
                                   {/* Timestamp Display */}
                                   <div className="text-right shrink-0 ml-auto flex flex-col items-end gap-0.5">
                                     <time dateTime={group.last_occurred_at.toISOString()} className="text-[10px] sm:text-[11px] text-gray-500 font-bold tracking-tight">
-                                      {group.last_occurred_at.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                      {group.last_occurred_at.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' })}
                                     </time>
                                     <div className="flex items-center gap-1">
                                       <span className="text-[9.5px] sm:text-[10.5px] text-gray-500 font-semibold">
-                                        {group.is_time_range
-                                          ? `${group.first_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()} – ${group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`
-                                          : group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                                        {group.last_occurred_at.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }).toLowerCase()}
                                       </span>
                                       <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">IST</span>
                                     </div>

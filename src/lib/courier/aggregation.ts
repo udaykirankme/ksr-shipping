@@ -130,30 +130,44 @@ function getCanonicalAction(status: string, cleanRemark: string): string {
   const remarkLower = cleanRemark.toLowerCase();
   const statusLower = status.toLowerCase();
 
-  if (remarkLower.includes('vehicle departed') || statusLower === 'vehicle departed' || remarkLower.includes('left origin')) {
-    return 'Vehicle Departed';
-  }
+  // 1. Prioritize specific operational scan remark first
   if (remarkLower.includes('trip arrived')) {
     return 'Trip Arrived';
   }
-  if (remarkLower.includes('bag added to trip')) {
-    return 'Bag Added to Trip';
-  }
-  if (remarkLower.includes('shipment received at facility') || remarkLower.includes('received at facility')) {
+  if (
+    remarkLower.includes('shipment received at facility') ||
+    remarkLower.includes('received at facility') ||
+    remarkLower.includes('received at origin center') ||
+    remarkLower.includes('recieved at origin center')
+  ) {
     return 'Shipment Received at Facility';
   }
   if (remarkLower.includes('bag received at facility') || remarkLower.includes('bag received')) {
     return 'Bag Received at Facility';
   }
+  if (remarkLower.includes('bag added to trip')) {
+    return 'Bag Added to Trip';
+  }
   if (remarkLower.includes('added to bag') || remarkLower.includes('shipment bagged')) {
     return 'Shipment Bagged';
+  }
+  if (remarkLower.includes('document audited')) {
+    return 'Document Audited';
+  }
+  if (remarkLower.includes('weight captured')) {
+    return 'Weight Captured';
+  }
+  if (
+    remarkLower.includes('vehicle departed') ||
+    remarkLower.includes('left origin') ||
+    remarkLower.includes('departed from client location')
+  ) {
+    return 'Vehicle Departed';
   }
   if (
     remarkLower.includes('out for delivery') ||
     statusLower === 'out for delivery' ||
-    statusLower === 'ofd' ||
-    remarkLower.includes('dispatched') ||
-    statusLower === 'dispatched'
+    statusLower === 'ofd'
   ) {
     return 'Out For Delivery';
   }
@@ -182,6 +196,10 @@ function getCanonicalAction(status: string, cleanRemark: string): string {
   if (statusLower === 'picked up' || remarkLower.includes('picked up') || remarkLower.includes('collected')) {
     return 'Picked Up';
   }
+
+  // 2. Fallbacks based on status if remark was generic
+  if (statusLower === 'vehicle departed') return 'Vehicle Departed';
+  if (statusLower === 'in transit') return cleanRemark || 'In Transit';
 
   return cleanRemark || status || 'In Transit';
 }
@@ -351,11 +369,11 @@ export function aggregateTrackingHistory(
     const occurrenceKey = `${facilityNorm}::${actionNorm}`;
     const existing = activeOccurrences.get(occurrenceKey);
 
-    // For non-Delhivery, only merge if within a reasonable clustering window (e.g. 10 mins) and not distinct notes
-    const shouldMerge = existing && (
-      isDelhivery ||
-      (Math.abs(scan.occurredAt.getTime() - existing.lastOccurredAt.getTime()) <= 10 * 60 * 1000 &&
-       scan.cleanRemark === existing.items[0]?.cleanRemark)
+    // Merge multi-piece package scans only if they occurred within a close operational window (default 30 mins)
+    const maxWindowMs = (options.windowMinutes || 30) * 60 * 1000;
+    const timeDiffMs = existing ? Math.abs(scan.occurredAt.getTime() - existing.lastOccurredAt.getTime()) : Infinity;
+    const shouldMerge = existing && timeDiffMs <= maxWindowMs && (
+      isDelhivery || scan.cleanRemark === existing.items[0]?.cleanRemark
     );
 
     if (shouldMerge && existing) {
@@ -415,8 +433,6 @@ export function aggregateTrackingHistory(
       distinctCount = options.maxShipmentPackages;
     }
 
-    const isTimeRange = (occ.lastOccurredAt.getTime() - occ.firstOccurredAt.getTime()) >= 60000;
-
     return {
       id: `agg-group-${idx}-${occ.lastOccurredAt.getTime()}`,
       status: occ.status,
@@ -428,7 +444,7 @@ export function aggregateTrackingHistory(
       has_package_identifiers: occ.packageIds.size > 0,
       first_occurred_at: occ.firstOccurredAt,
       last_occurred_at: occ.lastOccurredAt,
-      is_time_range: isTimeRange,
+      is_time_range: false,
       events: occ.items.map(item => ({
         status: item.status,
         location: item.location,
