@@ -13,68 +13,210 @@ export const EXCEPTION_PATTERNS = [
   /\bundeliver/i,
   /\bdelivery\s+exception/i,
   /\battempt/i,
-  /\brto\b/i,
-  /\breturn/i,
   /\bfailed\b/i,
   /\bdestroyed\b/i,
   /\bconfiscat/i,
   /\bshort/i,
   /\bpilfer/i,
   /\bseiz/i,
+  /\binvestigat/i,
+  /\blogistics\s+exception/i,
+  /\babnormal/i,
+  /\bincident/i,
 ];
 
+export const RETURN_PATTERNS = [
+  /\brto\b/i,
+  /\breturn/i,
+  /\bconsignor\s+location\b/i,
+  /\bdistribution\s+center\s+nearest\b/i,
+];
+
+export const ROUTINE_STATUS_PATTERNS = [
+  /\bmanifest/i,
+  /\bready\s+to\s+ship/i,
+  /\blabel\s+created/i,
+  /\border\s+created/i,
+  /\bshipment\s+created/i,
+  /\bnot\s+picked/i,
+  /\bpick/i,
+  /\bcollect/i,
+  /\bshipped/i,
+  /\bdepart/i,
+  /\bleft\s+origin/i,
+  /\bdispatched/i,
+  /\bin\s+transit/i,
+  /\bbag/i,
+  /\btrip/i,
+  /\breceiv/i,
+  /\bat\s+hub/i,
+  /\breached/i,
+  /\binward/i,
+  /\bout\s+for\s+delivery/i,
+  /\bofd\b/i,
+  /\bdeliver/i,
+  /\bdl\b/i,
+  /\bpending\b/i,
+];
+
+const INTERNAL_CODES = new Set([
+  'LEFT_ORIGIN',
+  'LEFT ORIGIN',
+  'UD',
+  'MANIFESTED',
+  'DL',
+  'OFD',
+  'IN_TRANSIT',
+  'REACHED_DESTINATION',
+  'PENDING'
+]);
+
+function isInternalCode(str: string | null | undefined): boolean {
+  if (!str) return false;
+  const s = str.trim().toUpperCase();
+  return INTERNAL_CODES.has(s) || (s.includes('_') && !s.includes(' '));
+}
+
+/**
+ * Multi-attribute exception classifier.
+ * Checks status, instruction note, and provider StatusType (e.g. LT).
+ */
 export function isExceptionStatus(
   status: string | null | undefined,
-  note?: string | null | undefined
+  note?: string | null | undefined,
+  statusType?: string | null | undefined
 ): boolean {
+  const st = (statusType || '').trim().toUpperCase();
+  if (st === 'LT') return true;
+
   const s = (status || '').trim();
   const n = (note || '').trim();
-  const text = `${s} ${n}`;
+  const text = `${s} ${n} ${st}`;
   if (!text.trim()) return false;
   return EXCEPTION_PATTERNS.some(pattern => pattern.test(text));
 }
 
+/**
+ * Checks whether an event represents a return journey (RT / RTO).
+ */
+export function isReturnStatus(
+  status: string | null | undefined,
+  note?: string | null | undefined,
+  statusType?: string | null | undefined
+): boolean {
+  const st = (statusType || '').trim().toUpperCase();
+  if (st === 'RT' || st === 'RTO') return true;
+
+  const s = (status || '').trim();
+  const n = (note || '').trim();
+  const text = `${s} ${n} ${st}`;
+  if (!text.trim()) return false;
+  return RETURN_PATTERNS.some(pattern => pattern.test(text));
+}
+
+/**
+ * Resolves return journey descriptions according to official carrier semantics.
+ */
+export function resolveReturnDescription(
+  status: string | null | undefined,
+  note?: string | null | undefined,
+  statusType?: string | null | undefined
+): string {
+  const s = (status || '').trim().toLowerCase();
+  const n = (note || '').trim().toLowerCase();
+  const text = `${s} ${n}`;
+
+  if (text.includes('out for delivery') || text.includes('ofd') || text.includes('dispatched') || text.includes('dispatch')) {
+    return 'Return Out For Delivery';
+  }
+  if (
+    (text.includes('delivered') || text.includes('dl') || text.includes('completed') || text.includes('rto delivered')) &&
+    !text.includes('out for delivery')
+  ) {
+    return 'Returned to Origin';
+  }
+  if (text.includes('distribution center') || text.includes('hub') || text.includes('pending') || text.includes('reached')) {
+    return 'Return at Hub';
+  }
+  return 'Return In Transit';
+}
+
+/**
+ * Positive whitelist classifier for routine operational events.
+ * Returns false for unverified, ambiguous, or exception events.
+ */
+export function isRoutineOperationalStatus(
+  status: string | null | undefined,
+  note?: string | null | undefined,
+  statusType?: string | null | undefined
+): boolean {
+  if (isExceptionStatus(status, note, statusType)) {
+    return false;
+  }
+  if (isReturnStatus(status, note, statusType)) {
+    return true;
+  }
+  const s = (status || '').trim();
+  const n = (note || '').trim();
+  const text = `${s} ${n}`;
+  if (!text.trim()) return false;
+  return ROUTINE_STATUS_PATTERNS.some(pattern => pattern.test(text));
+}
+
 export function resolveExceptionDescription(
   status: string | null | undefined,
-  note?: string | null | undefined
+  note?: string | null | undefined,
+  statusType?: string | null | undefined
 ): string {
   const s = (status || '').trim();
   const n = (note || '').trim();
-  const text = `${s} ${n}`.toLowerCase();
+  const st = (statusType || '').trim().toUpperCase();
+  const text = `${s} ${n} ${st}`.toLowerCase();
 
+  if (st === 'LT' || text.includes('lost')) return 'Shipment Lost';
   if (text.includes('damag')) return 'Shipment Damaged';
   if (text.includes('miss')) return 'Shipment Missing';
-  if (text.includes('lost')) return 'Shipment Lost';
   if (text.includes('misplac')) return 'Shipment Misplaced';
   if (text.includes('held') || text.includes('hold')) return 'Shipment Held';
   if (text.includes('cancel')) return 'Shipment Cancelled';
   if (text.includes('reject') || text.includes('refus')) return 'Shipment Rejected';
+  if (text.includes('investigat')) return 'Shipment Under Investigation';
   if (text.includes('undeliver') || text.includes('delivery exception') || text.includes('attempt') || text.includes('failed')) return 'Delivery Exception';
-  if (text.includes('rto') || text.includes('return')) return 'Returned';
 
   return s || 'Delivery Exception';
 }
 
-
-export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, instruction: string | null | undefined): KSRTrackingStatus | string {
+/**
+ * Normalizes Delhivery B2B carrier statuses and remarks into canonical KSR statuses.
+ */
+export function normalizeDelhiveryStatus(
+  rawStatus: string | null | undefined,
+  instruction?: string | null | undefined,
+  statusType?: string | null | undefined
+): KSRTrackingStatus | string {
   const status = (rawStatus || '').trim();
   const note = (instruction || '').trim();
+  const st = (statusType || '').trim().toUpperCase();
 
-  if (!status) return 'Unknown';
+  if (!status && !st) return 'Unknown';
 
-  if (isExceptionStatus(rawStatus, instruction)) {
-    return resolveExceptionDescription(rawStatus, instruction);
+  if (isExceptionStatus(rawStatus, instruction, statusType)) {
+    return resolveExceptionDescription(rawStatus, instruction, statusType);
+  }
+
+  if (isReturnStatus(rawStatus, instruction, statusType)) {
+    return resolveReturnDescription(rawStatus, instruction, statusType);
   }
 
   const statusLower = status.toLowerCase();
   const noteLower = note.toLowerCase();
 
-  if (isExceptionStatus(rawStatus, instruction)) {
-    return resolveExceptionDescription(rawStatus, instruction);
+  // Official Delhivery B2B: Not Picked -> Stage 0 (Shipment Created)
+  if (statusLower === 'not picked' || statusLower === 'not_picked' || noteLower.includes('not picked')) {
+    return 'Shipment Created';
   }
 
-  // 1. Stage 1: Shipment Created / Manifested Normalizations
-  // Manifested / Ready to Ship / Order Created must NEVER advance to Shipped or In Transit
+  // Stage 0: Manifested / Ready to Ship / Order Created
   if (
     noteLower.includes('manifest uploaded') ||
     noteLower.includes('ready to ship') ||
@@ -99,12 +241,17 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
     return 'Shipment Created';
   }
 
-  // 2. Out For Delivery Normalizations
+  // Official Delhivery B2B: Dispatched -> Out For Delivery (Stage 3)
+  if (statusLower === 'dispatched' || noteLower.includes('dispatched')) {
+    return 'Out For Delivery';
+  }
+
+  // Out For Delivery
   if (noteLower.includes('out for delivery') || statusLower === 'out for delivery' || statusLower === 'ofd') {
     return 'Out For Delivery';
   }
 
-  // 3. Delivered Normalizations
+  // Delivered
   if (
     statusLower === 'dl' ||
     (statusLower === 'delivered' && !statusLower.includes('out for delivery'))
@@ -112,27 +259,30 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
     return 'Delivered';
   }
 
-  // 4. Pending Normalizations
+  // Official Delhivery B2B: Pending
   if (statusLower === 'pending') {
     if (
       noteLower.includes('trip arrived') ||
       noteLower.includes('bag received') ||
       noteLower.includes('shipment received at facility') ||
-      noteLower.includes('missing in audit') ||
-      noteLower.includes('found in audit')
+      noteLower.includes('destination') ||
+      noteLower.includes('hub') ||
+      noteLower.includes('facility')
     ) {
       return 'In Transit';
     }
-  }
-
-  // 5. In Transit Normalizations (e.g., explicit instruction overrides)
-  if (statusLower === 'in transit') {
-    if (noteLower.includes('vehicle departed')) {
-      return 'In Transit';
+    if (noteLower.includes('pickup') || noteLower.includes('origin')) {
+      return 'Shipment Created';
     }
+    return 'In Transit';
   }
 
-  // 6. Raw Provider Status Code Mappings for internal courier providers
+  // In Transit
+  if (statusLower === 'in transit' || statusLower === 'in_transit') {
+    return 'In Transit';
+  }
+
+  // Raw Provider Status Code Mappings
   if (statusLower === 'left_origin' || statusLower === 'left origin') {
     return 'Vehicle Departed';
   }
@@ -141,7 +291,7 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
     if (noteLower.includes('manifest uploaded') || noteLower.includes('ready to ship')) return 'Shipment Created';
     if (noteLower.includes('pick') || noteLower.includes('collected')) return 'Picked Up';
     if (noteLower.includes('depart')) return 'Vehicle Departed';
-    if (noteLower.includes('out for delivery') || noteLower.includes('ofd')) return 'Out For Delivery';
+    if (noteLower.includes('out for delivery') || noteLower.includes('ofd') || noteLower.includes('dispatched') || noteLower === 'dispatch') return 'Out For Delivery';
     if (
       (noteLower === 'delivered' || noteLower.includes('delivered successfully') || noteLower.includes('successfully delivered')) &&
       !noteLower.includes('attempt') &&
@@ -161,8 +311,12 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
     return 'Out For Delivery';
   }
 
-  // Preserve all other statuses as-is to avoid destroying legitimate provider states (e.g. Delivered, RTO, Manifested)
-  return status;
+  // If status is recognized on positive routine whitelist, preserve
+  if (isRoutineOperationalStatus(rawStatus, instruction, statusType)) {
+    return status;
+  }
+
+  return 'Unknown';
 }
 
 /**
@@ -172,15 +326,25 @@ export function normalizeDelhiveryStatus(rawStatus: string | null | undefined, i
  */
 export function normalizeOperationalStatus(
   rawStatus: string | null | undefined,
-  instruction?: string | null | undefined
+  instruction?: string | null | undefined,
+  statusType?: string | null | undefined
 ): string {
   const status = (rawStatus || '').trim();
   const note = (instruction || '').trim();
+  const st = (statusType || '').trim().toUpperCase();
+
+  if (isExceptionStatus(rawStatus, instruction, statusType)) {
+    return resolveExceptionDescription(rawStatus, instruction, statusType);
+  }
+
+  if (isReturnStatus(rawStatus, instruction, statusType)) {
+    return resolveReturnDescription(rawStatus, instruction, statusType);
+  }
 
   const statusLower = status.toLowerCase();
   const noteLower = note.toLowerCase();
 
-  // If note or status indicates Manifest / Ready to Ship, never present as In Transit
+  // Manifest / Ready to ship
   if (
     noteLower.includes('manifest uploaded') ||
     noteLower.includes('ready to ship') ||
@@ -196,6 +360,10 @@ export function normalizeOperationalStatus(
     return 'Manifest Uploaded';
   }
 
+  if (statusLower === 'not picked' || statusLower === 'not_picked' || noteLower.includes('not picked')) {
+    return 'Shipment Created';
+  }
+
   if (!status) return 'In Transit';
 
   if (statusLower === 'out for delivery' || statusLower === 'ofd' || noteLower.includes('out for delivery')) {
@@ -206,12 +374,16 @@ export function normalizeOperationalStatus(
     return 'Vehicle Departed';
   }
 
+  if (statusLower === 'dispatched' || noteLower.includes('dispatched')) {
+    return 'Out For Delivery';
+  }
+
   if (statusLower === 'ud') {
     if (noteLower.includes('manifest uploaded') || noteLower.includes('ready to ship')) return 'Manifest Uploaded';
     if (noteLower.includes('depart')) return 'Vehicle Departed';
     if (noteLower.includes('pick') || noteLower.includes('collected')) return 'Picked Up';
     if (noteLower.includes('hub') || noteLower.includes('arrived') || noteLower.includes('reached')) return 'At Hub';
-    if (noteLower.includes('out for delivery') || noteLower.includes('ofd')) return 'Out For Delivery';
+    if (noteLower.includes('out for delivery') || noteLower.includes('ofd') || noteLower.includes('dispatched') || noteLower === 'dispatch') return 'Out For Delivery';
     if (
       (noteLower === 'delivered' || noteLower.includes('delivered successfully') || noteLower.includes('successfully delivered')) &&
       !noteLower.includes('attempt') &&
@@ -247,7 +419,7 @@ export function normalizeOperationalStatus(
     return 'Picked Up';
   }
 
-  const normalized = normalizeDelhiveryStatus(rawStatus, instruction);
+  const normalized = normalizeDelhiveryStatus(rawStatus, instruction, statusType);
   if (typeof normalized === 'string') {
     const normUpper = normalized.toUpperCase();
     if (normUpper === 'LEFT_ORIGIN') return 'Vehicle Departed';
@@ -259,6 +431,7 @@ export function normalizeOperationalStatus(
     }
     if (normUpper === 'DL') return 'Delivered';
     if (normUpper === 'OFD') return 'Out For Delivery';
+    if (normUpper === 'UNKNOWN') return 'Unknown';
     return normalized;
   }
 
@@ -267,27 +440,48 @@ export function normalizeOperationalStatus(
 
 /**
  * Returns the milestone stage index (0 to 4) for a given status and operational remark note.
- * Stage 0: Shipment Created (Manifested, Ready to Ship, Order Created)
+ * Stage 0: Shipment Created (Manifested, Ready to Ship, Order Created, Not Picked)
  * Stage 1: Shipped (Confirmed physical courier pickup)
  * Stage 2: In Transit (Vehicle Departed, Hub scan, Bag Added, Dispatched)
  * Stage 3: Out for Delivery (OFD)
- * Stage 4: Delivered (DL, Successfully Delivered)
+ * Stage 4: Delivered (DL, Successfully Delivered to Consignee)
+ *
+ * NOTE: RTO and Return events must NEVER advance to Stage 4 (Delivered).
  */
 export function getMilestoneStageIndex(
   status: string | null | undefined,
-  note?: string | null | undefined
+  note?: string | null | undefined,
+  statusType?: string | null | undefined
 ): number {
   if (!status && !note) return 0;
+  if (isExceptionStatus(status, note, statusType)) {
+    return 0;
+  }
+  if (isReturnStatus(status, note, statusType)) {
+    // Return journey: RTO must NEVER map to Stage 4 (Consignee Delivered)
+    const s = (status || '').toLowerCase();
+    const n = (note || '').toLowerCase();
+    if (
+      s.includes('out for delivery') ||
+      n.includes('out for delivery') ||
+      s.includes('dispatched') ||
+      n.includes('dispatched') ||
+      s.includes('dispatch') ||
+      n.includes('dispatch')
+    ) {
+      return 3;
+    }
+    return 2;
+  }
+
   const s = (status || '').trim().toLowerCase();
   const n = (note || '').trim().toLowerCase();
 
-  if (isExceptionStatus(status, note)) {
-    return 0;
-  }
-
-  // Stage 0: Shipment Created & Manifested
-  // Manifested / Ready to Ship / Order Created must NEVER advance to Shipped or In Transit
+  // Stage 0: Shipment Created, Manifested, Not Picked
   if (
+    s === 'not picked' ||
+    s === 'not_picked' ||
+    n.includes('not picked') ||
     n.includes('manifest uploaded') ||
     n.includes('ready to ship') ||
     n.includes('label created') ||
@@ -310,7 +504,7 @@ export function getMilestoneStageIndex(
     }
   }
 
-  // Stage 4: Delivered
+  // Stage 4: Delivered (ONLY when delivered to intended consignee)
   if (
     s === 'delivered' ||
     s === 'dl' ||
@@ -320,19 +514,30 @@ export function getMilestoneStageIndex(
       !s.includes('ofd') &&
       !s.includes('undelivered') &&
       !s.includes('attempted') &&
-      !s.includes('attempt')) ||
+      !s.includes('attempt') &&
+      !s.includes('return') &&
+      !s.includes('rto')) ||
     (n.includes('delivered') &&
       !n.includes('out for delivery') &&
       !n.includes('ofd') &&
       !n.includes('undelivered') &&
       !n.includes('attempted') &&
-      !n.includes('attempt'))
+      !n.includes('attempt') &&
+      !n.includes('return') &&
+      !n.includes('rto'))
   ) {
     return 4;
   }
 
-  // Stage 3: Out For Delivery
-  if (s === 'out for delivery' || s === 'ofd' || n.includes('out for delivery') || n.includes('ofd')) {
+  // Stage 3: Out For Delivery / Dispatched
+  if (
+    s === 'out for delivery' ||
+    s === 'ofd' ||
+    s === 'dispatched' ||
+    n.includes('out for delivery') ||
+    n.includes('ofd') ||
+    n.includes('dispatched')
+  ) {
     return 3;
   }
 
@@ -342,16 +547,17 @@ export function getMilestoneStageIndex(
     s === 'vehicle departed from client location' ||
     s === 'left origin' ||
     s === 'left_origin' ||
-    s === 'dispatched' ||
     s === 'at hub' ||
     s === 'arrived at hub' ||
     s === 'arrived at destination hub' ||
     s === 'bag added to trip' ||
     s === 'trip arrived' ||
+    s === 'shipment received at facility' ||
     n.includes('vehicle departed') ||
     n.includes('left origin') ||
     n.includes('bag added to trip') ||
     n.includes('trip arrived') ||
+    n.includes('shipment received at facility') ||
     (s.includes('hub') && !n.includes('manifest')) ||
     (s.includes('depart') && !n.includes('manifest'))
   ) {
@@ -373,12 +579,20 @@ export function getMilestoneStageIndex(
     return 1;
   }
 
+  // Pending: destination facility -> Stage 2; origin -> Stage 0
+  if (s === 'pending') {
+    if (n.includes('destination') || n.includes('hub') || n.includes('trip') || n.includes('facility')) {
+      return 2;
+    }
+    return 0;
+  }
+
   // Generic in transit with explicit transit note
-  if ((s === 'in transit' || s === 'in_transit') && (n.includes('trip') || n.includes('transit') || n.includes('depart'))) {
+  if ((s === 'in transit' || s === 'in_transit') && (n.includes('trip') || n.includes('transit') || n.includes('depart') || n.includes('bag') || n.includes('receiv'))) {
     return 2;
   }
 
-  // Unknown or ambiguous statuses must not advance the milestone
+  // Unknown or ambiguous statuses must NOT advance milestone
   return 0;
 }
 
@@ -388,9 +602,8 @@ export function getMilestoneStageIndex(
  * 1. An older event arriving late never regresses the highest achieved milestone.
  * 2. Manifested / Ready to Ship never marks Shipped or In Transit.
  * 3. Stale DB statuses (e.g. In Transit for a manifested shipment) are corrected using history.
- * 4. Bag Added to Trip and Bag Received at Facility are interpreted using operational sequence
- *    and context, not blindly mapped to In Transit.
- * 5. Distinct stages are achieved only with reliable operational confirmation.
+ * 4. RTO / Return journey NEVER advances to Stage 4 (Consignee Delivered).
+ * 5. Unknown events do NOT advance or regress milestones.
  */
 export function resolveMilestoneFromHistory(
   currentStatus: string | null | undefined,
@@ -411,15 +624,28 @@ export function resolveMilestoneFromHistory(
   let maxStage = 0;
   let hasConfirmedPickup = false;
   let hasConfirmedTransit = false;
+  let isReturnedShipment = isReturnStatus(currentStatus, customerUpdate);
 
   for (const evt of chronological) {
     if (isExceptionStatus(evt.status, evt.note)) {
       continue; // Exception events must never advance progressive milestones
     }
+    if (isReturnStatus(evt.status, evt.note)) {
+      isReturnedShipment = true;
+      const returnStage = getMilestoneStageIndex(evt.status, evt.note);
+      maxStage = Math.max(maxStage, returnStage);
+      hasConfirmedTransit = true;
+      hasConfirmedPickup = true;
+      continue;
+    }
+    if (!isRoutineOperationalStatus(evt.status, evt.note)) {
+      continue; // Unknown events must not advance milestones
+    }
+
     const s = (evt.status || '').trim().toLowerCase();
     const n = (evt.note || '').trim().toLowerCase();
 
-    // 1. Delivered (Stage 4)
+    // 1. Delivered to Consignee (Stage 4)
     if (
       s === 'delivered' ||
       s === 'dl' ||
@@ -429,13 +655,17 @@ export function resolveMilestoneFromHistory(
         !s.includes('ofd') &&
         !s.includes('undelivered') &&
         !s.includes('attempted') &&
-        !s.includes('attempt')) ||
+        !s.includes('attempt') &&
+        !s.includes('return') &&
+        !s.includes('rto')) ||
       (n.includes('delivered') &&
         !n.includes('out for delivery') &&
         !n.includes('ofd') &&
         !n.includes('undelivered') &&
         !n.includes('attempted') &&
-        !n.includes('attempt'))
+        !n.includes('attempt') &&
+        !n.includes('return') &&
+        !n.includes('rto'))
     ) {
       maxStage = Math.max(maxStage, 4);
       hasConfirmedTransit = true;
@@ -443,29 +673,37 @@ export function resolveMilestoneFromHistory(
       continue;
     }
 
-    // 2. Out for Delivery (Stage 3)
-    if (s === 'out for delivery' || s === 'ofd' || n.includes('out for delivery') || n.includes('ofd')) {
+    // 2. Out for Delivery / Dispatched (Stage 3)
+    if (
+      s === 'out for delivery' ||
+      s === 'ofd' ||
+      s === 'dispatched' ||
+      n.includes('out for delivery') ||
+      n.includes('ofd') ||
+      n.includes('dispatched')
+    ) {
       maxStage = Math.max(maxStage, 3);
       hasConfirmedTransit = true;
       hasConfirmedPickup = true;
       continue;
     }
 
-    // 3. Genuine Departure or Transit Linehaul Trip (Stage 2)
+    // 3. Genuine Departure, Transit Trip, or Hub scan (Stage 2)
     const isDepartureOrTrip =
       s === 'vehicle departed' ||
       s === 'vehicle departed from client location' ||
       s === 'left origin' ||
       s === 'left_origin' ||
-      s === 'dispatched' ||
       s === 'at hub' ||
       s === 'arrived at hub' ||
       s === 'arrived at destination hub' ||
       s === 'trip arrived' ||
+      s === 'shipment received at facility' ||
       n.includes('vehicle departed') ||
       n.includes('left origin') ||
       n.includes('bag added to trip') ||
       n.includes('trip arrived') ||
+      n.includes('shipment received at facility') ||
       (s.includes('hub') && !n.includes('manifest')) ||
       (s.includes('depart') && !n.includes('manifest'));
 
@@ -494,10 +732,7 @@ export function resolveMilestoneFromHistory(
       continue;
     }
 
-    // 5. Bag Received at Facility & In Transit scans evaluated using sequence & operational context:
-    // If departure or trip already confirmed -> In Transit (Stage 2)
-    // If pickup confirmed but no departure -> Shipped (Stage 1)
-    // If neither pickup nor departure occurred -> Origin Stage 0 (Shipment Created)
+    // 5. Bag Received / Bagged
     const isFacilityOrBag =
       s === 'bag received at facility' ||
       s === 'shipment bagged' ||
@@ -510,7 +745,6 @@ export function resolveMilestoneFromHistory(
       } else if (hasConfirmedPickup) {
         maxStage = Math.max(maxStage, 1);
       } else {
-        // Origin facility scan without confirmed pickup or departure does not advance
         maxStage = Math.max(maxStage, 0);
       }
       continue;
@@ -535,6 +769,11 @@ export function resolveMilestoneFromHistory(
     }
   }
 
+  // RTO / Return Guard: Stage 4 is strictly reserved for consignee delivery
+  if (isReturnedShipment) {
+    return Math.min(maxStage, 3);
+  }
+
   // If no departure/trip transit evidence exists in history, currentStatus cannot claim In Transit
   if (!hasConfirmedTransit) {
     if (hasConfirmedPickup) {
@@ -543,7 +782,7 @@ export function resolveMilestoneFromHistory(
     return 0;
   }
 
-  // If current status or customer update is an exception, do not let it artificially alter maxStage
+  // If current status or customer update is an exception, do not let it alter maxStage
   if (isExceptionStatus(currentStatus, customerUpdate)) {
     return maxStage;
   }
@@ -571,26 +810,45 @@ export function resolveMilestoneFromHistory(
 
 /**
  * Resolves the overall customer-facing shipment status for public display.
- * Guarantees that package-level exceptions (Damaged, Missing, Lost, Misplaced, Held, etc.)
- * NEVER override the overall physical shipment status.
+ * Guarantees that exceptions (Damaged, Missing, Lost, Misplaced, Held, etc.)
+ * NEVER appear on customer tracking.
+ * If raw status is an exception or unknown, derives status strictly from the
+ * highest confirmed routine milestone achieved.
  */
 export function resolveCustomerCurrentStatus(
   rawStatus: string | null | undefined,
   history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string }> | null,
   customerUpdate?: string | null | undefined
 ): string {
+  // Check if latest history event represents Return
+  if (history && history.length > 0) {
+    const sorted = [...history].sort((a, b) => {
+      const da = a.occurred_at ? new Date(a.occurred_at).getTime() : 0;
+      const db = b.occurred_at ? new Date(b.occurred_at).getTime() : 0;
+      return db - da; // newest first
+    });
+    const latestEvent = sorted[0];
+    if (latestEvent && isReturnStatus(latestEvent.status, latestEvent.note)) {
+      return resolveReturnDescription(latestEvent.status, latestEvent.note);
+    }
+  }
+
+  if (isReturnStatus(rawStatus, customerUpdate)) {
+    return resolveReturnDescription(rawStatus, customerUpdate);
+  }
+
   const cleanRaw = (rawStatus || '').trim();
   const isRawException = isExceptionStatus(cleanRaw);
 
-  // 1. If raw status is NOT an exception, normalize it as routine status without letting an exception note override
-  if (!isRawException && cleanRaw) {
+  // 1. If raw status is NOT an exception and is on the confirmed routine whitelist, normalize it
+  if (!isRawException && cleanRaw && isRoutineOperationalStatus(cleanRaw)) {
     const normalized = normalizeOperationalStatus(cleanRaw);
-    if (!isExceptionStatus(normalized)) {
+    if (!isExceptionStatus(normalized) && isRoutineOperationalStatus(normalized)) {
       return normalized;
     }
   }
 
-  // 2. If raw status was an exception or empty, derive the true operational status from the highest achieved routine milestone
+  // 2. If raw status is an exception OR unknown, derive the true operational status from the highest achieved routine milestone
   const stage = resolveMilestoneFromHistory(null, history, null);
   switch (stage) {
     case 4: return 'Delivered';
@@ -605,9 +863,9 @@ export function resolveCustomerCurrentStatus(
 
 /**
  * Resolves the eligible customer update message for the public tracking banner.
- * Completely excludes package-level exceptions (e.g. "Shipment damaged", "Shipment missing", "Shipment lost").
- * If the shipment's customer_update is an exception or empty, returns the latest eligible
- * routine operational update from history.
+ * Completely excludes exceptions (e.g. "Shipment damaged", "Shipment missing", "Shipment lost").
+ * If the shipment's customer_update is an exception, unknown, or empty, returns the latest
+ * eligible routine operational update from history.
  */
 export function resolveCustomerEligibleUpdate(
   customerUpdate: string | null | undefined,
@@ -617,19 +875,30 @@ export function resolveCustomerEligibleUpdate(
     .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
     .trim();
 
-  // If customer_update is present and NOT an exception, preserve it (e.g. manual admin note)
-  if (clean && !isExceptionStatus(clean)) {
+  // If customer_update is present and NOT an exception, NOT internal code, and IS routine, preserve it
+  if (
+    clean &&
+    !isExceptionStatus(clean) &&
+    !isInternalCode(clean) &&
+    isRoutineOperationalStatus(clean)
+  ) {
     return clean;
   }
 
-  // If customer_update was an exception (or empty), return the latest eligible routine operational update from history
+  // If customer_update was an exception (or empty/unknown), return the latest eligible routine operational update from history
   if (cleanedHistory && cleanedHistory.length > 0) {
     for (const evt of cleanedHistory) {
       if (!evt) continue;
       const note = (evt.note || '')
         .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
         .trim();
-      if (note && !isExceptionStatus(evt.status, note) && note.toLowerCase() !== 'status updated') {
+      if (
+        note &&
+        !isExceptionStatus(evt.status, note) &&
+        !isInternalCode(note) &&
+        note.toLowerCase() !== 'status updated' &&
+        isRoutineOperationalStatus(evt.status, note)
+      ) {
         return note;
       }
     }

@@ -46,6 +46,7 @@ model Shipment {
   
   paid_amount      Float?                  @default(0)
   received_amount  Float?                  @default(0)
+  miscellaneous_charges Float?             @default(0)
   profit           Float?                  @default(0)
   
   current_status   String                  @default("Shipment Created") @db.VarChar(255)

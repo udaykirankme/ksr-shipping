@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { shipmentService } from '@/lib/shipment-service';
 import { getQuote } from '@/lib/quote-service';
-import { ArrowLeft, Save, RefreshCw, Share2, Plane, Truck } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, Share2, Plane, Truck, Check, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { ServicesApi, ServiceThroughApi, ServiceItem } from '@/lib/services-api';
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
 import { PremiumTimePicker } from "@/components/ui/PremiumTimePicker";
-import { formatDateToYYYYMMDD } from "@/lib/format";
+import { formatDateToYYYYMMDD, formatIndianNumberString } from "@/lib/format";
 import { toBusinessTimeInput } from "@/lib/datetime";
 import {
   buildShipmentCreatedShareMessage,
@@ -36,13 +36,15 @@ export default function NewShipmentPage() {
   const [error, setError] = useState('');
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [entryType, setEntryType] = useState<'shipment' | 'packing'>('shipment');
+  const [sameAsReceiver, setSameAsReceiver] = useState(false);
+  const [sameAsSender, setSameAsSender] = useState(false);
 
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
   const [dbServiceThrough, setDbServiceThrough] = useState<ServiceItem[]>([]);
 
   const [formData, setFormData] = useState(() => ({
     official_tracking_id: '',
-    shipment_type: 'Domestic',
+    shipment_type: '',
     medium: '',
     ...getCurrentBookedDateTime(),
     estimated_delivery: '',
@@ -68,11 +70,12 @@ export default function NewShipmentPage() {
     receiver_country: '',
     
     weight: '',
-    num_packages: '1',
+    num_packages: '',
     description: '',
     
     paid_amount: '',
     received_amount: '',
+    miscellaneous_charges: '',
     
     internal_notes: '',
     source_quote_id: ''
@@ -116,7 +119,57 @@ export default function NewShipmentPage() {
     }
   }, [quoteId]);
 
+  const handleSameAsReceiverChange = (checked: boolean) => {
+    setSameAsReceiver(checked);
+    if (checked) {
+      setSameAsSender(false);
+      setFormData(prev => ({
+        ...prev,
+        sender_name: prev.receiver_name,
+        sender_phone: prev.receiver_phone,
+        sender_email: prev.receiver_email,
+        sender_address: prev.receiver_address,
+        sender_city: prev.receiver_city,
+        sender_state: prev.receiver_state,
+        sender_pincode: prev.receiver_pincode,
+        sender_country: prev.receiver_country,
+      }));
+    }
+  };
+
+  const handleSameAsSenderChange = (checked: boolean) => {
+    setSameAsSender(checked);
+    if (checked) {
+      setSameAsReceiver(false);
+      setFormData(prev => ({
+        ...prev,
+        receiver_name: prev.sender_name,
+        receiver_phone: prev.sender_phone,
+        receiver_email: prev.sender_email,
+        receiver_address: prev.sender_address,
+        receiver_city: prev.sender_city,
+        receiver_state: prev.sender_state,
+        receiver_pincode: prev.sender_pincode,
+        receiver_country: prev.sender_country,
+      }));
+    }
+  };
+
+    const handleMoneyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const raw = value.replace(/,/g, '');
+    if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
+      let clean = raw;
+      if (clean.length > 1 && clean.startsWith('0') && !clean.startsWith('0.')) {
+        clean = clean.replace(/^0+/, '');
+        if (clean === '') clean = '0';
+      }
+      setFormData((prev: any) => ({ ...prev, [name]: clean }));
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name } = e.target;
     let value = e.target.value;
     if (e.target.type === 'number') {
       if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
@@ -124,7 +177,30 @@ export default function NewShipmentPage() {
         if (value === '') value = '0';
       }
     }
-    setFormData(prev => ({ ...prev, [e.target.name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+
+      if (sameAsSender && name.startsWith('sender_')) {
+        const receiverKey = name.replace('sender_', 'receiver_') as keyof typeof prev;
+        if (receiverKey in prev) {
+          (updated as any)[receiverKey] = value;
+        }
+      } else if (sameAsReceiver && name.startsWith('receiver_')) {
+        const senderKey = name.replace('receiver_', 'sender_') as keyof typeof prev;
+        if (senderKey in prev) {
+          (updated as any)[senderKey] = value;
+        }
+      }
+
+      return updated;
+    });
+
+    if (sameAsSender && name.startsWith('receiver_')) {
+      setSameAsSender(false);
+    }
+    if (sameAsReceiver && name.startsWith('sender_')) {
+      setSameAsReceiver(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,13 +241,33 @@ export default function NewShipmentPage() {
       return;
     }
 
+    if (!formData.shipment_type) {
+      setError('Shipment Type is required');
+      return;
+    }
+
     if (!formData.estimated_delivery) {
       setError('Estimated Delivery Date is required');
       return;
     }
 
+    if (!formData.service) {
+      setError('Service is required');
+      return;
+    }
+
+    if (!formData.service_through) {
+      setError('Service Through is required');
+      return;
+    }
+
     if (!formData.medium) {
       setError('Medium is required');
+      return;
+    }
+
+    if (!formData.num_packages || parseInt(formData.num_packages) <= 0 || isNaN(parseInt(formData.num_packages))) {
+      setError('Number of Boxes is required and must be at least 1');
       return;
     }
     
@@ -182,9 +278,10 @@ export default function NewShipmentPage() {
         entry_type: 'shipment',
         ...formData,
         weight: formData.weight ? parseFloat(formData.weight) : null,
-        num_packages: parseInt(formData.num_packages) || 1,
+        num_packages: parseInt(formData.num_packages),
         paid_amount: parseFloat(formData.paid_amount) || 0,
         received_amount: parseFloat(formData.received_amount) || 0,
+        miscellaneous_charges: formData.miscellaneous_charges ? (parseFloat(formData.miscellaneous_charges) || 0) : 0,
         source_quote_id: formData.source_quote_id || null
       });
       const resData = res as any;
@@ -237,14 +334,19 @@ export default function NewShipmentPage() {
             <button 
               onClick={() => {
                 setCreatedId(null);
+                setSameAsReceiver(false);
+                setSameAsSender(false);
                 setFormData((prev) => ({
                   ...prev,
                   official_tracking_id: '',
+                  shipment_type: '',
                   medium: '',
                   received_amount: '',
                   paid_amount: '',
+                  miscellaneous_charges: '',
                   sender_name: '',
                   sender_phone: '',
+                  num_packages: '',
                   ...getCurrentBookedDateTime(),
                 }));
               }}
@@ -459,14 +561,8 @@ export default function NewShipmentPage() {
                     type="text" 
                     inputMode="decimal"
                     name="received_amount" 
-                    placeholder="Enter amount received (e.g. 500)"
-                    value={formData.received_amount?.toString().length > 0 ? formData.received_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} 
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/,/g, '');
-                      if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
-                        handleChange({ target: { name: 'received_amount', value: raw } } as any);
-                      }
-                    }} 
+                    value={formatIndianNumberString(formData.received_amount)}
+                    onChange={handleMoneyChange} 
                     className="w-full rounded-xl border border-emerald-300 px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 text-lg font-bold bg-emerald-50/40" 
                   />
                 </div>
@@ -635,6 +731,41 @@ export default function NewShipmentPage() {
                       <input name="sender_pincode" value={formData.sender_pincode} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
                     </div>
                   </div>
+
+                  <div className="pt-4 border-t border-gray-100">
+                    <label
+                      className={`group flex items-center justify-between p-3.5 sm:px-4 sm:py-3 rounded-2xl border cursor-pointer select-none transition-all duration-200 min-h-[48px] ${
+                        sameAsReceiver
+                          ? 'border-orange-400 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400/30 shadow-xs'
+                          : 'border-gray-200/90 bg-gray-50/50 text-gray-700 hover:border-orange-200 hover:bg-orange-50/30 hover:text-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          name="same_as_receiver"
+                          checked={sameAsReceiver}
+                          onChange={(e) => handleSameAsReceiverChange(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div
+                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 ${
+                            sameAsReceiver
+                              ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
+                              : 'bg-white border-gray-300 group-hover:border-orange-300'
+                          }`}
+                        >
+                          <Check
+                            className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
+                              sameAsReceiver ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                            }`}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold tracking-tight">Same as receiver details</span>
+                      </div>
+                      <Copy className={`w-4 h-4 transition-colors ${sameAsReceiver ? 'text-orange-500' : 'text-gray-400 group-hover:text-orange-400'}`} />
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -670,45 +801,149 @@ export default function NewShipmentPage() {
                       <input name="receiver_pincode" value={formData.receiver_pincode} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
                     </div>
                   </div>
+
+                  <div className="pt-4 border-t border-gray-100">
+                    <label
+                      className={`group flex items-center justify-between p-3.5 sm:px-4 sm:py-3 rounded-2xl border cursor-pointer select-none transition-all duration-200 min-h-[48px] ${
+                        sameAsSender
+                          ? 'border-orange-400 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400/30 shadow-xs'
+                          : 'border-gray-200/90 bg-gray-50/50 text-gray-700 hover:border-orange-200 hover:bg-orange-50/30 hover:text-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          name="same_as_sender"
+                          checked={sameAsSender}
+                          onChange={(e) => handleSameAsSenderChange(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div
+                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 ${
+                            sameAsSender
+                              ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
+                              : 'bg-white border-gray-300 group-hover:border-orange-300'
+                          }`}
+                        >
+                          <Check
+                            className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
+                              sameAsSender ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                            }`}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold tracking-tight">Same as sender details</span>
+                      </div>
+                      <Copy className={`w-4 h-4 transition-colors ${sameAsSender ? 'text-orange-500' : 'text-gray-400 group-hover:text-orange-400'}`} />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Package & Payment */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Package Details</h2>
-                <div className="grid grid-cols-2 gap-6 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg) <span className="text-red-500">*</span></label>
-                    <input required type="number" step="0.01" name="weight" value={formData.weight} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">No. of Packages</label>
-                    <input required type="number" name="num_packages" value={formData.num_packages} onChange={handleChange} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
-                  </div>
-                </div>
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description / Contents</label>
-                  <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all" />
+                  <h2 className="text-lg font-semibold text-gray-900 mb-6">Package Details</h2>
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
+                    <div>
+                      <label className="h-10 flex items-end text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <span>Weight (kg) <span className="text-red-500">*</span></span>
+                      </label>
+                      <input 
+                        required 
+                        type="number" 
+                        step="0.01" 
+                        name="weight" 
+                        value={formData.weight} 
+                        onChange={handleChange} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-gray-900" 
+                      />
+                    </div>
+                    <div>
+                      <label className="h-10 flex items-end text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <span>Number of Boxes <span className="text-red-500">*</span></span>
+                      </label>
+                      <input 
+                        required 
+                        type="number" 
+                        min="1" 
+                        name="num_packages" 
+                        value={formData.num_packages} 
+                        onChange={handleChange} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-gray-900" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Description / Contents</label>
+                    <textarea 
+                      name="description" 
+                      value={formData.description} 
+                      onChange={handleChange} 
+                      rows={3} 
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all resize-none text-gray-900" 
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Financials</h2>
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Received Amount (₹) <span className="text-red-500">*</span></label>
-                    <input required type="text" inputMode="decimal" name="received_amount" value={formData.received_amount?.toString().length > 0 ? formData.received_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'received_amount', value: raw } } as any); }} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50" />
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-6">Financials</h2>
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        Received (₹) <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        required 
+                        type="text" 
+                        inputMode="decimal" 
+                        name="received_amount" 
+                        value={formatIndianNumberString(formData.received_amount)} 
+                        onChange={handleMoneyChange} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 text-base sm:text-lg" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        Paid (₹) <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        required 
+                        type="text" 
+                        inputMode="decimal" 
+                        name="paid_amount" 
+                        value={formatIndianNumberString(formData.paid_amount)} 
+                        onChange={handleMoneyChange} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 text-base sm:text-lg" 
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Paid Amount (₹) <span className="text-red-500">*</span></label>
-                    <input required type="text" inputMode="decimal" name="paid_amount" value={formData.paid_amount?.toString().length > 0 ? formData.paid_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'paid_amount', value: raw } } as any); }} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 sm:items-center mb-6">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">
+                        Miscellaneous Charges (₹)
+                      </label>
+                    </div>
+                    <div>
+                      <input 
+                        type="text" 
+                        inputMode="decimal" 
+                        name="miscellaneous_charges" 
+                        value={formatIndianNumberString(formData.miscellaneous_charges)} 
+                        onChange={handleMoneyChange} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-amber-700 font-semibold bg-amber-50/40 text-base sm:text-lg" 
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100">
+                <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100 mt-6">
                    <span className="font-semibold text-gray-700">Estimated Profit</span>
-                   <span className="text-2xl font-bold text-gray-900">₹{(Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0)}</span>
+                   <span className="text-2xl font-bold text-gray-900">
+                     ₹{((Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0) - (Number(formData.miscellaneous_charges) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                   </span>
                 </div>
               </div>
             </div>

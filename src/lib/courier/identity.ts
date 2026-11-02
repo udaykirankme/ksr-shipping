@@ -1,4 +1,4 @@
-import { isExceptionStatus, normalizeOperationalStatus } from './normalization';
+import { isExceptionStatus, isRoutineOperationalStatus, normalizeOperationalStatus } from './normalization';
 
 export interface IncomingTrackingEvent {
   status: string;
@@ -76,12 +76,24 @@ export function sanitizeCustomerHistoryNote(note: string | null | undefined): st
   const upper = n.toUpperCase();
   if (upper === 'LEFT_ORIGIN' || upper === 'LEFT ORIGIN') return 'Vehicle Departed';
   if (upper === 'MANIFESTED') return 'Manifest Uploaded';
-  if (upper === 'UD') return 'Shipment Updated';
+  if (upper === 'UD') return 'In Transit';
   if (upper === 'DL') return 'Delivered';
+  if (upper === 'OFD') return 'Out For Delivery';
 
   return n.trim();
 }
 
+/**
+ * Evaluates whether an incoming event is a duplicate of an existing record.
+ * Uses strict conservative physical composite identity:
+ * - Package scope / WBN identifier (both must match; different IDs or scope mismatch = not duplicate)
+ * - Physical facility location (case-insensitive, trimmed)
+ * - Canonical operational action
+ * - Core operational remark (stripped of ID prefixes)
+ * - Exact normalized carrier timestamp comparison:
+ *     - diffMs === 0: exact physical instant match -> DUPLICATE
+ *     - diffMs > 0: treated as AMBIGUOUS -> NOT DUPLICATE (preserve both records)
+ */
 export function isDuplicateEvent(
   existingEvent: { status: string; location: string | null; occurred_at: Date; note: string | null },
   incomingEvent: IncomingTrackingEvent
@@ -91,55 +103,54 @@ export function isDuplicateEvent(
                         incomingEvent.provider_event_id?.trim() ||
                         extractPackageIdentifier(incomingEvent.note);
 
-  // 1. If both supply package/provider event identifiers:
-  // If the identifiers differ, they are distinct physical scans (e.g. two packages under the same LR)
-  if (existingPkgId && incomingPkgId && existingPkgId.toLowerCase() !== incomingPkgId.toLowerCase()) {
-    return false;
+  // 1. Package scope / WBN check:
+  // If one has an identifier and the other does not, or if they differ,
+  // they represent distinct physical scopes (package-level vs shipment-level or distinct boxes).
+  // They MUST NOT be merged or treated as duplicates!
+  if (existingPkgId || incomingPkgId) {
+    if (!existingPkgId || !incomingPkgId) {
+      return false;
+    }
+    if (existingPkgId.toLowerCase() !== incomingPkgId.toLowerCase()) {
+      return false;
+    }
   }
 
+  // 2. Physical Location check (case-insensitive, trimmed)
   const existingLoc = (existingEvent.location || '').trim().toLowerCase();
   const incomingLoc = (incomingEvent.location || '').trim().toLowerCase();
   if (existingLoc !== incomingLoc) return false;
 
+  // 3. Canonical Action check
   const normalizedExistingStatus = normalizeOperationalStatus(existingEvent.status, existingEvent.note).toLowerCase();
   const normalizedIncomingStatus = normalizeOperationalStatus(incomingEvent.status, incomingEvent.note || incomingEvent.raw_status).toLowerCase();
   if (normalizedExistingStatus !== normalizedIncomingStatus) return false;
 
+  // 4. Core Operational Remark check (stripped of prefixes and ID tags)
   const normalizedExistingNote = normalizeNoteForComparison(existingEvent.note);
   const normalizedIncomingNote = normalizeNoteForComparison(incomingEvent.note || incomingEvent.raw_status);
-
-  // Both notes are empty (or were just prefixes), or match
   const notesMatch = (!normalizedExistingNote && !normalizedIncomingNote) || (normalizedExistingNote === normalizedIncomingNote);
   if (!notesMatch) return false;
 
+  // 5. Exact normalized carrier timestamp comparison
   const diffMs = Math.abs(existingEvent.occurred_at.getTime() - incomingEvent.occurred_at.getTime());
 
-  const isException = isExceptionStatus(normalizedExistingStatus, normalizedExistingNote) ||
-                      isExceptionStatus(normalizedIncomingStatus, normalizedIncomingNote);
-
-  // If both have the same package identifier:
-  if (existingPkgId && incomingPkgId && existingPkgId.toLowerCase() === incomingPkgId.toLowerCase()) {
-    return diffMs < 60000;
+  // Conservative deduplication:
+  // Drop ONLY when exact physical instant equivalence is established (diffMs === 0).
+  // If timestamps differ by > 0ms (even up to 2000ms), treat as AMBIGUOUS and preserve as separate records.
+  if (diffMs === 0) {
+    return true;
   }
 
-  // Deduplicate identical exception events (e.g. Shipment Damaged, Held, Missing) across webhook & API sync
-  if (isException) {
-    return diffMs < 15 * 60 * 1000;
-  }
-
-  // Without package identifiers:
-  // Duplicate webhook/API transmissions of the same physical event typically have identical timestamps
-  // or differ by sub-second millisecond precision (e.g. 23:21:27.901Z vs 23:21:27.000Z).
-  // Distinct multi-package scans without IDs are separated by seconds (> 2000ms).
-  return diffMs < 2000;
+  return false;
 }
 
 /**
  * Prepares history for customer display by:
- * 1. Sanitizing raw internal provider codes into clean human-readable descriptions
- * 2. Stripping internal barcodes/WBNs/IDs so they are never exposed in public tracking
- * 3. Deduplicating duplicate physical events delivered across webhook and API sync
- * 4. Preserving all legitimate package scans
+ * 1. Filtering out all exceptions (Damaged, Lost, Missing, Held, etc.)
+ * 2. Sanitizing raw internal provider codes into clean human-readable descriptions
+ * 3. Stripping internal barcodes/WBNs/IDs so they are never exposed in public tracking
+ * 4. Deduplicating identical physical events delivered across webhook and API sync
  */
 export function sanitizeHistoryForCustomer<T extends { status: string; location?: string | null; note?: string | null; occurred_at: Date | string }>(
   history: T[]
@@ -147,7 +158,7 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
   const result: T[] = [];
 
   for (const item of history) {
-    // Exclude package-level exception events from public customer consumption
+    // Exclude exception events from public customer consumption
     if (isExceptionStatus(item.status, item.note)) {
       continue;
     }
@@ -157,6 +168,11 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
     if (isExceptionStatus(normalizedStatus, cleanNote)) {
       continue;
     }
+    // Unknown event safety suppression for public customer history
+    if (!isRoutineOperationalStatus(normalizedStatus, cleanNote)) {
+      continue;
+    }
+    const pkgId = extractPackageIdentifier(item as any) || extractPackageIdentifier(item.note);
 
     const isDuplicate = result.some(existing => {
       const existingDate = existing.occurred_at instanceof Date ? existing.occurred_at : new Date(existing.occurred_at);
@@ -180,7 +196,8 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
       result.push({
         ...item,
         status: normalizedStatus,
-        note: cleanNote || null
+        note: cleanNote || null,
+        package_id: pkgId || (item as any).package_id || undefined
       });
     }
   }

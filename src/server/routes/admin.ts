@@ -225,7 +225,7 @@ router.get('/shipments/export', async (req, res) => {
       'Receiver Name', 'Receiver Mobile', 'Destination', 'Shipment Type', 
       'Courier Service', 'Service Through', 'Medium', 'Current Status', 'Weight', 
       'Book Date', 'Book Time', 'Estimated Delivery', 'Profit', 
-      'Paid Amount', 'Receiver Amount', 'Active/Inactive'
+      'Paid Amount', 'Received Amount', 'Misc Charges', 'Active/Inactive'
     ];
 
     const csv = [
@@ -251,6 +251,7 @@ router.get('/shipments/export', async (req, res) => {
           s.profit,
           s.paid_amount,
           s.received_amount,
+          (s as any).miscellaneous_charges ?? 0,
           s.is_active ? 'Active' : 'Inactive'
         ];
         return row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
@@ -434,7 +435,8 @@ router.post('/shipments', async (req, res) => {
     
     data.paid_amount = Number(data.paid_amount) || 0;
     data.received_amount = Number(data.received_amount) || 0;
-    data.profit = data.received_amount - data.paid_amount;
+    data.miscellaneous_charges = Number(data.miscellaneous_charges) || 0;
+    data.profit = data.received_amount - data.paid_amount - data.miscellaneous_charges;
 
     if (source_quote_id) {
       const quote = await prisma.quotationRequest.findUnique({ where: { id: source_quote_id } });
@@ -626,18 +628,16 @@ router.put('/shipments/:id', async (req, res) => {
       return res.status(400).json({ success: false, message: `Field received_amount is required` });
     }
     
-    if (current.current_status === 'Delivered') {
-      return res.status(403).json({ success: false, message: 'Cannot edit a delivered shipment (Read Only)'  });
-    }
-
     if (current.version !== version) {
       return res.status(409).json({ success: false, message: 'Conflict: This record has been updated by another user. Please refresh.'  });
     }
 
-    if (updateData.paid_amount !== undefined || updateData.received_amount !== undefined) {
+    if (updateData.paid_amount !== undefined || updateData.received_amount !== undefined || updateData.miscellaneous_charges !== undefined) {
       const paid = Number(updateData.paid_amount ?? current.paid_amount) || 0;
       const received = Number(updateData.received_amount ?? current.received_amount) || 0;
-      updateData.profit = received - paid;
+      const misc = Number(updateData.miscellaneous_charges ?? (current as any).miscellaneous_charges) || 0;
+      updateData.miscellaneous_charges = misc;
+      updateData.profit = received - paid - misc;
     }
 
     if (updateData.estimated_delivery) updateData.estimated_delivery = new Date(updateData.estimated_delivery as string);

@@ -138,7 +138,7 @@ export class DelhiveryB2BProvider implements CourierProvider {
     }
 
     // Extract fields using established normalization logic.
-    let normalized = normalizeDelhiveryStatus(rawStatus, latest.scan_remark);
+    let normalized = normalizeDelhiveryStatus(rawStatus, latest.scan_remark, statusType);
     if (typeof normalized === 'string' && normalized.toUpperCase() === 'UD') {
       const remarkLower = (latest.scan_remark || '').toLowerCase();
       if (
@@ -207,7 +207,7 @@ export class DelhiveryB2BProvider implements CourierProvider {
         rawStatus
       ).trim();
 
-      let itemNormalized = normalizeDelhiveryStatus(wbnRawStatus, wbnItem.scan_remark || latest.scan_remark);
+      let itemNormalized = normalizeDelhiveryStatus(wbnRawStatus, wbnItem.scan_remark || latest.scan_remark, wbnStatusType);
       if (typeof itemNormalized === 'string' && itemNormalized.toUpperCase() === 'UD') {
         const itemRemarkLower = (wbnItem.scan_remark || latest.scan_remark || '').toLowerCase();
         if (

@@ -1,5 +1,5 @@
 import { sanitizeCustomerHistoryNote, sanitizeHistoryForCustomer } from './identity';
-import { isExceptionStatus, normalizeOperationalStatus } from './normalization';
+import { isExceptionStatus, isRoutineOperationalStatus, normalizeOperationalStatus } from './normalization';
 
 export interface RawTrackingScan {
   status: string;
@@ -104,18 +104,89 @@ export function getCleanOperationalRemark(note: string | null | undefined): stri
 }
 
 /**
- * Intelligently aggregates multiple package-level tracking scans belonging to the
- * same shipment stage and operational remark into concise, customer-friendly groups.
+ * Resolves the canonical operational action for an event.
+ */
+function getCanonicalAction(status: string, cleanRemark: string): string {
+  const remarkLower = cleanRemark.toLowerCase();
+  const statusLower = status.toLowerCase();
+
+  if (remarkLower.includes('vehicle departed') || statusLower === 'vehicle departed' || remarkLower.includes('left origin')) {
+    return 'Vehicle Departed';
+  }
+  if (remarkLower.includes('trip arrived')) {
+    return 'Trip Arrived';
+  }
+  if (remarkLower.includes('bag added to trip')) {
+    return 'Bag Added to Trip';
+  }
+  if (remarkLower.includes('shipment received at facility') || remarkLower.includes('received at facility')) {
+    return 'Shipment Received at Facility';
+  }
+  if (remarkLower.includes('bag received at facility') || remarkLower.includes('bag received')) {
+    return 'Bag Received at Facility';
+  }
+  if (remarkLower.includes('added to bag') || remarkLower.includes('shipment bagged')) {
+    return 'Shipment Bagged';
+  }
+  if (
+    remarkLower.includes('out for delivery') ||
+    statusLower === 'out for delivery' ||
+    statusLower === 'ofd' ||
+    remarkLower.includes('dispatched') ||
+    statusLower === 'dispatched'
+  ) {
+    return 'Out For Delivery';
+  }
+  if (
+    statusLower === 'delivered' ||
+    (statusLower.includes('deliver') && !statusLower.includes('out for delivery') && !statusLower.includes('return')) ||
+    (remarkLower.includes('delivered') && !remarkLower.includes('out for delivery') && !remarkLower.includes('return'))
+  ) {
+    return 'Delivered';
+  }
+  if (statusLower === 'returned' || statusLower === 'returned to origin' || remarkLower.includes('returned to origin')) {
+    return 'Returned to Origin';
+  }
+  if (statusLower.includes('return in transit') || remarkLower.includes('return in transit')) {
+    return 'Return In Transit';
+  }
+  if (statusLower.includes('return at hub') || remarkLower.includes('distribution center nearest')) {
+    return 'Return at Hub';
+  }
+  if (statusLower.includes('return out for delivery')) {
+    return 'Return Out For Delivery';
+  }
+  if (remarkLower.includes('manifest uploaded') || statusLower === 'manifest uploaded' || statusLower === 'manifested') {
+    return 'Manifest Uploaded';
+  }
+  if (statusLower === 'picked up' || remarkLower.includes('picked up') || remarkLower.includes('collected')) {
+    return 'Picked Up';
+  }
+
+  return cleanRemark || status || 'In Transit';
+}
+
+function isDepartureAction(action: string): boolean {
+  const a = action.toLowerCase();
+  return a.includes('depart') || a.includes('left origin');
+}
+
+/**
+ * Universal Delhivery B2B Tracking Aggregation Engine.
  *
- * Scans are grouped only if:
- * 1. Same normalized status (e.g. "In Transit", "Vehicle Departed")
- * 2. Same physical location (case-insensitive)
- * 3. Compatible operational remark (e.g. both are "Bag Added To Trip")
- * 4. Occur within a bounded time window (default: 10 minutes)
- *    - Strictly bounded: Scans do NOT chain indefinitely beyond the window from the first scan.
- *    - Accommodates interleaved multi-piece scans (e.g. Added to Bag and Bag Added to Trip per package).
- *
- * Preserves every raw scan inside `events` for expandable customer inspection.
+ * Implements Topological Contiguity Clustering:
+ * 1. Groups package scans of the same canonical action at the same physical facility during
+ *    an active warehouse session into exactly ONE clean customer-facing timeline entry.
+ * 2. Recognizes occurrence boundaries:
+ *    - Sealed on departure ('Vehicle Departed', 'Dispatched') from the facility.
+ *    - Sealed upon movement to a different physical facility ('Trip Arrived', 'Received at Facility').
+ *    - Sealed upon terminal milestones ('Out For Delivery', 'Delivered').
+ * 3. Correctly distinguishes subsequent visits:
+ *    If a shipment returns to the same facility after departure or movement, the new scans form
+ *    a distinct, separate operational occurrence card.
+ * 4. Filters out all exceptions (Damaged, Lost, Missing, Held, etc.) and unverified unknown events.
+ * 5. Returns exactly ONE clean card per operational occurrence with ZERO package badges,
+ *    ZERO scan counts, and ZERO expandable accordions.
  */
 export function aggregateTrackingHistory(
   rawEvents: RawTrackingScan[],
@@ -125,25 +196,32 @@ export function aggregateTrackingHistory(
     return [];
   }
 
-  // 1. Deduplicate identical physical events across webhook and sync API
+  // 1. Deduplicate identical physical events delivered across webhook and sync API
   const dedupedScans = sanitizeHistoryForCustomer(rawEvents);
 
-  const windowMinutes = typeof options.windowMinutes === 'number' && options.windowMinutes > 0
-    ? options.windowMinutes
-    : 10;
-  const windowMs = windowMinutes * 60 * 1000;
-
-  // 2. Normalize and parse all scans
+  // 2. Filter out exceptions and unverified non-routine events, parse valid scans
   interface ParsedScan {
     status: string;
     location: string;
     note: string;
     cleanRemark: string;
+    canonicalAction: string;
     occurredAt: Date;
     packageId: string | null;
   }
 
-  const parsedScans: ParsedScan[] = dedupedScans.map(evt => {
+  const validScans: ParsedScan[] = [];
+
+  for (const evt of dedupedScans) {
+    // Absolute public exception suppression
+    if (isExceptionStatus(evt.status, evt.note)) {
+      continue;
+    }
+    // Unknown event safety suppression
+    if (!isRoutineOperationalStatus(evt.status, evt.note)) {
+      continue;
+    }
+
     const rawDate = evt.occurred_at;
     let occurredAt = rawDate instanceof Date ? rawDate : new Date(rawDate);
     if (isNaN(occurredAt.getTime()) || occurredAt.getFullYear() <= 1970) {
@@ -153,134 +231,148 @@ export function aggregateTrackingHistory(
     const cleanNote = getCleanOperationalRemark(evt.note);
     const packageId = extractPackageId(evt);
     const normStatus = normalizeOperationalStatus(evt.status, cleanNote);
+    const canonicalAction = getCanonicalAction(normStatus, cleanNote);
 
-    return {
+    validScans.push({
       status: normStatus,
       location: (evt.location || '').trim(),
       note: cleanNote || normStatus,
       cleanRemark: cleanNote.toLowerCase(),
+      canonicalAction,
       occurredAt,
       packageId
-    };
-  });
+    });
+  }
 
-  // 3. Sort scans chronologically descending (newest first)
-  parsedScans.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+  if (validScans.length === 0) {
+    return [];
+  }
 
-  // 4. Build aggregated groups
-  interface TempGroup {
+  // 3. Sort scans chronologically ASCENDING (oldest first) to trace physical logistics flow
+  validScans.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+
+  // 4. State Machine Clustering: Trace active occurrences and boundaries
+  interface TempOccurrence {
+    id: string;
     status: string;
     location: string;
-    cleanRemark: string;
+    canonicalAction: string;
     headline: string;
-    isException: boolean;
-    anchorTime: number;
-    newestTime: number;
-    oldestTime: number;
+    firstOccurredAt: Date;
+    lastOccurredAt: Date;
     packageIds: Set<string>;
     items: ParsedScan[];
   }
 
-  const tempGroups: TempGroup[] = [];
+  const completedOccurrences: TempOccurrence[] = [];
+  const activeOccurrences = new Map<string, TempOccurrence>();
+  let currentActiveFacility: string | null = null;
 
-  for (const scan of parsedScans) {
-    if (isExceptionStatus(scan.status, scan.note)) {
-      continue; // Exclude package-level exception events from customer aggregation
+  for (const scan of validScans) {
+    const facilityNorm = scan.location.toLowerCase();
+    const actionNorm = scan.canonicalAction.toLowerCase();
+    const isDeparture = isDepartureAction(scan.canonicalAction);
+    const isOutForDeliveryOrDelivered = actionNorm.includes('out for delivery') || actionNorm.includes('delivered') || actionNorm.includes('dispatched');
+
+    // Boundary Check 1: Movement to a different physical facility
+    if (currentActiveFacility !== null && facilityNorm !== '' && facilityNorm !== currentActiveFacility) {
+      // Seal all open occurrences from the previous facility
+      for (const occ of Array.from(activeOccurrences.values())) {
+        completedOccurrences.push(occ);
+      }
+      activeOccurrences.clear();
+      currentActiveFacility = facilityNorm;
     }
-    const scanTime = scan.occurredAt.getTime();
-    const isScanException = isExceptionStatus(scan.status, scan.note);
 
-    // Look for an existing open group within the bounded window that matches status, location, and remark.
-    // Exception events (Damaged, Lost, Missing, Held, Cancelled, etc.) MUST NEVER be merged into routine scan groups.
-    let matchingGroup: TempGroup | undefined = undefined;
+    // Boundary Check 2: Terminal milestone (OFD or Delivered) seals prior facility operations
+    if (isOutForDeliveryOrDelivered) {
+      for (const occ of Array.from(activeOccurrences.values())) {
+        completedOccurrences.push(occ);
+      }
+      activeOccurrences.clear();
+    }
 
-    if (!isScanException) {
-      for (let i = tempGroups.length - 1; i >= 0; i--) {
-        const g = tempGroups[i];
-        if (g.isException) continue; // Routine scans must never merge into exception events
-
-        // If group is beyond 2x window from scan, stop looking backward
-        if (Math.abs(scanTime - g.anchorTime) > windowMs * 2) {
-          break;
-        }
-
-        const sameStatus = g.status.toLowerCase() === scan.status.toLowerCase();
-        const sameLocation = g.location.toLowerCase() === scan.location.toLowerCase();
-        const sameRemark = g.cleanRemark === scan.cleanRemark;
-
-        if (sameStatus && sameLocation && sameRemark) {
-          const proposedNewest = Math.max(g.newestTime, scanTime);
-          const proposedOldest = Math.min(g.oldestTime, scanTime);
-          // Strictly bounded window check: span cannot exceed windowMs
-          if ((proposedNewest - proposedOldest) <= windowMs) {
-            matchingGroup = g;
-            break;
-          }
+    // Boundary Check 3: Departure from the facility seals intake/handling occurrences
+    if (isDeparture) {
+      for (const [key, occ] of Array.from(activeOccurrences.entries())) {
+        if (!isDepartureAction(occ.canonicalAction)) {
+          completedOccurrences.push(occ);
+          activeOccurrences.delete(key);
         }
       }
     }
 
-    if (matchingGroup) {
-      matchingGroup.newestTime = Math.max(matchingGroup.newestTime, scanTime);
-      matchingGroup.oldestTime = Math.min(matchingGroup.oldestTime, scanTime);
+    const occurrenceKey = `${facilityNorm}::${actionNorm}`;
+    const existing = activeOccurrences.get(occurrenceKey);
+
+    if (existing) {
+      // Attach to the current active occurrence
+      if (scan.occurredAt.getTime() < existing.firstOccurredAt.getTime()) {
+        existing.firstOccurredAt = scan.occurredAt;
+      }
+      if (scan.occurredAt.getTime() > existing.lastOccurredAt.getTime()) {
+        existing.lastOccurredAt = scan.occurredAt;
+      }
       if (scan.packageId) {
-        matchingGroup.packageIds.add(scan.packageId);
+        existing.packageIds.add(scan.packageId);
       }
-      matchingGroup.items.push(scan);
+      existing.items.push(scan);
     } else {
-      // Start a new group
-      const headlineText = scan.note || scan.status;
-      const headline = toTitleCase(headlineText);
-      const pkgSet = new Set<string>();
-      if (scan.packageId) {
-        pkgSet.add(scan.packageId);
-      }
-
-      tempGroups.push({
+      // Start a new operational occurrence
+      const newOcc: TempOccurrence = {
+        id: `occ-${completedOccurrences.length}-${scan.occurredAt.getTime()}`,
         status: scan.status,
         location: scan.location,
-        cleanRemark: scan.cleanRemark,
-        headline,
-        isException: isScanException,
-        anchorTime: scanTime,
-        newestTime: scanTime,
-        oldestTime: scanTime,
-        packageIds: pkgSet,
+        canonicalAction: scan.canonicalAction,
+        headline: toTitleCase(scan.canonicalAction),
+        firstOccurredAt: scan.occurredAt,
+        lastOccurredAt: scan.occurredAt,
+        packageIds: new Set<string>(),
         items: [scan]
-      });
+      };
+      if (scan.packageId) {
+        newOcc.packageIds.add(scan.packageId);
+      }
+      activeOccurrences.set(occurrenceKey, newOcc);
+    }
+
+    if (facilityNorm !== '') {
+      currentActiveFacility = facilityNorm;
     }
   }
 
-  // 5. Sort groups by latest activity first (chronologically descending)
-  tempGroups.sort((a, b) => b.newestTime - a.newestTime);
+  // Push any remaining active occurrences into completed list
+  for (const occ of Array.from(activeOccurrences.values())) {
+    completedOccurrences.push(occ);
+  }
+
+  // 5. Sort occurrences chronologically DESCENDING (newest occurrence first) for customer tracking view
+  completedOccurrences.sort((a, b) => b.lastOccurredAt.getTime() - a.lastOccurredAt.getTime());
 
   // 6. Map to final AggregatedTrackingGroup structure
-  return tempGroups.map((g, idx) => {
-    // Sort items within the group chronologically descending
-    g.items.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
+  return completedOccurrences.map((occ, idx) => {
+    occ.items.sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
 
-    const firstTime = new Date(g.oldestTime);
-    const lastTime = new Date(g.newestTime);
-    const isTimeRange = (g.newestTime - g.oldestTime) >= 60000;
-
-    let distinctCount = g.packageIds.size;
+    let distinctCount = occ.packageIds.size;
     if (options.maxShipmentPackages && options.maxShipmentPackages > 0 && distinctCount > options.maxShipmentPackages) {
       distinctCount = options.maxShipmentPackages;
     }
 
+    const isTimeRange = (occ.lastOccurredAt.getTime() - occ.firstOccurredAt.getTime()) >= 60000;
+
     return {
-      id: `agg-group-${idx}-${g.oldestTime}`,
-      status: g.status,
-      location: g.location,
-      headline: g.headline,
-      is_exception: g.isException,
-      scan_count: g.items.length,
+      id: `agg-group-${idx}-${occ.lastOccurredAt.getTime()}`,
+      status: occ.status,
+      location: occ.location,
+      headline: occ.headline,
+      is_exception: false,
+      scan_count: occ.items.length,
       distinct_packages: distinctCount,
-      has_package_identifiers: g.packageIds.size > 0,
-      first_occurred_at: firstTime,
-      last_occurred_at: lastTime,
+      has_package_identifiers: occ.packageIds.size > 0,
+      first_occurred_at: occ.firstOccurredAt,
+      last_occurred_at: occ.lastOccurredAt,
       is_time_range: isTimeRange,
-      events: g.items.map(item => ({
+      events: occ.items.map(item => ({
         status: item.status,
         location: item.location,
         note: item.note,
@@ -290,3 +382,8 @@ export function aggregateTrackingHistory(
     };
   });
 }
+
+/**
+ * Universal Delhivery B2B Tracking Aggregation Alias.
+ */
+export const aggregateDelhiveryB2BHistory = aggregateTrackingHistory;

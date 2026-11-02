@@ -100,7 +100,8 @@ export const processWebhookEventCore = async (
   return runWithShipmentLock(officialTrackingId, async () => {
   try {
     // 0. Normalize the status strictly using the shared function
-    const normalizedStatus = normalizeDelhiveryStatus(eventStatus, eventCustomerUpdate);
+    const eventStatusType = payload?.status_type || payload?.StatusType || undefined;
+    const normalizedStatus = normalizeDelhiveryStatus(eventStatus, eventCustomerUpdate, eventStatusType);
 
     if (!officialTrackingId) {
       console.warn('[Webhook] Received payload without a valid tracking identifier.');
@@ -128,8 +129,8 @@ export const processWebhookEventCore = async (
        occurredAt = new Date();
     }
 
-    const timeLowerBound = new Date(occurredAt.getTime() - 60000);
-    const timeUpperBound = new Date(occurredAt.getTime() + 60000);
+    const timeLowerBound = new Date(occurredAt.getTime() - 5000);
+    const timeUpperBound = new Date(occurredAt.getTime() + 5000);
 
     // 1. Load the shipment using the official tracking ID (AWB / LR)
     const shipment = await prisma.shipment.findUnique({

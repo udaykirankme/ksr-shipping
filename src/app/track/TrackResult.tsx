@@ -73,7 +73,11 @@ const getStatusColor = (status: string) => {
     case 'Out For Delivery': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'Delivered': return 'bg-green-100 text-green-800 border-green-200';
     case 'Cancelled': return 'bg-red-100 text-red-800 border-red-200';
-    case 'Returned': return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'Returned':
+    case 'Returned to Origin':
+    case 'Return In Transit':
+    case 'Return at Hub':
+    case 'Return Out For Delivery': return 'bg-purple-100 text-purple-800 border-purple-200';
     default: return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
@@ -106,7 +110,11 @@ const getStatusIcon = (status: string, className = "w-5 h-5", isAir = false) => 
     case 'Out For Delivery': return isAir ? <Plane className={className} /> : <Truck className={className} />;
     case 'Delivered': return <CheckCircle2 className={className} />;
     case 'Cancelled': return <XCircle className={className} />;
-    case 'Returned': return <RotateCcw className={className} />;
+    case 'Returned':
+    case 'Returned to Origin':
+    case 'Return In Transit':
+    case 'Return at Hub':
+    case 'Return Out For Delivery': return <RotateCcw className={className} />;
     default: return <Clock className={className} />;
   }
 };
@@ -128,7 +136,11 @@ const getDynamicMessage = (status: string, sender?: string | null, receiver?: st
     case 'Out For Delivery': return <>Exciting news! Your shipment is out for delivery and will reach {toName} soon.</>;
     case 'Delivered': return <>Your shipment from {fromName} to {toName} has been successfully delivered.</>;
     case 'Cancelled': return <>This shipment has been cancelled. Please contact KSR Shipping Services if you require assistance.</>;
-    case 'Returned': return <>This shipment is being returned to {fromName}.</>;
+    case 'Returned':
+    case 'Returned to Origin': return <>This shipment has been returned to {fromName}.</>;
+    case 'Return In Transit': return <>This shipment is in transit back to {fromName}.</>;
+    case 'Return at Hub': return <>This shipment has reached the distribution center nearest to {fromName}.</>;
+    case 'Return Out For Delivery': return <>This shipment is out for delivery to return to {fromName}.</>;
     default: return <>Your shipment from {fromName} to {toName} is currently in transit.</>;
   }
 };
@@ -198,19 +210,19 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
       return (
         s.includes('transit') ||
         s.includes('hub') ||
-        s.includes('dispatch') ||
+
         s.includes('bag') ||
         s.includes('receiv') ||
         s.includes('pack') ||
         s.includes('manifest')
-      ) && !s.includes('out for delivery') && !n.includes('out for delivery');
+      ) && !s.includes('out for delivery') && !n.includes('out for delivery') && !s.includes('dispatch') && !n.includes('dispatch');
     });
   } else if (stageIndex === 3) {
     // Out for Delivery
     matched = history.find(e => {
       const s = e.status.toLowerCase();
       const n = (e.note || '').toLowerCase();
-      return s.includes('out for delivery') || n.includes('out for delivery');
+      return s.includes('out for delivery') || n.includes('out for delivery') || s.includes('dispatched') || n.includes('dispatched');
     });
   } else if (stageIndex === 4) {
     // Delivered (exclude 'out for delivery')
@@ -241,7 +253,7 @@ interface HorizontalShipmentTrackerProps {
 function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTrackerProps) {
   const isAir = isAirShipment(data);
   const finalStageIdx = resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update);
-  const isDelivered = data.current_status === 'Delivered' || finalStageIdx === 4;
+  const isDelivered = (data.current_status === 'Delivered' || finalStageIdx === 4) && !data.current_status.toLowerCase().includes('return');
   const destinationCity = data.receiver_city || data.destination || "Destination";
   const currentLocation = data.history[0]?.location || data.current_location || data.sender_city || "Current Facility";
 
@@ -779,6 +791,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                                       ? "ring-white bg-orange-500 text-white shadow-xs shadow-orange-500/40"
                                       : "ring-white bg-orange-500/85 text-white shadow-2xs"
                                 )}>
+                                  
                                   {getStatusIcon(group.status, "w-4 h-4 sm:w-4.5 sm:h-4.5", isAir)}
                                 </span>
                               </div>
@@ -813,34 +826,27 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
 
                                 </div>
 
-                                {/* Routine Multi-package Scan Group: Clean Aggregated Pill (No Accordion) */}
-                                {group.scan_count > 1 ? (
-                                  <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200/70">
-                                      <Package className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                      <span>
-                                        {group.has_package_identifiers && group.distinct_packages > 1
-                                          ? `${group.scan_count} package scans recorded • ${group.distinct_packages} distinct packages`
-                                          : group.has_package_identifiers && group.distinct_packages === 1
-                                            ? `${group.scan_count} package scans recorded • 1 distinct package`
-                                            : `${group.scan_count} package scans recorded`}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  /* Single Scan or Exception Event: Display customer-readable operational note */
-                                  group.events[0]?.note && group.events[0].note.toLowerCase() !== 'status updated' && (
+                                {/* Clean Customer Operational Card */}
+                                {(() => {
+                                  const note = group.events[0]?.note;
+                                  if (!note) return null;
+                                  const clean = note.trim();
+                                  const lower = clean.toLowerCase();
+                                  if (lower === 'status updated' || lower === group.headline.toLowerCase() || isInternalCourierCode(clean)) {
+                                    return null;
+                                  }
+                                  return (
                                     <div className="mt-2 p-2.5 sm:p-3 bg-blue-50/70 border border-blue-100 rounded-xl shadow-2xs flex justify-between items-start gap-2">
                                       <div className="flex items-start gap-2 text-xs sm:text-sm text-blue-950 font-medium leading-relaxed">
                                         <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <p>{group.events[0]?.note || group.headline}</p>
+                                        <p>{clean}</p>
                                       </div>
                                     </div>
-                                  )
-                                )}
-                              </div>
+                                  );
+                                })()}
+                                                              </div>
                             </div>
                           </div>
                         </div>

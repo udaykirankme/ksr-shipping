@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { shipmentService } from '@/lib/shipment-service';
-import { formatDateTime, formatCurrency, formatDateToYYYYMMDD } from '@/lib/format';
+import { formatDateTime, formatCurrency, formatDateToYYYYMMDD, formatIndianNumberString } from '@/lib/format';
 import {
   getCurrentBusinessDateTimeInput,
   toBusinessDateTimeFields,
@@ -131,8 +131,9 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const router = useRouter();
   const confirm = useConfirm();
   const [shipment, setShipment] = useState(initialData);
-  const [formData, setFormData] = useState({ 
+  const [formData, setFormData] = useState<any>({ 
     ...initialData,
+    miscellaneous_charges: (initialData.miscellaneous_charges && Number(initialData.miscellaneous_charges) > 0) ? initialData.miscellaneous_charges : '',
     estimated_delivery: initialData.estimated_delivery ? toBusinessDateInput(initialData.estimated_delivery) : '',
     booked_time: initialData.booked_date ? toBusinessTimeInput(initialData.booked_date) : ''
   });
@@ -175,6 +176,19 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       occurred_at: nextUpdate.occurred_at,
     }));
   }, [shipment.current_status]);
+
+    const handleMoneyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const raw = value.replace(/,/g, '');
+    if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
+      let clean = raw;
+      if (clean.length > 1 && clean.startsWith('0') && !clean.startsWith('0.')) {
+        clean = clean.replace(/^0+/, '');
+        if (clean === '') clean = '0';
+      }
+      setFormData((prev: any) => ({ ...prev, [name]: clean }));
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     let value = e.target.value;
@@ -245,6 +259,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         num_packages: parseInt(formData.num_packages) || 1,
         paid_amount: parseFloat(formData.paid_amount) || 0,
         received_amount: parseFloat(formData.received_amount) || 0,
+        miscellaneous_charges: formData.miscellaneous_charges ? (parseFloat(formData.miscellaneous_charges) || 0) : 0,
         version: shipment.version // OCC
       }) as any;
       
@@ -519,6 +534,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       const dataToSpread = data as any;
       setFormData({
         ...dataToSpread,
+        miscellaneous_charges: (dataToSpread.miscellaneous_charges && Number(dataToSpread.miscellaneous_charges) > 0) ? dataToSpread.miscellaneous_charges : '',
         booked_time: dataToSpread.booked_date ? toBusinessTimeInput(dataToSpread.booked_date) : '',
       });
       
@@ -749,17 +765,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
               <div className="flex justify-between items-center mb-6">
                  <div className="flex items-center gap-2">
                    <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
-                   {!isDelivered && (
-                      <button
-                        type="button"
-                        onClick={() => setIsEditing(!isEditing)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isEditing ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600 hover:text-orange-500 hover:bg-orange-50'}`}
-                        title={isEditing ? "Lock Editing" : "Unlock Editing"}
-                      >
-                        <Edit3 className="w-4 h-4" />
-                        {isEditing ? "Lock Edit" : "Unlock Edit"}
-                      </button>
-                    )}
+                   <button
+                     type="button"
+                     onClick={() => setIsEditing(!isEditing)}
+                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isEditing ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600 hover:text-orange-500 hover:bg-orange-50'}`}
+                     title={isEditing ? "Lock Editing" : "Unlock Editing"}
+                   >
+                     <Edit3 className="w-4 h-4" />
+                     {isEditing ? "Lock Edit" : "Unlock Edit"}
+                   </button>
                  </div>
               </div>
               
@@ -947,44 +961,136 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
             {/* Financials & Package */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Financials</h2>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Received (₹) <span className="text-red-500">*</span></label>
-                    <input required type="text" inputMode="decimal" name="received_amount" value={formData.received_amount?.toString().length > 0 ? formData.received_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'received_amount', value: raw } } as any); }} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500" />
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">Financials</h2>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(!isEditing)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                        isEditing
+                          ? 'bg-orange-100 text-orange-600'
+                          : 'bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600'
+                      }`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      {isEditing ? 'Lock Edit' : 'Edit Financials'}
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Paid (₹) <span className="text-red-500">*</span></label>
-                    <input required type="text" inputMode="decimal" name="paid_amount" value={formData.paid_amount?.toString().length > 0 ? formData.paid_amount.toString().split('.').map((p:string,i:number) => i===0&&p?Number(p).toLocaleString('en-IN'):p).join('.') : ''} onChange={(e) => { const raw = e.target.value.replace(/,/g, ''); if (raw === '' || /^\d*\.?\d*$/.test(raw)) handleChange({ target: { name: 'paid_amount', value: raw } } as any); }} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500" />
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        Received (₹) <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        required 
+                        type="text" 
+                        inputMode="decimal" 
+                        name="received_amount" 
+                        value={formatIndianNumberString(formData.received_amount)} 
+                        onChange={handleMoneyChange} 
+                        disabled={!isEditing} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500 text-base sm:text-lg" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        Paid (₹) <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        required 
+                        type="text" 
+                        inputMode="decimal" 
+                        name="paid_amount" 
+                        value={formatIndianNumberString(formData.paid_amount)} 
+                        onChange={handleMoneyChange} 
+                        disabled={!isEditing} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500 text-base sm:text-lg" 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 sm:items-center mb-6">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700">
+                        Miscellaneous Charges (₹)
+                      </label>
+                    </div>
+                    <div>
+                      <input 
+                        type="text" 
+                        inputMode="decimal" 
+                        name="miscellaneous_charges" 
+                        value={formatIndianNumberString(formData.miscellaneous_charges)} 
+                        onChange={handleMoneyChange} 
+                        disabled={!isEditing} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-amber-700 font-semibold bg-amber-50/40 disabled:text-amber-600 text-base sm:text-lg" 
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between border border-gray-100 mt-6">
                    <span className="font-semibold text-gray-700">Profit</span>
-                   <span className="text-2xl font-bold text-gray-900">{formatCurrency(shipment.profit || 0)}</span>
+                   <span className="text-2xl font-bold text-gray-900">
+                     {formatCurrency(
+                       isEditing
+                         ? (Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0) - (Number(formData.miscellaneous_charges) || 0)
+                         : (shipment.profit || 0)
+                     )}
+                   </span>
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Package Details</h2>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg) <span className="text-red-500">*</span></label>
-                    <input required type="number" step="0.01" name="weight" value={formData.weight || ''} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Packages</label>
-                    <input required type="number" name="num_packages" value={formData.num_packages || 1} onChange={handleChange} disabled={isDelivered || !isEditing} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
-                  </div>
-                </div>
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                  <textarea name="description" value={formData.description || ''} onChange={handleChange} disabled={isDelivered || !isEditing} rows={2} className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500" />
+                  <h2 className="text-lg font-semibold text-gray-900 mb-6">Package Details</h2>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="h-10 flex items-end text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <span>Weight (kg) <span className="text-red-500">*</span></span>
+                      </label>
+                      <input 
+                        required 
+                        type="number" 
+                        step="0.01" 
+                        name="weight" 
+                        value={formData.weight || ''} 
+                        onChange={handleChange} 
+                        disabled={isDelivered || !isEditing} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500 text-gray-900" 
+                      />
+                    </div>
+                    <div>
+                      <label className="h-10 flex items-end text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <span>Packages <span className="text-red-500">*</span></span>
+                      </label>
+                      <input 
+                        required 
+                        type="number" 
+                        name="num_packages" 
+                        value={formData.num_packages || 1} 
+                        onChange={handleChange} 
+                        disabled={isDelivered || !isEditing} 
+                        className="w-full h-11 rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500 text-gray-900" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea 
+                      name="description" 
+                      value={formData.description || ''} 
+                      onChange={handleChange} 
+                      disabled={isDelivered || !isEditing} 
+                      rows={2} 
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500 resize-none text-gray-900" 
+                    />
+                  </div>
                 </div>
               </div>
             </div>
             
-            {!isDelivered && isEditing && (
+            {isEditing && (
               <div className="flex justify-end pt-4">
                 <button 
                   type="submit"

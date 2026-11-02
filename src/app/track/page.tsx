@@ -34,6 +34,9 @@ async function getInitialTrackingData(id?: string) {
         receiver_city: true,
         booked_date: true,
         medium: true,
+        num_packages: true,
+        service: true,
+        service_through: true,
         current_location: true,
         customer_update: true,
         history: {
