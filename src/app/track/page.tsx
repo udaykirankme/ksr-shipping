@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import TrackResult from "./TrackResult";
+import { TrackingResultSkeleton } from "@/components/TrackingResultSkeleton";
 import Link from "next/link";
 import { Headset } from "lucide-react";
 import type { Metadata } from "next";
@@ -7,6 +8,7 @@ import { absoluteUrl } from "@/lib/seo/site";
 import { prisma } from "@/lib/db";
 import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from "@/lib/courier/identity";
 import { normalizeOperationalStatus, resolveMilestoneFromHistory, resolveCustomerCurrentStatus, resolveCustomerEligibleUpdate } from "@/lib/courier/normalization";
+import { isDelhiveryService } from '@/lib/courier/aggregation';
 
 type TrackPageProps = {
   searchParams: Promise<{ id?: string }>;
@@ -18,7 +20,7 @@ export const revalidate = 0;
 async function getInitialTrackingData(id?: string) {
   if (!id?.trim()) return null;
   try {
-    const shipment = await prisma.shipment.findFirst({
+    const shipment = await prisma.shipment.findUnique({
       where: {
         tracking_id: id.trim(),
       },
@@ -37,6 +39,7 @@ async function getInitialTrackingData(id?: string) {
         num_packages: true,
         service: true,
         service_through: true,
+        courier: true,
         current_location: true,
         customer_update: true,
         history: {
@@ -56,11 +59,12 @@ async function getInitialTrackingData(id?: string) {
 
     if (!shipment) return null;
 
-    const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
-    const cleanedCustomerUpdate = resolveCustomerEligibleUpdate(shipment.customer_update, cleanedHistory);
-    let normalizedCurrentStatus = resolveCustomerCurrentStatus(shipment.current_status, cleanedHistory, cleanedCustomerUpdate);
+    const isDelhivery = isDelhiveryService(shipment.service, shipment.service_through, shipment.courier);
+    const cleanedHistory = sanitizeHistoryForCustomer(shipment.history, isDelhivery);
+    const cleanedCustomerUpdate = resolveCustomerEligibleUpdate(shipment.customer_update, cleanedHistory, isDelhivery);
+    let normalizedCurrentStatus = resolveCustomerCurrentStatus(shipment.current_status, cleanedHistory, cleanedCustomerUpdate, isDelhivery);
 
-    const resolvedStage = resolveMilestoneFromHistory(normalizedCurrentStatus, cleanedHistory, cleanedCustomerUpdate);
+    const resolvedStage = resolveMilestoneFromHistory(normalizedCurrentStatus, cleanedHistory, cleanedCustomerUpdate, isDelhivery);
     if (resolvedStage === 0) {
       if (normalizedCurrentStatus === 'In Transit' || normalizedCurrentStatus === 'Vehicle Departed') {
         normalizedCurrentStatus = cleanedCustomerUpdate?.toLowerCase().includes('manifest')
@@ -110,7 +114,8 @@ export async function generateMetadata({ searchParams }: TrackPageProps): Promis
 
 export default async function TrackPage({ searchParams }: TrackPageProps) {
   const params = await searchParams;
-  const initialData = await getInitialTrackingData(params?.id);
+  const searchedId = params?.id ? params.id.trim() : null;
+  const initialData = await getInitialTrackingData(searchedId || undefined);
 
   return (
     <div className="min-h-[90vh] bg-gray-50 pt-[74px] sm:pt-[82px] lg:pt-[92px] pb-24 relative overflow-hidden flex flex-col">
@@ -120,15 +125,15 @@ export default async function TrackPage({ searchParams }: TrackPageProps) {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full flex-grow flex flex-col">
         <div className="mb-20">
-          <Suspense fallback={
-            <div className="text-center pt-2 sm:pt-4 mb-8 sm:mb-10">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Track Your <span className="text-orange-500">Shipment</span></h1>
-              <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                Loading shipment details...
-              </p>
-            </div>
-          }>
-            <TrackResult initialData={initialData} />
+          <Suspense fallback={<TrackingResultSkeleton />}>
+
+
+
+
+
+
+
+            <TrackResult initialData={initialData} searchedId={searchedId} />
           </Suspense>
         </div>
 

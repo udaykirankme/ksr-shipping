@@ -32,6 +32,7 @@ export default function GetQuotationPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!formData.shipment_type || !formData.package_type) {
       setError("Please select both Shipment Type and Package Type.");
       return;

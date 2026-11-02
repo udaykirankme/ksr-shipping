@@ -216,18 +216,22 @@ export function MessageListClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
-                      <p>Loading messages...</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
+              {loading && messages.length === 0 ? (
+                [...Array(6)].map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell className="text-center"><div className="w-4 h-4 bg-gray-200 rounded mx-auto" /></TableCell>
+                    <TableCell><div className="w-4 h-4 bg-gray-200 rounded mx-auto" /></TableCell>
+                    <TableCell><div className="h-4 w-24 bg-gray-200 rounded" /></TableCell>
+                    <TableCell><div className="space-y-1"><div className="h-4 w-28 bg-gray-200 rounded" /><div className="h-3 w-36 bg-gray-100 rounded" /></div></TableCell>
+                    <TableCell><div className="h-4 w-36 bg-gray-200 rounded" /></TableCell>
+                    <TableCell><div className="h-4 w-24 bg-gray-200 rounded" /></TableCell>
+                    <TableCell><div className="h-6 w-20 bg-gray-100 rounded-full" /></TableCell>
+                    <TableCell><div className="w-4 h-4 bg-gray-200 rounded mx-auto" /></TableCell>
+                  </TableRow>
+                ))
               ) : messages.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-gray-500">
+                  <TableCell colSpan={8} className="h-32 text-center text-gray-500">
                     No messages found matching your criteria.
                   </TableCell>
                 </TableRow>

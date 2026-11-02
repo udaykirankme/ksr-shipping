@@ -6,6 +6,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { pushService } from '../push-service';
 import { sanitizeHistoryForCustomer, sanitizeCustomerHistoryNote } from '@/lib/courier/identity';
+import { isDelhiveryService } from '@/lib/courier/aggregation';
 import { normalizeOperationalStatus, resolveMilestoneFromHistory, resolveCustomerCurrentStatus, resolveCustomerEligibleUpdate } from '@/lib/courier/normalization';
 
 const router = Router();
@@ -40,14 +41,15 @@ const apiLimiter = rateLimit({
 
 router.post('/track', apiLimiter, async (req, res) => {
   try {
-    const { trackingNumber } = req.body;
+    const rawNumber = req.body?.trackingNumber;
+    const trackingNumber = typeof rawNumber === 'string' ? rawNumber.trim() : '';
     
     if (!trackingNumber) {
       return res.status(400).json({ success: false, message: 'Tracking number is required' });
     }
 
     // Search our DB using ONLY tracking_id (KSR tracking number)
-    const shipment = await prisma.shipment.findFirst({
+    const shipment = await prisma.shipment.findUnique({
       where: {
         tracking_id: trackingNumber
       },
@@ -66,6 +68,7 @@ router.post('/track', apiLimiter, async (req, res) => {
         num_packages: true,
         service: true,
         service_through: true,
+        courier: true,
         current_location: true,
         customer_update: true,
         history: {
@@ -87,14 +90,15 @@ router.post('/track', apiLimiter, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Shipment not found' });
     }
 
-    const cleanedHistory = sanitizeHistoryForCustomer(shipment.history);
-    const cleanedCustomerUpdate = resolveCustomerEligibleUpdate(shipment.customer_update, cleanedHistory);
-    let normalizedCurrentStatus = resolveCustomerCurrentStatus(shipment.current_status, cleanedHistory, cleanedCustomerUpdate);
+    const isDelhivery = isDelhiveryService(shipment.service, shipment.service_through, shipment.courier);
+    const cleanedHistory = sanitizeHistoryForCustomer(shipment.history, isDelhivery);
+    const cleanedCustomerUpdate = resolveCustomerEligibleUpdate(shipment.customer_update, cleanedHistory, isDelhivery);
+    let normalizedCurrentStatus = resolveCustomerCurrentStatus(shipment.current_status, cleanedHistory, cleanedCustomerUpdate, isDelhivery);
 
     // Ensure milestone consistency: if the complete history reveals that the shipment is only
     // manifested/created (no pickup or transit has occurred), do not allow stale DB status
     // like "In Transit" to be exposed to the customer
-    const resolvedStage = resolveMilestoneFromHistory(normalizedCurrentStatus, cleanedHistory, cleanedCustomerUpdate);
+    const resolvedStage = resolveMilestoneFromHistory(normalizedCurrentStatus, cleanedHistory, cleanedCustomerUpdate, isDelhivery);
     if (resolvedStage === 0) {
       if (normalizedCurrentStatus === 'In Transit' || normalizedCurrentStatus === 'Vehicle Departed') {
         normalizedCurrentStatus = cleanedCustomerUpdate?.toLowerCase().includes('manifest')

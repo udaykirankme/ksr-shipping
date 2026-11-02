@@ -158,7 +158,21 @@ export default function ServicesTab() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {items.map((item, index) => (
+              {loading && items.length === 0 ? (
+                [...Array(4)].map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-4 w-8 bg-gray-200 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-4 w-32 bg-gray-200 rounded mb-1" /><div className="h-3 w-20 bg-gray-100 rounded" /></td>
+                    <td className="px-6 py-4"><div className="h-5 w-16 bg-gray-100 rounded-full" /></td>
+                    <td className="px-6 py-4 text-right"><div className="h-4 w-12 bg-gray-200 rounded ml-auto" /></td>
+                  </tr>
+                ))
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-700">No items found.</td>
+                </tr>
+              ) : (
+                items.map((item, index) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1">
@@ -209,12 +223,7 @@ export default function ServicesTab() {
                     </div>
                   </td>
                 </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-700">No services found.</td>
-                </tr>
-              )}
+              )))}
             </tbody>
           </table>
         </div>

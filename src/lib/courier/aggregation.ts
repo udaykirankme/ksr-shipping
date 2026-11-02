@@ -36,6 +36,26 @@ export interface AggregationOptions {
   windowMinutes?: number;
   /** Total number of packages in the shipment, to ensure distinct_packages never exceeds total shipment packages */
   maxShipmentPackages?: number;
+  /** Courier service identifier (e.g. 'delhivery-b2b', 'delhivery-b2c', 'dhl', etc.) */
+  service?: string | null;
+  /** Service through identifier */
+  serviceThrough?: string | null;
+  /** Courier identifier */
+  courier?: string | null;
+  /** Explicit flag indicating whether this is a Delhivery B2B or B2C shipment */
+  isDelhivery?: boolean;
+}
+
+/**
+ * Determines whether a given shipment service is Delhivery B2B or Delhivery B2C.
+ */
+export function isDelhiveryService(
+  service?: string | null,
+  serviceThrough?: string | null,
+  courier?: string | null
+): boolean {
+  const combined = `${service || ''} ${serviceThrough || ''} ${courier || ''}`.toLowerCase().replace(/[\s\-_]+/g, '');
+  return combined.includes('delhivery');
 }
 
 /**
@@ -196,16 +216,21 @@ export function aggregateTrackingHistory(
     return [];
   }
 
-  // 1. Deduplicate identical physical events delivered across webhook and sync API
-  const dedupedScans = sanitizeHistoryForCustomer(rawEvents);
+  // 1. Determine whether this is a Delhivery B2B/B2C or other shipment
+  const isDelhivery = options.isDelhivery !== undefined
+    ? options.isDelhivery
+    : isDelhiveryService(options.service, options.serviceThrough, options.courier);
 
-  // 2. Filter out exceptions and unverified non-routine events, parse valid scans
+  // 2. Deduplicate identical physical events delivered across webhook and sync API
+  const dedupedScans = sanitizeHistoryForCustomer(rawEvents, isDelhivery);
+
   interface ParsedScan {
     status: string;
     location: string;
     note: string;
     cleanRemark: string;
     canonicalAction: string;
+    headline: string;
     occurredAt: Date;
     packageId: string | null;
   }
@@ -230,8 +255,26 @@ export function aggregateTrackingHistory(
 
     const cleanNote = getCleanOperationalRemark(evt.note);
     const packageId = extractPackageId(evt);
-    const normStatus = normalizeOperationalStatus(evt.status, cleanNote);
-    const canonicalAction = getCanonicalAction(normStatus, cleanNote);
+
+    let normStatus: string;
+    let canonicalAction: string;
+    let headline: string;
+
+    if (isDelhivery) {
+      // 100% untouched Delhivery B2B and B2C operational action resolution
+      normStatus = normalizeOperationalStatus(evt.status, cleanNote);
+      canonicalAction = getCanonicalAction(normStatus, cleanNote);
+      headline = toTitleCase(canonicalAction);
+    } else {
+      // Services other than Delhivery B2B and B2C:
+      // Status MUST be displayed as the heading in the track result
+      const rawStatusTrimmed = (evt.status || '').trim();
+      normStatus = rawStatusTrimmed
+        ? toTitleCase(rawStatusTrimmed.replace(/_/g, ' '))
+        : normalizeOperationalStatus(evt.status, cleanNote);
+      canonicalAction = normStatus;
+      headline = normStatus;
+    }
 
     validScans.push({
       status: normStatus,
@@ -239,6 +282,7 @@ export function aggregateTrackingHistory(
       note: cleanNote || normStatus,
       cleanRemark: cleanNote.toLowerCase(),
       canonicalAction,
+      headline,
       occurredAt,
       packageId
     });
@@ -272,7 +316,9 @@ export function aggregateTrackingHistory(
     const facilityNorm = scan.location.toLowerCase();
     const actionNorm = scan.canonicalAction.toLowerCase();
     const isDeparture = isDepartureAction(scan.canonicalAction);
-    const isOutForDeliveryOrDelivered = actionNorm.includes('out for delivery') || actionNorm.includes('delivered') || actionNorm.includes('dispatched');
+    const isOutForDeliveryOrDelivered = isDelhivery
+      ? (actionNorm.includes('out for delivery') || actionNorm.includes('delivered') || actionNorm.includes('dispatched'))
+      : (actionNorm.includes('out for delivery') || actionNorm.includes('delivered'));
 
     // Boundary Check 1: Movement to a different physical facility
     if (currentActiveFacility !== null && facilityNorm !== '' && facilityNorm !== currentActiveFacility) {
@@ -305,7 +351,14 @@ export function aggregateTrackingHistory(
     const occurrenceKey = `${facilityNorm}::${actionNorm}`;
     const existing = activeOccurrences.get(occurrenceKey);
 
-    if (existing) {
+    // For non-Delhivery, only merge if within a reasonable clustering window (e.g. 10 mins) and not distinct notes
+    const shouldMerge = existing && (
+      isDelhivery ||
+      (Math.abs(scan.occurredAt.getTime() - existing.lastOccurredAt.getTime()) <= 10 * 60 * 1000 &&
+       scan.cleanRemark === existing.items[0]?.cleanRemark)
+    );
+
+    if (shouldMerge && existing) {
       // Attach to the current active occurrence
       if (scan.occurredAt.getTime() < existing.firstOccurredAt.getTime()) {
         existing.firstOccurredAt = scan.occurredAt;
@@ -318,13 +371,17 @@ export function aggregateTrackingHistory(
       }
       existing.items.push(scan);
     } else {
+      if (existing) {
+        completedOccurrences.push(existing);
+        activeOccurrences.delete(occurrenceKey);
+      }
       // Start a new operational occurrence
       const newOcc: TempOccurrence = {
         id: `occ-${completedOccurrences.length}-${scan.occurredAt.getTime()}`,
         status: scan.status,
         location: scan.location,
         canonicalAction: scan.canonicalAction,
-        headline: toTitleCase(scan.canonicalAction),
+        headline: scan.headline,
         firstOccurredAt: scan.occurredAt,
         lastOccurredAt: scan.occurredAt,
         packageIds: new Set<string>(),

@@ -1,3 +1,4 @@
+import { toTitleCase } from './aggregation';
 import { KSRTrackingStatus } from './types';
 
 export const EXCEPTION_PATTERNS = [
@@ -448,11 +449,94 @@ export function normalizeOperationalStatus(
  *
  * NOTE: RTO and Return events must NEVER advance to Stage 4 (Delivered).
  */
+/**
+ * Returns the milestone stage index (0 to 4) for non-Delhivery shipments.
+ * Stage 0: Shipment Created (or Manifested)
+ * Stage 1: Picked Up, Shipment Bagged
+ * Stage 2: Dispatched, In Transit, At Hub, Shipment Received
+ * Stage 3: Out For Delivery (OFD)
+ * Stage 4: Delivered (DL)
+ */
+export function getNonDelhiveryMilestoneStage(
+  status: string | null | undefined,
+  note?: string | null | undefined
+): number {
+  if (!status && !note) return 0;
+  if (isExceptionStatus(status, note)) return 0;
+  if (isReturnStatus(status, note)) return 2;
+
+  const s = (status || '').trim().toLowerCase();
+  const n = (note || '').trim().toLowerCase();
+
+  // Stage 4: Delivered
+  if (
+    s === 'delivered' ||
+    s === 'dl' ||
+    (s.includes('deliver') &&
+      !s.includes('out for delivery') &&
+      !s.includes('ofd') &&
+      !s.includes('undelivered') &&
+      !s.includes('attempt') &&
+      !s.includes('return') &&
+      !s.includes('rto'))
+  ) {
+    return 4;
+  }
+
+  // Stage 3: Out For Delivery
+  if (
+    s === 'out for delivery' ||
+    s === 'ofd' ||
+    n.includes('out for delivery') ||
+    n.includes('ofd')
+  ) {
+    return 3;
+  }
+
+  // Stage 2: Dispatched, In Transit, At Hub, Shipment Received
+  if (
+    s === 'dispatched' ||
+    s === 'in transit' ||
+    s === 'in_transit' ||
+    s === 'at hub' ||
+    s === 'shipment received' ||
+    s === 'vehicle departed' ||
+    s === 'left origin' ||
+    s === 'trip arrived' ||
+    s.includes('hub') ||
+    s.includes('transit') ||
+    s.includes('dispatched') ||
+    s.includes('received')
+  ) {
+    return 2;
+  }
+
+  // Stage 1: Picked Up, Shipment Bagged
+  if (
+    s === 'picked up' ||
+    s === 'picked_up' ||
+    s === 'shipped' ||
+    s === 'shipment bagged' ||
+    s.includes('pick') ||
+    s.includes('shipped') ||
+    s.includes('bag')
+  ) {
+    return 1;
+  }
+
+  // Stage 0: Shipment Created, Manifested, Ready to Ship
+  return 0;
+}
+
 export function getMilestoneStageIndex(
   status: string | null | undefined,
   note?: string | null | undefined,
-  statusType?: string | null | undefined
+  statusType?: string | null | undefined,
+  isDelhivery: boolean = false
 ): number {
+  if (!isDelhivery) {
+    return getNonDelhiveryMilestoneStage(status, note);
+  }
   if (!status && !note) return 0;
   if (isExceptionStatus(status, note, statusType)) {
     return 0;
@@ -608,10 +692,38 @@ export function getMilestoneStageIndex(
 export function resolveMilestoneFromHistory(
   currentStatus: string | null | undefined,
   history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string }> | null,
-  customerUpdate?: string | null | undefined
+  customerUpdate?: string | null | undefined,
+  isDelhivery: boolean = false
 ): number {
+  if (!isDelhivery) {
+    let maxStage = 0;
+
+    if (history && history.length > 0) {
+      for (const evt of history) {
+        if (isExceptionStatus(evt.status, evt.note)) continue;
+        const stage = getNonDelhiveryMilestoneStage(evt.status, evt.note);
+        if (stage > maxStage) {
+          maxStage = stage;
+        }
+      }
+    }
+
+    if (currentStatus && !isExceptionStatus(currentStatus, customerUpdate)) {
+      const currentStage = getNonDelhiveryMilestoneStage(currentStatus, customerUpdate);
+      if (currentStage > maxStage) {
+        maxStage = currentStage;
+      }
+    }
+
+    if (isReturnStatus(currentStatus, customerUpdate) || (history && history.some(e => isReturnStatus(e.status, e.note)))) {
+      return Math.min(maxStage, 3);
+    }
+
+    return maxStage;
+  }
+
   if (!history || history.length === 0) {
-    return getMilestoneStageIndex(currentStatus, customerUpdate);
+    return getMilestoneStageIndex(currentStatus, customerUpdate, undefined, true);
   }
 
   // Sort chronological ascending (oldest first) to evaluate operational sequence
@@ -818,7 +930,8 @@ export function resolveMilestoneFromHistory(
 export function resolveCustomerCurrentStatus(
   rawStatus: string | null | undefined,
   history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string }> | null,
-  customerUpdate?: string | null | undefined
+  customerUpdate?: string | null | undefined,
+  isDelhivery: boolean = false
 ): string {
   // Check if latest history event represents Return
   if (history && history.length > 0) {
@@ -842,6 +955,9 @@ export function resolveCustomerCurrentStatus(
 
   // 1. If raw status is NOT an exception and is on the confirmed routine whitelist, normalize it
   if (!isRawException && cleanRaw && isRoutineOperationalStatus(cleanRaw)) {
+    if (!isDelhivery) {
+      return toTitleCase(cleanRaw.replace(/_/g, ' '));
+    }
     const normalized = normalizeOperationalStatus(cleanRaw);
     if (!isExceptionStatus(normalized) && isRoutineOperationalStatus(normalized)) {
       return normalized;
@@ -849,7 +965,7 @@ export function resolveCustomerCurrentStatus(
   }
 
   // 2. If raw status is an exception OR unknown, derive the true operational status from the highest achieved routine milestone
-  const stage = resolveMilestoneFromHistory(null, history, null);
+  const stage = resolveMilestoneFromHistory(null, history, null, isDelhivery);
   switch (stage) {
     case 4: return 'Delivered';
     case 3: return 'Out For Delivery';
@@ -869,8 +985,19 @@ export function resolveCustomerCurrentStatus(
  */
 export function resolveCustomerEligibleUpdate(
   customerUpdate: string | null | undefined,
-  cleanedHistory?: Array<{ status: string; note?: string | null }> | null
+  cleanedHistory?: Array<{ status: string; note?: string | null }> | null,
+  isDelhivery: boolean = true
 ): string | null {
+  // For shipments other than Delhivery B2B and B2C:
+  // Shipment update MUST be exactly what was entered in the admin.
+  // It should NOT be taken from the last update notes.
+  // If nothing was entered in admin (or it is empty), return null so there is no space for shipment update.
+  if (!isDelhivery) {
+    const raw = (customerUpdate || '').trim();
+    return raw !== '' ? raw : null;
+  }
+
+  // Delhivery B2B and B2C logic (100% untouched):
   const clean = (customerUpdate || '')
     .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
     .trim();

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrackingWidget } from "@/components/TrackingWidget";
+import { TrackingResultSkeleton } from "@/components/TrackingResultSkeleton";
 import {
   Check,
   CheckCircle2,
@@ -27,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
 import { business } from "@/lib/config/business";
-import { aggregateTrackingHistory } from "@/lib/courier/aggregation";
+import { aggregateTrackingHistory, isDelhiveryService } from "@/lib/courier/aggregation";
 import { isInternalCourierCode } from "@/lib/courier/identity";
 import { isExceptionStatus, normalizeOperationalStatus, resolveMilestoneFromHistory, getMilestoneStageIndex, resolveCustomerCurrentStatus } from "@/lib/courier/normalization";
 
@@ -53,6 +54,7 @@ interface TrackingData {
   num_packages?: number | null;
   service?: string | null;
   service_through?: string | null;
+  courier?: string | null;
   current_location?: string | null;
   history: TrackingHistoryEvent[];
   customer_update?: string | null;
@@ -183,7 +185,7 @@ const _unusedOldStageIndex = (status?: string | null): number => {
   }
 };
 
-const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]): { date: string; full: string } | null => {
+const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[], isDelhivery: boolean = false): { date: string; full: string } | null => {
   if (!history || history.length === 0) return null;
 
   let matched: TrackingHistoryEvent | undefined;
@@ -197,35 +199,38 @@ const getStageTimestamp = (stageIndex: number, history: TrackingHistoryEvent[]):
     // Stage 1: Shipped / Picked up
     matched = [...history].reverse().find(e => {
       const s = e.status.toLowerCase();
-      return s.includes('pick') || s.includes('shipped');
+      return s.includes('pick') || s.includes('shipped') || s.includes('bag');
     }) || [...history].reverse().find(e => {
       const s = e.status.toLowerCase();
       return !s.includes('creat');
     });
   } else if (stageIndex === 2) {
-    // Stage 2: In Transit (Shipment Bagged, Received, Dispatched, In Transit, At Hub)
+    // Stage 2: In Transit (Dispatched, In Transit, At Hub, Shipment Received, Vehicle Departed)
     matched = history.find(e => {
       const s = e.status.toLowerCase();
       const n = (e.note || '').toLowerCase();
       return (
         s.includes('transit') ||
         s.includes('hub') ||
-
-        s.includes('bag') ||
+        s.includes('dispatch') ||
         s.includes('receiv') ||
-        s.includes('pack') ||
-        s.includes('manifest')
-      ) && !s.includes('out for delivery') && !n.includes('out for delivery') && !s.includes('dispatch') && !n.includes('dispatch');
+        s.includes('depart') ||
+        n.includes('depart') ||
+        n.includes('transit')
+      ) && !s.includes('out for delivery') && !n.includes('out for delivery') && !s.includes('delivered');
     });
   } else if (stageIndex === 3) {
-    // Out for Delivery
+    // Stage 3: Out for Delivery (For Delhivery B2B, includes delivery dispatch; for other services, strictly Out For Delivery)
     matched = history.find(e => {
       const s = e.status.toLowerCase();
       const n = (e.note || '').toLowerCase();
-      return s.includes('out for delivery') || n.includes('out for delivery') || s.includes('dispatched') || n.includes('dispatched');
+      if (isDelhivery) {
+        return s.includes('out for delivery') || n.includes('out for delivery') || s.includes('dispatched') || n.includes('dispatched');
+      }
+      return s.includes('out for delivery') || n.includes('out for delivery') || s === 'ofd' || n === 'ofd';
     });
   } else if (stageIndex === 4) {
-    // Delivered (exclude 'out for delivery')
+    // Stage 4: Delivered (exclude 'out for delivery')
     matched = history.find(e => {
       const s = e.status.toLowerCase();
       return s === 'delivered' || (s.includes('deliver') && !s.includes('out for delivery'));
@@ -252,7 +257,8 @@ interface HorizontalShipmentTrackerProps {
 
 function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTrackerProps) {
   const isAir = isAirShipment(data);
-  const finalStageIdx = resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update);
+  const isDelhivery = isDelhiveryService(data.service, data.service_through, data.courier);
+  const finalStageIdx = resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update, isDelhivery);
   const isDelivered = (data.current_status === 'Delivered' || finalStageIdx === 4) && !data.current_status.toLowerCase().includes('return');
   const destinationCity = data.receiver_city || data.destination || "Destination";
   const currentLocation = data.history[0]?.location || data.current_location || data.sender_city || "Current Facility";
@@ -266,13 +272,13 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
   ];
 
   // Target fill along the connector track (from 0% to 100% across the 4 segments connecting the 5 nodes):
-  // - Stage 0 (Shipment Created): 0%
+  // - Stage 0 (Shipment Created): 12.5% (halfway between Stage 0 at 0% and Stage 1 at 25%)
   // - Stage 1 (Shipped): 37.5% (halfway between Shipped at 25% and In Transit at 50%)
   // - Stage 2 (In Transit): 62.5% (halfway between In Transit at 50% and Out for Delivery at 75%)
   // - Stage 3 (Out for Delivery): 87.5% (halfway between Out for Delivery at 75% and Delivered at 100%)
   // - Stage 4 (Delivered): 100%
-  let targetPercent = 0;
-  if (finalStageIdx === 0) targetPercent = 0;
+  let targetPercent = 12.5;
+  if (finalStageIdx === 0) targetPercent = 12.5;
   else if (finalStageIdx === 1) targetPercent = 37.5;
   else if (finalStageIdx === 2) targetPercent = 62.5;
   else if (finalStageIdx === 3) targetPercent = 87.5;
@@ -286,13 +292,18 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
       return;
     }
 
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setTrackPercent(targetPercent);
+      return;
+    }
+
     setTrackPercent(0);
 
     let animationFrameId: number;
     let startTime: number | null = null;
 
     // Duration: 1600ms for Shipped, 2200ms for In Transit, 2500ms for Out for Delivery, 2800ms for Delivered
-    const duration = finalStageIdx === 1 ? 1600 : finalStageIdx === 2 ? 2200 : finalStageIdx === 3 ? 2500 : 2800;
+    const duration = finalStageIdx === 0 ? 1200 : finalStageIdx === 1 ? 1600 : finalStageIdx === 2 ? 2200 : finalStageIdx === 3 ? 2500 : 2800;
 
     // Gentle, natural sine ease-out: steady natural glide, softly easing into arrival
     const easeOutSine = (t: number) => Math.sin((t * Math.PI) / 2);
@@ -393,7 +404,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
                 <div
                   className={cn(
                     "absolute bottom-full mb-1.5 sm:mb-2 flex flex-col pointer-events-auto transition-opacity duration-300",
-                    trackPercent > (finalStageIdx === 0 ? -1 : (finalStageIdx === 1 ? 15 : 25)) ? "opacity-100" : "opacity-0 pointer-events-none",
+                    trackPercent > (finalStageIdx === 0 ? 5 : (finalStageIdx === 1 ? 15 : 25)) ? "opacity-100" : "opacity-0 pointer-events-none",
                     trackPercent < 20
                       ? "left-1/2 translate-x-[-15%] items-start"
                       : trackPercent > 75
@@ -456,7 +467,7 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
         <div className="relative z-10 flex justify-between items-start w-full">
           {stages.map((stage, i) => {
             const isCompleted = isStageCompleted(i);
-            const timestamp = getStageTimestamp(i, data.history);
+            const timestamp = getStageTimestamp(i, data.history, isDelhivery);
 
             return (
               <div
@@ -518,22 +529,52 @@ function HorizontalShipmentTracker({ data, onViewDetails }: HorizontalShipmentTr
 }
 
 
-export default function TrackResult({ initialData = null }: { initialData?: TrackingData | null }) {
+export default function TrackResult({
+  initialData = null,
+  searchedId = null,
+}: {
+  initialData?: TrackingData | null;
+  searchedId?: string | null;
+}) {
   const searchParams = useSearchParams();
-  const trackingId = searchParams.get("id");
+  const rawTrackingId = searchParams.get("id");
+  const trackingId = rawTrackingId ? rawTrackingId.trim() : null;
+
   const [data, setData] = useState<TrackingData | null>(initialData);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>(() => {
+    // If SSR already executed for searchedId and found nothing, initialize error immediately without making a duplicate API request
+    if (searchedId && !initialData) {
+      return "Shipment Not Found";
+    }
+    return "";
+  });
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
 
-
-
   useEffect(() => {
-    if (initialData && initialData.tracking_id === trackingId) {
-      setData(initialData);
+    if (!trackingId) {
+      setData(null);
+      setError("");
       return;
     }
 
+    // Check if SSR already verified this exact ID (case-insensitive & trimmed)
+    if (searchedId && trackingId.toUpperCase() === searchedId.toUpperCase()) {
+      if (initialData) {
+        setData(initialData);
+        setError("");
+      } else {
+        setData(null);
+        setError("Shipment Not Found");
+      }
+      return;
+    }
+
+    if (data && data.tracking_id.toUpperCase() === trackingId.toUpperCase()) {
+      return;
+    }
+
+    let isCancelled = false;
     const handleSearch = async (id: string) => {
       setLoading(true);
       setError("");
@@ -543,8 +584,11 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
         const res = await fetch('/api/track', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trackingNumber: id })
+          body: JSON.stringify({ trackingNumber: id.trim() }),
         });
+
+        if (isCancelled) return;
+
         if (!res.ok) {
           if (res.status === 404) {
             setError("Shipment Not Found");
@@ -553,24 +597,34 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
           }
           return;
         }
+
         const result = await res.json();
+        if (isCancelled) return;
+
         if (result.success && result.data) {
           setData(result.data);
+          setError("");
         } else {
           setError("Shipment Not Found");
         }
       } catch (err) {
-        console.error(err);
-        setError("Connection Failed");
+        if (!isCancelled) {
+          console.error(err);
+          setError("Connection Failed");
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    if (trackingId) {
-      handleSearch(trackingId);
-    }
-  }, [trackingId, initialData]);
+    handleSearch(trackingId);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [trackingId, initialData, searchedId]);
 
   const handleViewDetails = () => {
     if (!data?.history || data.history.length === 0) return;
@@ -584,9 +638,39 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
     }
   };
 
-  const isAir = data ? isAirShipment(data) : false;
-  const isDelivered = data ? (data.current_status.toLowerCase().trim() === 'delivered' || resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update) === 4) : false;
-  const customerDisplayStatus = data ? resolveCustomerCurrentStatus(data.current_status, data.history, data.customer_update) : "In Transit";
+  const isDelhivery = useMemo(() => {
+    if (!data) return false;
+    return isDelhiveryService(data.service, data.service_through, data.courier);
+  }, [data?.service, data?.service_through, data?.courier]);
+
+  const isAir = useMemo(() => (data ? isAirShipment(data) : false), [data]);
+  const isDelivered = useMemo(
+    () =>
+      data
+        ? data.current_status.toLowerCase().trim() === 'delivered' ||
+          resolveMilestoneFromHistory(data.current_status, data.history, data.customer_update, isDelhivery) === 4
+        : false,
+    [data, isDelhivery]
+  );
+  const customerDisplayStatus = useMemo(
+    () =>
+      data
+        ? resolveCustomerCurrentStatus(data.current_status, data.history, data.customer_update, isDelhivery)
+        : "In Transit",
+    [data, isDelhivery]
+  );
+
+
+  const aggregatedGroups = useMemo(() => {
+    if (!data?.history || data.history.length === 0) return [];
+    return aggregateTrackingHistory(data.history, {
+      maxShipmentPackages: data.num_packages || undefined,
+      isDelhivery,
+      service: data.service,
+      serviceThrough: data.service_through,
+      courier: data.courier,
+    });
+  }, [data?.history, data?.num_packages, isDelhivery, data?.service, data?.service_through, data?.courier]);
 
   return (
     <div className={cn(trackingId ? "space-y-3 sm:space-y-4 pt-1 sm:pt-2" : "space-y-8")}>
@@ -604,12 +688,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
 
       {!trackingId && <TrackingWidget centered={true} />}
 
-      {loading && (
-        <div className="bg-white rounded-3xl shadow-lg shadow-orange-100/50 p-12 text-center border border-orange-50/50">
-          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-orange-900 font-medium">Fetching shipment details...</p>
-        </div>
-      )}
+      {loading && <TrackingResultSkeleton />}
 
       {error && !loading && (
         <div className="bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-3xl p-10 text-center relative overflow-hidden">
@@ -718,7 +797,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
               </div>
 
               {/* Shipment Update Banner - Aligned with Customer Message Banner */}
-              {data.customer_update && data.customer_update.trim() !== '' && !isExceptionStatus(data.customer_update) && (
+              {data.customer_update && data.customer_update.trim() !== '' && (!isDelhivery || !isExceptionStatus(data.customer_update)) && (
                 <div className="mt-2.5 sm:mt-3 border border-orange-200/80 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3 bg-white shadow-xs transition-all w-full">
                   <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800 break-words">
                     <span className="font-bold text-orange-600 uppercase tracking-wider underline underline-offset-2 mr-1.5 sm:mr-2">
@@ -747,12 +826,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
 
             <div className="flow-root relative">
               <ul role="list" className="-mb-4">
-                {(() => {
-                  const aggregatedGroups = aggregateTrackingHistory(data.history || [], {
-                    maxShipmentPackages: data.num_packages || undefined
-                  });
-
-                  return aggregatedGroups.map((group, groupIdx) => {
+                {aggregatedGroups.map((group, groupIdx) => {
                     const isLast = groupIdx === aggregatedGroups.length - 1;
                     const isFirst = groupIdx === 0;
                     const groupKey = String(groupIdx);
@@ -852,8 +926,7 @@ export default function TrackResult({ initialData = null }: { initialData?: Trac
                         </div>
                       </li>
                     );
-                  });
-                })()}
+                  })}
               </ul>
             </div>
           </div>

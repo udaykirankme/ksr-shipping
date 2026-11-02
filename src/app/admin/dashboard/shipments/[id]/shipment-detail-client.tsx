@@ -639,7 +639,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">

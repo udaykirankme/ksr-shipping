@@ -1,14 +1,43 @@
 "use client";
 
-import { useState, useId } from "react";
-import { Search, Package } from "lucide-react";
+import { useState, useId, useEffect } from "react";
+import { Search, Package, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 export function TrackingWidget({ compact = false, centered = false }: { compact?: boolean, centered?: boolean }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [trackingId, setTrackingId] = useState("");
-  // Generate a unique ID for this widget instance to avoid duplicate ID issues
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const baseId = useId();
   const inputId = `tracking-id-input-${compact ? 'compact' : 'full'}-${baseId}`;
+
+  // Reset loading state on route change, unmount, or pageshow (e.g. browser back button from bfcache)
+  useEffect(() => {
+    setIsSubmitting(false);
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    const handlePageShow = () => {
+      setIsSubmitting(false);
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      setIsSubmitting(false);
+    };
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = trackingId.trim();
+    if (!clean || isSubmitting) return;
+
+    setIsSubmitting(true);
+    router.push(`/track?id=${encodeURIComponent(clean)}`);
+  };
 
   return (
     <div 
@@ -27,7 +56,7 @@ export function TrackingWidget({ compact = false, centered = false }: { compact?
         </h3>
       </div>
       
-      <form action="/track" method="GET" aria-label="Track your shipment">
+      <form onSubmit={handleSubmit} action="/track" method="GET" aria-label="Track your shipment">
         <div className="relative mb-4">
           <label htmlFor={inputId} className="sr-only">
             Tracking ID or AWB Number
@@ -39,19 +68,31 @@ export function TrackingWidget({ compact = false, centered = false }: { compact?
             name="id"
             autoComplete="off"
             aria-required="true"
-            className="w-full pl-12 pr-4 py-3.5 bg-white/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow text-gray-900 placeholder-gray-400"
+            className="w-full pl-12 pr-4 py-3.5 bg-white/80 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow text-gray-900 placeholder-gray-400 disabled:opacity-75 disabled:cursor-not-allowed"
             placeholder="Enter Tracking ID / AWB Number"
             value={trackingId}
             onChange={(e) => setTrackingId(e.target.value)}
+            disabled={isSubmitting}
             required
           />
         </div>
         
         <button
           type="submit"
-          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95"
+          disabled={isSubmitting || !trackingId.trim()}
+          className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
         >
-          <Search className="w-4 h-4" /> Track Now
+          {isSubmitting ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
+              <span>Tracking...</span>
+            </>
+          ) : (
+            <>
+              <Search className="w-4 h-4" />
+              <span>Track Now</span>
+            </>
+          )}
         </button>
         
         {!compact && (

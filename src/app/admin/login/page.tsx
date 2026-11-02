@@ -49,6 +49,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     if (!validate()) return;
     
     setIsLoading(true);
@@ -58,6 +59,7 @@ export default function LoginPage() {
       toast.success('Successfully logged in');
       router.push('/admin/dashboard');
       router.refresh();
+
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Failed to sign in');
       setErrors({ password: ' ' }); // visually mark error but rely on toast for message
@@ -164,7 +166,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full h-12 text-base font-semibold" loading={isLoading}>
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
         </CardContent>

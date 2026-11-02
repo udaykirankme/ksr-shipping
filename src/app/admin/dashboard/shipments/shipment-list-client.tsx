@@ -11,6 +11,8 @@ import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { shipmentService } from "@/lib/shipment-service";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useConfirm } from "@/components/ui/confirm-modal";
+import { NavigationProgress } from "@/components/ui/navigation-progress";
+import { cn } from "@/lib/utils";
 
 interface ShipmentData {
   id: string;
@@ -59,6 +61,7 @@ export function ShipmentListClient({
   const [isActiveFilter, setIsActiveFilter] = useState(true);
   const [olderThan31Days, setOlderThan31Days] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement | null>(null);
   
   const limit = 50;
@@ -69,6 +72,12 @@ export function ShipmentListClient({
   const skipInitialFetch = useRef(hasInitialData);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const handleRowClick = useCallback((id: string) => {
+    if (navigatingId) return;
+    setNavigatingId(id);
+    router.push(`/admin/dashboard/shipments/${id}`);
+  }, [navigatingId, router]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -272,6 +281,7 @@ export function ShipmentListClient({
 
   return (
     <div className="flex flex-col h-full min-h-0 space-y-4 sm:space-y-5">
+      <NavigationProgress active={Boolean(navigatingId)} />
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4 shrink-0">
         <div>
@@ -562,12 +572,23 @@ export function ShipmentListClient({
                   </td>
                 </tr>
               )}
-              {shipments.map((shipment) => (
+              {shipments.map((shipment) => {
+                const isNavigating = navigatingId === shipment.id;
+                const isAnyNavigating = Boolean(navigatingId);
+
+                return (
                 <tr 
                   key={shipment.id} 
-                  className="group hover:bg-orange-50/30 transition-colors cursor-pointer border-b border-gray-100/80" 
-                  onClick={() => router.push(`/admin/dashboard/shipments/${shipment.id}`)}
-                  onMouseEnter={() => router.prefetch(`/admin/dashboard/shipments/${shipment.id}`)}
+                  className={cn(
+                    "group transition-colors border-b border-gray-100/80",
+                    isNavigating
+                      ? "bg-orange-50/90 ring-1 ring-inset ring-orange-300"
+                      : isAnyNavigating
+                        ? "opacity-60 cursor-not-allowed"
+                        : "hover:bg-orange-50/30 cursor-pointer"
+                  )} 
+                  onClick={() => handleRowClick(shipment.id)}
+                  onMouseEnter={() => !navigatingId && router.prefetch(`/admin/dashboard/shipments/${shipment.id}`)}
                 >
                   <td className="w-9 text-center px-2.5 py-3.5" onClick={(e) => e.stopPropagation()}>
                     <input 
@@ -589,7 +610,15 @@ export function ShipmentListClient({
                   </td>
                   <td className="whitespace-nowrap px-3 py-3.5">
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-semibold text-gray-900 hover:text-orange-600 transition-colors text-xs sm:text-sm">{shipment.tracking_id}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-900 hover:text-orange-600 transition-colors text-xs sm:text-sm">{shipment.tracking_id}</span>
+                        {isNavigating && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-600 bg-orange-100/90 px-1.5 py-0.5 rounded animate-pulse">
+                            <RefreshCw className="w-2.5 h-2.5 animate-spin text-orange-600" />
+                            <span>Opening...</span>
+                          </span>
+                        )}
+                      </div>
                       {shipment.official_tracking_id && (
                         <span className="text-[11px] text-gray-400 font-normal">{shipment.official_tracking_id}</span>
                       )}
@@ -636,7 +665,8 @@ export function ShipmentListClient({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
 

@@ -246,8 +246,8 @@ export function NotificationListClient() {
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden relative">
-        {loading && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
+        {loading && notifications.length > 0 && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-xs z-10 flex items-center justify-center">
             <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
           </div>
         )}
@@ -271,7 +271,18 @@ export function NotificationListClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {notifications.length === 0 && !loading ? (
+              {loading && notifications.length === 0 ? (
+                [...Array(6)].map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell className="text-center"><div className="w-4 h-4 bg-gray-200 rounded mx-auto" /></TableCell>
+                    <TableCell><div className="w-4 h-4 bg-gray-200 rounded mx-auto" /></TableCell>
+                    <TableCell><div className="w-6 h-6 bg-gray-100 rounded-full mx-auto" /></TableCell>
+                    <TableCell><div className="h-4 w-40 bg-gray-200 rounded" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><div className="h-4 w-60 bg-gray-100 rounded" /></TableCell>
+                    <TableCell><div className="h-4 w-24 bg-gray-200 rounded" /></TableCell>
+                  </TableRow>
+                ))
+              ) : notifications.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-gray-500">
                     No notifications found.

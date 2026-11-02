@@ -1,4 +1,5 @@
 import { isExceptionStatus, isRoutineOperationalStatus, normalizeOperationalStatus } from './normalization';
+import { toTitleCase } from './aggregation';
 
 export interface IncomingTrackingEvent {
   status: string;
@@ -96,7 +97,8 @@ export function sanitizeCustomerHistoryNote(note: string | null | undefined): st
  */
 export function isDuplicateEvent(
   existingEvent: { status: string; location: string | null; occurred_at: Date; note: string | null },
-  incomingEvent: IncomingTrackingEvent
+  incomingEvent: IncomingTrackingEvent,
+  isDelhivery: boolean = true
 ): boolean {
   const existingPkgId = extractPackageIdentifier(existingEvent.note);
   const incomingPkgId = incomingEvent.package_id?.trim() ||
@@ -122,8 +124,12 @@ export function isDuplicateEvent(
   if (existingLoc !== incomingLoc) return false;
 
   // 3. Canonical Action check
-  const normalizedExistingStatus = normalizeOperationalStatus(existingEvent.status, existingEvent.note).toLowerCase();
-  const normalizedIncomingStatus = normalizeOperationalStatus(incomingEvent.status, incomingEvent.note || incomingEvent.raw_status).toLowerCase();
+  const normalizedExistingStatus = isDelhivery 
+    ? normalizeOperationalStatus(existingEvent.status, existingEvent.note).toLowerCase()
+    : (existingEvent.status || '').toLowerCase().trim();
+  const normalizedIncomingStatus = isDelhivery
+    ? normalizeOperationalStatus(incomingEvent.status, incomingEvent.note || incomingEvent.raw_status).toLowerCase()
+    : (incomingEvent.status || incomingEvent.raw_status || '').toLowerCase().trim();
   if (normalizedExistingStatus !== normalizedIncomingStatus) return false;
 
   // 4. Core Operational Remark check (stripped of prefixes and ID tags)
@@ -153,7 +159,8 @@ export function isDuplicateEvent(
  * 4. Deduplicating identical physical events delivered across webhook and API sync
  */
 export function sanitizeHistoryForCustomer<T extends { status: string; location?: string | null; note?: string | null; occurred_at: Date | string }>(
-  history: T[]
+  history: T[],
+  isDelhivery: boolean = true
 ): T[] {
   const result: T[] = [];
 
@@ -164,14 +171,26 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
     }
     const cleanNote = sanitizeCustomerHistoryNote(item.note);
     const itemDate = item.occurred_at instanceof Date ? item.occurred_at : new Date(item.occurred_at);
-    const normalizedStatus = normalizeOperationalStatus(item.status, cleanNote);
-    if (isExceptionStatus(normalizedStatus, cleanNote)) {
-      continue;
+    
+    let finalStatus: string;
+    if (isDelhivery) {
+      const normalizedStatus = normalizeOperationalStatus(item.status, cleanNote);
+      if (isExceptionStatus(normalizedStatus, cleanNote)) {
+        continue;
+      }
+      // Unknown event safety suppression for public customer history
+      if (!isRoutineOperationalStatus(normalizedStatus, cleanNote)) {
+        continue;
+      }
+      finalStatus = normalizedStatus;
+    } else {
+      // Services other than Delhivery B2B and B2C:
+      // Status is strictly preserved as entered by admin (in Title Case)!
+      // NEVER run through Delhivery B2B's normalization (which corrupts Dispatched to Out For Delivery)!
+      const rawTrimmed = (item.status || '').trim();
+      finalStatus = rawTrimmed ? toTitleCase(rawTrimmed.replace(/_/g, ' ')) : 'In Transit';
     }
-    // Unknown event safety suppression for public customer history
-    if (!isRoutineOperationalStatus(normalizedStatus, cleanNote)) {
-      continue;
-    }
+
     const pkgId = extractPackageIdentifier(item as any) || extractPackageIdentifier(item.note);
 
     const isDuplicate = result.some(existing => {
@@ -184,18 +203,19 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
           note: existing.note || null
         },
         {
-          status: normalizedStatus,
+          status: finalStatus,
           location: item.location || null,
           occurred_at: itemDate,
           note: cleanNote
-        }
+        },
+        isDelhivery
       );
     });
 
     if (!isDuplicate) {
       result.push({
         ...item,
-        status: normalizedStatus,
+        status: finalStatus,
         note: cleanNote || null,
         package_id: pkgId || (item as any).package_id || undefined
       });

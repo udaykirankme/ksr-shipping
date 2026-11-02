@@ -29,7 +29,13 @@ router.post('/login', loginLimiter, async (req, res) => {
           { username: identifier },
           { email: identifier }
         ]
-      } 
+      },
+      select: {
+        id: true,
+        username: true,
+        password_hash: true,
+        role: true,
+      }
     });
     
     if (!user) {
@@ -59,7 +65,13 @@ router.post('/login', loginLimiter, async (req, res) => {
       data: { last_login_at: new Date() }
     });
 
-    res.json({ success: true, data: { message: 'Logged in successfully', user: { id: user.id, username: user.username, role: user.role } } });
+    res.json({
+      success: true,
+      data: {
+        message: 'Logged in successfully',
+        user: { id: user.id, username: user.username, role: user.role }
+      }
+    });
   } catch (error) {
     console.error('Login error:', error);
 
