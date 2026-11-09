@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrackingWidget } from "@/components/TrackingWidget";
 import { TrackingResultSkeleton } from "@/components/TrackingResultSkeleton";
@@ -23,6 +23,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Star,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -361,11 +363,35 @@ const renderStageIcon = (
         <Truck className={cn(iconSize, iconColor)} />
       );
     case 4:
-      return <CheckCircle2 className={cn(iconSize, iconColor)} />;
+      return isCompleted || isCurrent ? (
+        <Check
+          strokeWidth={3}
+          className={cn("w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-white relative z-10 drop-shadow-xs")}
+        />
+      ) : (
+        <CheckCircle2
+          strokeWidth={2}
+          className={cn(iconSize, iconColor, "relative z-10")}
+        />
+      );
     default:
       return <Package className={cn(iconSize, iconColor)} />;
   }
 };
+
+function getVehicleY(p: number, positions: number[]): number {
+  if (!positions || positions.length < 5) return 0;
+  if (p <= 0) return positions[0];
+  if (p >= 4) return positions[4];
+
+  const stage = Math.floor(p);
+  const fraction = p - stage;
+
+  const startY = positions[stage];
+  const endY = positions[stage + 1];
+
+  return startY + fraction * (endY - startY);
+}
 
 export default function TrackResult({
   initialData = null,
@@ -503,6 +529,156 @@ export default function TrackResult({
       !data.current_status.toLowerCase().includes("return")
     );
   }, [data, finalStageIdx]);
+
+  // Measure exact vertical centers of all 5 stage circles for continuous physical travel
+  const timelineContainerRef = useRef<HTMLDivElement>(null);
+  const circleRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [nodePositions, setNodePositions] = useState<number[]>([]);
+  const [vehicleX, setVehicleX] = useState(22);
+
+  const updateNodePositions = useCallback(() => {
+    if (!timelineContainerRef.current) return;
+    const containerRect = timelineContainerRef.current.getBoundingClientRect();
+    const positions: number[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      const el = circleRefs.current[i];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const centerY = (rect.top + rect.bottom) / 2 - containerRect.top;
+        positions.push(centerY);
+        if (i === 0) {
+          const centerX = (rect.left + rect.right) / 2 - containerRect.left;
+          setVehicleX(centerX);
+        }
+      }
+    }
+
+    if (positions.length === 5) {
+      setNodePositions(positions);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateNodePositions();
+
+    const handleResize = () => {
+      updateNodePositions();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && timelineContainerRef.current) {
+      observer = new ResizeObserver(() => {
+        updateNodePositions();
+      });
+      observer.observe(timelineContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (observer) observer.disconnect();
+    };
+  }, [updateNodePositions, data]);
+
+  // Continuous animation state from Stage 0 to Current Stage + 50%
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [isAnimationComplete, setIsAnimationComplete] = useState(false);
+
+  // Target stage progress:
+  // - Stage 0: 0.5 (halfway between Stage 0 and Stage 1)
+  // - Stage 1: 1.5 (halfway between Stage 1 and Stage 2)
+  // - Stage 2: 2.5 (halfway between Stage 2 and Stage 3)
+  // - Stage 3: 3.5 (halfway between Stage 3 and Stage 4)
+  // - Stage 4: 4.0 (Delivered at Stage 4)
+  const targetProgress = useMemo(() => {
+    if (finalStageIdx === 0) return 0.5;
+    if (finalStageIdx === 1) return 1.5;
+    if (finalStageIdx === 2) return 2.5;
+    if (finalStageIdx === 3) return 3.5;
+    return 4.0;
+  }, [finalStageIdx]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setCurrentProgress(targetProgress);
+      setIsAnimationComplete(true);
+      return;
+    }
+
+    setCurrentProgress(0);
+    setIsAnimationComplete(false);
+
+    let animationFrameId: number;
+    let startTime: number | null = null;
+
+    // Total duration: calibrated gentle sine glide
+    const duration =
+      finalStageIdx === 0
+        ? 1200
+        : finalStageIdx === 1
+          ? 1600
+          : finalStageIdx === 2
+            ? 2200
+            : finalStageIdx === 3
+              ? 2500
+              : 2800;
+
+    // Gentle natural sine ease-out: steady natural glide, softly easing into arrival
+    const easeOutSine = (t: number) => Math.sin((t * Math.PI) / 2);
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOutSine(progress);
+      const current = eased * targetProgress;
+
+      setCurrentProgress(current);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(step);
+      } else {
+        setCurrentProgress(targetProgress);
+        setIsAnimationComplete(true);
+      }
+    };
+
+    // Small delay on mount so the user clearly perceives the journey start from Stage 0
+    const timeoutId = setTimeout(() => {
+      updateNodePositions();
+      animationFrameId = requestAnimationFrame(step);
+    }, 120);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
+  }, [finalStageIdx, data?.tracking_id, targetProgress, updateNodePositions]);
+
+  // Delivered Feedback Pop-up Modal state: triggers with success & thank you message upon reaching delivery
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackDismissed, setFeedbackDismissed] = useState(false);
+
+  useEffect(() => {
+    setShowFeedbackModal(false);
+    setFeedbackDismissed(false);
+  }, [trackingId]);
+
+  useEffect(() => {
+    if (isDelivered && isAnimationComplete && !feedbackDismissed) {
+      const timer = setTimeout(() => {
+        setShowFeedbackModal(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [isDelivered, isAnimationComplete, feedbackDismissed]);
 
   const customerDisplayStatus = useMemo(() => {
     if (!data) return "In Transit";
@@ -782,11 +958,58 @@ export default function TrackResult({
             </div>
 
             {/* 5 Vertically Connected Stages */}
-            <div className="flow-root">
+            <div className="flow-root relative" ref={timelineContainerRef}>
+              {/* Single Continuous Traveling Vehicle Icon */}
+              {nodePositions.length === 5 && (
+                <div
+                  className={cn(
+                    "absolute z-[5] pointer-events-none -translate-x-1/2 -translate-y-1/2 flex items-center justify-center will-change-transform transition-opacity duration-500",
+                    isDelivered && isAnimationComplete ? "opacity-0" : "opacity-100"
+                  )}
+                  style={{
+                    top: `${getVehicleY(currentProgress, nodePositions)}px`,
+                    left: `${vehicleX}px`,
+                  }}
+                >
+                  <motion.div
+                    animate={isAnimationComplete && !isDelivered ? { y: [0, -2.5, 0] } : {}}
+                    transition={
+                      isAnimationComplete && !isDelivered
+                        ? { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                        : {}
+                    }
+                    className="flex items-center justify-center"
+                  >
+                    {isAir ? (
+                      <Plane
+                        className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 fill-white filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)] rotate-45"
+                        strokeWidth={2}
+                      />
+                    ) : (
+                      <Truck
+                        className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 fill-white filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </motion.div>
+                </div>
+              )}
+
               {STAGES.map((stage, i) => {
-                const isCompleted = i < finalStageIdx || (i === 4 && finalStageIdx === 4);
-                const isCurrent = i === finalStageIdx;
-                const isUpcoming = i > finalStageIdx;
+                // Stage progress logic:
+                // Node is reached only when the vehicle arrives at or passes by it
+                const isNodeReached = currentProgress >= (i === 0 ? 0 : i - 0.15);
+                const isFinalTarget = i === finalStageIdx;
+                const isCurrentActive = isFinalTarget && isNodeReached;
+
+                // Vehicle is actively passing through this intermediate node right now
+                const isPassingThrough =
+                  !isFinalTarget &&
+                  currentProgress >= (i === 0 ? 0 : i - 0.15) &&
+                  currentProgress < i + 0.45;
+
+                const isCompleted = isNodeReached && !isFinalTarget && currentProgress >= i + 0.45;
+                const isUpcoming = !isNodeReached;
                 const isExpanded = !!expandedStages[i];
                 const stageEvents = milestoneGroups[i] || [];
 
@@ -825,86 +1048,61 @@ export default function TrackResult({
                   <div key={stage.key} className="relative flex items-start gap-3.5 sm:gap-5">
                     {/* Left: Node circle + vertically connecting line */}
                     <div className="flex flex-col items-center self-stretch shrink-0 w-9 sm:w-11">
-                      {/* Node Circle */}
+                      {/* Node Circle with dynamic stage pass-through glow */}
                       <div
+                        ref={(el) => {
+                          circleRefs.current[i] = el;
+                        }}
                         className={cn(
-                          "w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 z-10 transition-all duration-300",
-                          isCurrent
+                          "w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0 z-10 transition-all duration-300 relative",
+                          isCurrentActive
                             ? isDelivered
-                              ? "bg-emerald-500 text-white ring-4 ring-emerald-200/90 shadow-md shadow-emerald-500/25"
-                              : "bg-orange-500 text-white ring-4 ring-orange-200/90 shadow-md shadow-orange-500/25"
-                            : isCompleted
-                              ? "bg-orange-500 text-white shadow-xs shadow-orange-500/20"
-                              : "bg-gray-100 border border-gray-200 text-gray-400"
+                              ? "bg-emerald-500 text-white ring-4 ring-emerald-200/90 shadow-lg shadow-emerald-500/30 scale-105"
+                              : "bg-orange-500 text-white ring-4 ring-orange-200/90 shadow-lg shadow-orange-500/30 scale-105"
+                            : isPassingThrough
+                              ? "bg-orange-500 text-white ring-4 ring-orange-300 shadow-[0_0_22px_rgba(249,115,22,0.75)] scale-105"
+                              : isCompleted
+                                ? "bg-orange-500 text-white shadow-xs shadow-orange-500/20"
+                                : "bg-gray-100 border border-gray-200 text-gray-400"
                         )}
-                        aria-label={`${stage.label}: ${isCurrent ? "Current" : isCompleted ? "Completed" : "Upcoming"}`}
+                        aria-label={`${stage.label}: ${isCurrentActive ? (isDelivered ? "Delivered" : "Current") : isCompleted ? "Completed" : "Upcoming"}`}
                       >
-                        {renderStageIcon(i, isCompleted, isCurrent, isAir)}
+                        {/* Glowing ripple aura when vehicle icon is actively passing through intermediate node */}
+                        {isPassingThrough && (
+                          <span className="absolute -inset-1 rounded-full bg-orange-400/50 animate-ping pointer-events-none -z-10" />
+                        )}
+                        {/* Glowing halo for delivered when reached */}
+                        {isCurrentActive && isDelivered && (
+                          <span className="absolute -inset-1 rounded-full bg-emerald-400/40 animate-pulse pointer-events-none -z-10" />
+                        )}
+                        {renderStageIcon(i, isNodeReached, isCurrentActive, isAir)}
                       </div>
 
                       {/* Continuous vertical connecting line to next stage */}
-                      {i < 4 && (
-                        <div
-                          className={cn(
-                            "relative flex flex-col items-center w-[2px] sm:w-[2.5px] flex-grow my-1.5",
-                            isCurrent && !isDelivered
-                              ? "min-h-[52px] sm:min-h-[64px]"
-                              : "min-h-[28px] sm:min-h-[32px]"
-                          )}
-                        >
-                          {/* Base track: grey for upcoming, solid orange (or emerald if delivered) for completed */}
+                      {i < 4 && (() => {
+                        // Calculate percentage of this segment filled with solid opaque line
+                        const segmentFill = Math.min(100, Math.max(0, (currentProgress - i) * 100));
+
+                        return (
                           <div
                             className={cn(
-                              "absolute inset-0 rounded-full transition-colors duration-300",
-                              i < finalStageIdx
-                                ? isDelivered
-                                  ? "bg-emerald-500"
-                                  : "bg-orange-500"
-                                : "bg-gray-200"
+                              "relative flex flex-col items-center w-[2.5px] sm:w-[3px] flex-grow my-1",
+                              isFinalTarget && !isDelivered
+                                ? "min-h-[52px] sm:min-h-[64px]"
+                                : "min-h-[28px] sm:min-h-[32px]"
                             )}
-                          />
+                          >
+                            {/* Base track: gray track */}
+                            <div className="absolute inset-0 rounded-full bg-gray-200" />
 
-                          {/* Current Active Milestone: animate line half the way (50%) with vehicle icon en-route */}
-                          {isCurrent && !isDelivered && (
-                            <>
-                              {/* Orange progress line covering half of the way */}
-                              <motion.div
-                                initial={{ height: "0%" }}
-                                animate={{ height: "50%" }}
-                                transition={{ duration: 1.2, ease: "easeOut" }}
-                                className="absolute top-0 w-full bg-orange-500 rounded-full z-10"
-                              />
-
-                              {/* Traveling vehicle icon positioned at the 50% halfway point */}
-                              <motion.div
-                                initial={{ top: "0%", opacity: 0 }}
-                                animate={{ top: "50%", opacity: 1 }}
-                                transition={{ duration: 1.2, ease: "easeOut" }}
-                                className="absolute -translate-x-1/2 -translate-y-1/2 left-1/2 z-20 pointer-events-none flex items-center justify-center"
-                              >
-                                <motion.div
-                                  animate={{ y: [0, -2, 0] }}
-                                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                                  className="flex items-center justify-center"
-                                  title={`In transit to ${STAGES[i + 1]?.label || 'next milestone'}`}
-                                >
-                                  {isAir ? (
-                                    <Plane
-                                      className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-orange-500 fill-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] rotate-45 transition-transform"
-                                      strokeWidth={2}
-                                    />
-                                  ) : (
-                                    <Truck
-                                      className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 text-orange-500 fill-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)] transition-transform"
-                                      strokeWidth={2}
-                                    />
-                                  )}
-                                </motion.div>
-                              </motion.div>
-                            </>
-                          )}
-                        </div>
-                      )}
+                            {/* Solid opaque fill line advancing smoothly from Stage 0 to destination */}
+                            <div
+                              className="absolute top-0 w-full rounded-full z-[1] bg-orange-500"
+                              style={{ height: `${segmentFill}%` }}
+                            />
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Right: Milestone Header, Summary, and Collapsible Events Area */}
@@ -914,10 +1112,10 @@ export default function TrackResult({
                         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                           <h4
                             className={cn(
-                              "text-sm sm:text-base md:text-lg font-bold leading-tight",
-                              isCurrent
+                              "text-sm sm:text-base md:text-lg font-bold leading-tight transition-colors duration-300",
+                              isCurrentActive
                                 ? "text-gray-950 font-black"
-                                : isCompleted
+                                : isNodeReached
                                   ? "text-gray-900"
                                   : "text-gray-400"
                             )}
@@ -926,10 +1124,10 @@ export default function TrackResult({
                           </h4>
 
                           {/* Stage State Badge */}
-                          {isCurrent ? (
+                          {isCurrentActive ? (
                             <span
                               className={cn(
-                                "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border",
+                                "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border transition-all duration-300",
                                 isDelivered
                                   ? "text-emerald-700 bg-emerald-50 border-emerald-200"
                                   : "text-orange-700 bg-orange-100/90 border-orange-200"
@@ -944,12 +1142,12 @@ export default function TrackResult({
                               {isDelivered ? "Delivered" : "Current Stage"}
                             </span>
                           ) : isCompleted ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 transition-all duration-300">
                               <Check className="w-2.5 h-2.5 text-emerald-600" />
                               Completed
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold text-gray-400 bg-gray-50 border border-gray-200">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold text-gray-400 bg-gray-50 border border-gray-200 transition-all duration-300">
                               Upcoming
                             </span>
                           )}
@@ -974,7 +1172,7 @@ export default function TrackResult({
                               "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400/50",
                               isExpanded
                                 ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                : isCurrent
+                                : isCurrentActive
                                   ? "bg-orange-500 hover:bg-orange-600 text-white shadow-xs"
                                   : "bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200/80"
                             )}
@@ -998,9 +1196,18 @@ export default function TrackResult({
 
                       {/* City from receiver details for Delivered milestone */}
                       {i === 4 && (data.receiver_city || data.destination) && (
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                          <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                          <span className="font-semibold text-gray-800">
+                        <div className={cn(
+                          "flex items-center gap-1.5 text-xs sm:text-sm font-medium mt-1 transition-colors duration-300",
+                          isNodeReached ? "text-gray-800" : "text-gray-400"
+                        )}>
+                          <MapPin className={cn(
+                            "w-3.5 h-3.5 shrink-0 transition-colors duration-300",
+                            isNodeReached ? "text-orange-500" : "text-gray-400"
+                          )} />
+                          <span className={cn(
+                            "font-semibold",
+                            isNodeReached ? "text-gray-800" : "text-gray-400"
+                          )}>
                             {data.receiver_city || data.destination}
                           </span>
                         </div>
@@ -1011,19 +1218,27 @@ export default function TrackResult({
                       {/* Displays latest operational update, location, and timestamp    */}
                       {/* even when milestone details are collapsed!                     */}
                       {/* ============================================================== */}
-                      {isCurrent && (
-                        <div className="mt-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-50/90 via-white to-amber-50/40 border border-orange-200/90 shadow-xs">
+                      {isFinalTarget && (
+                        <div
+                          className={cn(
+                            "mt-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-50/90 via-white to-amber-50/40 border border-orange-200/90 shadow-xs transition-opacity duration-300",
+                            isNodeReached ? "opacity-100" : "opacity-60"
+                          )}
+                        >
                           <div className="flex flex-wrap items-start justify-between gap-2.5 sm:gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                                 <span
                                   className={cn(
                                     "w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 animate-pulse",
-                                    isDelivered ? "bg-emerald-500" : "bg-orange-500"
+                                    isCurrentActive ? "bg-orange-500" : "bg-gray-400"
                                   )}
                                   aria-hidden="true"
                                 />
-                                <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-orange-600">
+                                <span className={cn(
+                                  "text-[10.5px] sm:text-xs font-bold uppercase tracking-wider transition-colors duration-300",
+                                  isCurrentActive ? "text-orange-600" : "text-gray-500"
+                                )}>
                                   Latest Operational Update
                                 </span>
                               </div>
@@ -1138,7 +1353,7 @@ export default function TrackResult({
                                             <span
                                               className={cn(
                                                 "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-white text-xs shadow-2xs",
-                                                isSubFirst && isCurrent
+                                                isSubFirst && isCurrentActive
                                                   ? "bg-orange-500 ring-2 ring-orange-200"
                                                   : "bg-orange-500/85"
                                               )}
@@ -1240,6 +1455,139 @@ export default function TrackResult({
           </div>
         </div>
       )}
+
+      {/* Delivered Feedback Pop-up Modal */}
+      <AnimatePresence>
+        {showFeedbackModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={() => {
+                setShowFeedbackModal(false);
+                setFeedbackDismissed(true);
+              }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              aria-hidden="true"
+            />
+
+            {/* Modal Card */}
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="feedback-modal-title"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 z-10 text-center overflow-hidden"
+            >
+              {/* Ambient Decorative Glow */}
+              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-orange-400/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setFeedbackDismissed(true);
+                }}
+                className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                aria-label="Close feedback modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Celebratory Success Icon */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ring-emerald-50/60 shadow-inner">
+                <Check className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600 stroke-[3]" />
+              </div>
+
+              {/* Success Heading & Thank You Message */}
+              <h3
+                id="feedback-modal-title"
+                className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mb-2"
+              >
+                Delivered Successfully!
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                Thank you for choosing{" "}
+                <span className="font-bold text-gray-900">KSR Shipping Services</span>.
+                We hope your delivery was safe and prompt!
+              </p>
+
+              {/* 5-Star Visual Prompt */}
+              <div className="flex items-center justify-center gap-1.5 mb-2 text-amber-400">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className="w-5 h-5 sm:w-6 sm:h-6 fill-amber-400 text-amber-400 drop-shadow-xs"
+                  />
+                ))}
+              </div>
+              <p className="text-xs sm:text-[13px] font-medium text-gray-500 mb-6">
+                Your feedback helps us continuously improve our service.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2.5">
+                <a
+                  href={business.googleReviewUrl || "https://g.page/r/CdBtDQra-a6oEB0/review"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all duration-200 group"
+                  id="google-review-modal-btn"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    className="shrink-0 bg-white rounded-full p-0.5"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                      <path
+                        fill="#4285F4"
+                        d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.369 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.109 -17.884 43.989 -14.754 43.989 Z"
+                      />
+                    </g>
+                  </svg>
+                  <span>Write a Review on Google</span>
+                  <ExternalLink className="w-4 h-4 text-white/80 group-hover:text-white transition-colors" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFeedbackModal(false);
+                    setFeedbackDismissed(true);
+                  }}
+                  className="py-2 text-xs sm:text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
