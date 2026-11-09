@@ -2,7 +2,6 @@ import { Package, Scale, TrendingUp } from "lucide-react";
 import { CircularKpi } from "@/components/dashboard/circular-kpi";
 import { ShipmentOverview } from "@/components/dashboard/shipment-overview";
 import { RecentShipments } from "@/components/dashboard/recent-shipments";
-import { RecentNotifications } from "@/components/dashboard/recent-notifications";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { getDashboardStats } from "@/lib/dashboard-stats";
 
@@ -25,6 +24,7 @@ export default async function DashboardPage() {
       monthlyWeight: 0,
       recentShipments: [],
       statusCounts: {},
+      stageCounts: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
     };
   }
 
@@ -55,6 +55,8 @@ export default async function DashboardPage() {
           icon={Package} 
           progress={100}
           colorClass="text-blue-500"
+          href="/admin/dashboard/shipments?stage=0"
+          actionText="View Shipments"
         />
         <CircularKpi 
           title="Weight This Month" 
@@ -66,13 +68,8 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ShipmentOverview statusCounts={stats.statusCounts} />
-        </div>
-        <div className="lg:col-span-1">
-          <RecentNotifications />
-        </div>
+      <div className="w-full">
+        <ShipmentOverview stageCounts={stats.stageCounts} statusCounts={stats.statusCounts} />
       </div>
 
       <QuickActions />

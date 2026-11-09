@@ -7,13 +7,27 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ShipmentsPage() {
+export default async function ShipmentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   let initialShipments: any[] = [];
   let initialTotal = 0;
   let initialError: string | null = null;
 
+  const resolvedParams = searchParams ? await searchParams : {};
+  const stage = typeof resolvedParams.stage === 'string' ? resolvedParams.stage : undefined;
+  const status = typeof resolvedParams.status === 'string' ? resolvedParams.status : undefined;
+
   try {
-    const initial = await getShipmentsList({ page: 1, limit: 50, isActive: true });
+    const initial = await getShipmentsList({
+      page: 1,
+      limit: 50,
+      isActive: true,
+      stage,
+      status,
+    });
     initialShipments = initial.shipments;
     initialTotal = initial.total;
   } catch (err: any) {

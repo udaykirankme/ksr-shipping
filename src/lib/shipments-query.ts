@@ -21,6 +21,7 @@ export const SHIPMENT_LIST_SELECT = {
 export type ShipmentListFilters = {
   search?: string;
   status?: string;
+  stage?: number | string;
   courier?: string;
   startDate?: string;
   endDate?: string;
@@ -30,14 +31,28 @@ export type ShipmentListFilters = {
   limit?: number;
 };
 
+const STAGE_STATUS_MAP: Record<number, string[]> = {
+  0: ['Shipment Created', 'Manifested', 'Manifest Uploaded', 'Ready to Ship', 'Label Created', 'Order Created', 'Not Picked', 'Pickup Scheduled'],
+  1: ['Picked Up', 'Shipped', 'Shipment Bagged', 'Shipment Received'],
+  2: ['In Transit', 'At Hub', 'Vehicle Departed', 'Vehicle Departed from Client Location', 'Trip Arrived', 'Left Origin', 'Pending'],
+  3: ['Out For Delivery', 'Dispatched'],
+  4: ['Delivered', 'Successfully Delivered'],
+};
+
 function buildShipmentListWhere(filters: ShipmentListFilters): Prisma.ShipmentWhereInput {
   const where: Prisma.ShipmentWhereInput = {
     is_active: filters.isActive ?? true,
   };
 
-  if (filters.status) {
+  const stageVal = filters.stage !== undefined && filters.stage !== ''
+    ? (typeof filters.stage === 'string' ? parseInt(filters.stage, 10) : filters.stage)
+    : (filters.status?.startsWith('stage:') ? parseInt(filters.status.replace('stage:', ''), 10) : undefined);
+
+  if (stageVal !== undefined && !isNaN(stageVal) && STAGE_STATUS_MAP[stageVal]) {
+    where.current_status = { in: STAGE_STATUS_MAP[stageVal] };
+  } else if (filters.status) {
     if (filters.status === 'Non-delivered') {
-      where.current_status = { not: 'Delivered' };
+      where.current_status = { notIn: ['Delivered', 'Successfully Delivered'] };
     } else {
       where.current_status = filters.status;
     }

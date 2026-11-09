@@ -1,8 +1,10 @@
 "use client";
 
+import { isCancelledOrReturnedStatus } from '@/lib/courier/normalization';
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, Filter, RefreshCw, ArchiveRestore, Trash2, Download, History, Calendar, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +50,7 @@ export function ShipmentListClient({
   initialError?: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const confirm = useConfirm();
   const hasInitialData = initialShipments.length > 0 || initialTotal > 0;
   const [shipments, setShipments] = useState<ShipmentData[]>(initialShipments);
@@ -57,7 +60,25 @@ export function ShipmentListClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const normalizeStatusToFilterValue = (stage: string | null, status: string | null): string => {
+    if (stage !== null && stage !== '') return `stage:${stage}`;
+    if (!status) return '';
+    if (status === 'Non-delivered') return 'Non-delivered';
+    if (status.startsWith('stage:')) return status;
+    const s = status.trim().toLowerCase();
+    if (s === 'delivered' || s.includes('delivered')) return 'stage:4';
+    if (s.includes('out for delivery') || s === 'dispatched') return 'stage:3';
+    if (s.includes('transit') || s.includes('hub') || s.includes('depart') || s.includes('received')) return 'stage:2';
+    if (s.includes('pick') || s.includes('shipped') || s.includes('bag')) return 'stage:1';
+    if (s.includes('creat') || s.includes('manifest')) return 'stage:0';
+    return status;
+  };
+
+  const getInitialFilter = () => {
+    return normalizeStatusToFilterValue(searchParams.get('stage'), searchParams.get('status'));
+  };
+
+  const [statusFilter, setStatusFilter] = useState(getInitialFilter);
   const [isActiveFilter, setIsActiveFilter] = useState(true);
   const [olderThan31Days, setOlderThan31Days] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -73,6 +94,31 @@ export function ShipmentListClient({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setStatusFilter(normalizeStatusToFilterValue(searchParams.get('stage'), searchParams.get('status')));
+  }, [searchParams]);
+
+  const buildFetchParams = useCallback((targetPage: number) => {
+    const params: Record<string, string | number | boolean> = {
+      page: targetPage,
+      limit,
+      isActive: isActiveFilter,
+      olderThan31Days,
+    };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter) {
+      if (statusFilter.startsWith('stage:')) {
+        params.stage = statusFilter.replace('stage:', '');
+      } else {
+        params.status = statusFilter;
+      }
+    }
+    return params;
+  }, [isActiveFilter, olderThan31Days, debouncedSearch, statusFilter]);
+
+  useEffect(() => {
+    setNavigatingId(null);
+  }, []);
   const handleRowClick = useCallback((id: string) => {
     if (navigatingId) return;
     setNavigatingId(id);
@@ -101,6 +147,42 @@ export function ShipmentListClient({
   }, [search]);
 
   useEffect(() => {
+    const checkRefreshNeeded = () => {
+      try {
+        if (sessionStorage.getItem('ksr_shipments_need_refresh') === 'true') {
+          sessionStorage.removeItem('ksr_shipments_need_refresh');
+          router.refresh();
+          shipmentService.getShipments(buildFetchParams(1))
+            .then((data: any) => {
+              if (data?.shipments) {
+                setShipments(data.shipments);
+                setTotal(data.total || 0);
+              }
+            })
+            .catch((err) => console.error('Silent refresh failed:', err));
+        }
+      } catch {}
+    };
+
+    checkRefreshNeeded();
+
+    const handleFocus = () => checkRefreshNeeded();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') checkRefreshNeeded();
+    };
+    const handleCustomSync = () => checkRefreshNeeded();
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('ksr-shipment-updated', handleCustomSync);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('ksr-shipment-updated', handleCustomSync);
+    };
+  }, [buildFetchParams, router]);
+  useEffect(() => {
     let mounted = true;
 
     if (
@@ -118,14 +200,7 @@ export function ShipmentListClient({
       setLoading(true);
       setError(null);
       try {
-        const data = await shipmentService.getShipments({
-          page: 1,
-          limit,
-          search: debouncedSearch,
-          status: statusFilter,
-          isActive: isActiveFilter,
-          olderThan31Days
-        });
+        const data = await shipmentService.getShipments(buildFetchParams(1));
         if (mounted) {
           const resData = data as any;
           setShipments(resData.shipments || []);
@@ -142,21 +217,14 @@ export function ShipmentListClient({
     
     fetchData();
     return () => { mounted = false; };
-  }, [statusFilter, isActiveFilter, olderThan31Days, debouncedSearch]);
+  }, [statusFilter, isActiveFilter, olderThan31Days, debouncedSearch, buildFetchParams]);
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const data = await shipmentService.getShipments({
-        page: nextPage,
-        limit,
-        search: debouncedSearch,
-        status: statusFilter,
-        isActive: isActiveFilter,
-        olderThan31Days
-      });
+      const data = await shipmentService.getShipments(buildFetchParams(nextPage));
       const resData = data as any;
       const newItems: ShipmentData[] = resData.shipments || [];
       if (newItems.length > 0) {
@@ -173,7 +241,7 @@ export function ShipmentListClient({
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, hasMore, page, limit, debouncedSearch, statusFilter, isActiveFilter, olderThan31Days, total]);
+  }, [loading, loadingMore, hasMore, page, buildFetchParams, total]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -196,18 +264,34 @@ export function ShipmentListClient({
   }, [loadMore, hasMore, loading, loadingMore]);
 
   // Provide manual refresh
+const handleStatusFilterChange = (val: string) => {
+    setStatusFilter(val);
+    setPage(1);
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (!val) {
+        params.delete('stage');
+        params.delete('status');
+      } else if (val.startsWith('stage:')) {
+        params.set('stage', val.replace('stage:', ''));
+        params.delete('status');
+      } else {
+        params.set('status', val);
+        params.delete('stage');
+      }
+
+      const query = params.toString();
+      const newUrl = query ? `/admin/dashboard/shipments?${query}` : '/admin/dashboard/shipments';
+      router.replace(newUrl);
+    }
+  };
+
   const handleRefresh = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await shipmentService.getShipments({
-        page: 1,
-        limit,
-        search: debouncedSearch,
-        status: statusFilter,
-        isActive: isActiveFilter,
-        olderThan31Days
-      });
+      const data = await shipmentService.getShipments(buildFetchParams(1));
       const resData = data as any;
       setShipments(resData.shipments || []);
       setTotal(resData.total || 0);
@@ -266,13 +350,20 @@ export function ShipmentListClient({
         endDate = new Date(now.getFullYear(), now.getMonth(), 0);
       }
 
-      await shipmentService.exportShipments({
-        search: debouncedSearch,
-        status: statusFilter,
+      const exportParams: Record<string, string | number | boolean> = {
         isActive: isActiveFilter,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-      }, type);
+      };
+      if (debouncedSearch) exportParams.search = debouncedSearch;
+      if (statusFilter) {
+        if (statusFilter.startsWith('stage:')) {
+          exportParams.stage = statusFilter.replace('stage:', '');
+        } else {
+          exportParams.status = statusFilter;
+        }
+      }
+      await shipmentService.exportShipments(exportParams, type);
     } catch (err) {
       console.error(err);
       alert('Failed to export shipments');
@@ -458,19 +549,15 @@ export function ShipmentListClient({
         <div className="min-w-[200px]">
           <PremiumSelect
             value={statusFilter}
-            onChange={(val) => {
-              setStatusFilter(val);
-              setPage(1);
-            }}
+            onChange={handleStatusFilterChange}
             options={[
               { label: 'All Statuses', value: '' },
+              { label: 'Shipment Created', value: 'stage:0' },
+              { label: 'Shipped', value: 'stage:1' },
+              { label: 'In Transit', value: 'stage:2' },
+              { label: 'Out for Delivery', value: 'stage:3' },
+              { label: 'Delivered', value: 'stage:4' },
               { label: 'Non-delivered', value: 'Non-delivered' },
-              { label: 'Shipment Created', value: 'Shipment Created' },
-              { label: 'Picked Up', value: 'Picked Up' },
-              { label: 'Dispatched', value: 'Dispatched' },
-              { label: 'In Transit', value: 'In Transit' },
-              { label: 'Out For Delivery', value: 'Out For Delivery' },
-              { label: 'Delivered', value: 'Delivered' }
             ]}
           />
         </div>
@@ -655,7 +742,7 @@ export function ShipmentListClient({
                     {formatDate(shipment.booked_date)}
                   </td>
                   <td className="text-right font-bold text-gray-900 whitespace-nowrap px-2.5 py-3.5 text-xs sm:text-sm">
-                    {formatCurrency(shipment.profit || 0)}
+                    {formatCurrency(isCancelledOrReturnedStatus(shipment.current_status) ? 0 : (shipment.profit || 0))}
                   </td>
                   <td className="w-12 whitespace-nowrap px-2 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center">

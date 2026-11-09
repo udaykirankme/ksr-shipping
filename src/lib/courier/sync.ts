@@ -1,3 +1,4 @@
+import { isCancelledOrReturnedStatus } from './normalization';
 import { prisma } from '@/lib/db';
 import { getCourierProvider } from './index';
 import { isDuplicateEvent } from './identity';
@@ -121,15 +122,21 @@ export async function syncTracking(shipmentId: string) {
 
   if (highestAchievedEvent && (highestRank > existingRank || (highestRank === existingRank && highestAchievedEvent.status !== shipment.current_status))) {
     updateData.current_status = highestAchievedEvent.status;
+    if (isCancelledOrReturnedStatus(highestAchievedEvent.status)) {
+      updateData.profit = 0;
+    } else if (isCancelledOrReturnedStatus(shipment.current_status)) {
+      const received = Number(shipment.received_amount) || 0;
+      const paid = Number(shipment.paid_amount) || 0;
+      const misc = Number((shipment as any).miscellaneous_charges) || 0;
+      updateData.profit = Math.round((received - paid - misc) * 100) / 100;
+    }
   }
 
-  // Update note/location from the chronologically latest event if newer than maxDbDate or if it's our first sync
+  // Update location from the chronologically latest event if newer than maxDbDate or if it's our first sync
+  // NOTE: customer_update is strictly an admin-entered field and must never be defaulted/overwritten by courier sync
   if (chronologicallyLatestEvent && (chronologicallyLatestEvent.occurred_at.getTime() >= maxDbDate.getTime() || currentHistory.length === newEventsInserted)) {
     if (chronologicallyLatestEvent.location && chronologicallyLatestEvent.location !== shipment.current_location) {
       updateData.current_location = chronologicallyLatestEvent.location;
-    }
-    if (chronologicallyLatestEvent.note && chronologicallyLatestEvent.note.trim() !== shipment.customer_update) {
-      updateData.customer_update = chronologicallyLatestEvent.note.trim();
     }
   }
 

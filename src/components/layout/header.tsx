@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Search, Menu, Package, FileText, MessageSquare, AlertCircle } from "lucide-react";
+import { Bell, Menu, Package, FileText, MessageSquare, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { notificationService, NotificationItem } from "@/lib/notification-service";
@@ -194,25 +194,15 @@ export function Header({ onMenuClick, mobileSidebarOpen = false, onDesktopMenuCl
 
       <div className="h-6 w-px bg-gray-200 md:hidden ml-2" aria-hidden="true" />
 
-      <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-        <div className="flex flex-1 items-center gap-x-4">
-          <div className="hidden sm:block">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight leading-tight">Dashboard</h1>
-            <p className="text-sm text-gray-500 font-medium whitespace-nowrap mt-0.5">
+      <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6 min-w-0">
+        <div className="flex flex-1 items-center min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-sm min-[400px]:text-base sm:text-lg md:text-xl lg:text-2xl font-bold tracking-wider uppercase whitespace-nowrap leading-tight bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 bg-clip-text text-transparent drop-shadow-xs">
+              KSR SHIPPING SERVICES
+            </h1>
+            <p className="text-[11px] sm:text-xs text-gray-500 font-medium whitespace-nowrap mt-0.5">
               {currentDay}, {currentDate}
             </p>
-          </div>
-          
-          <div className="relative w-full max-w-md ml-auto group">
-            <label htmlFor="search-field" className="sr-only">Search</label>
-            <Search className="pointer-events-none absolute inset-y-0 left-3 h-full w-4 text-gray-400 group-focus-within:text-orange-500 transition-colors" aria-hidden="true" />
-            <input
-              id="search-field"
-              className="premium-input block h-10 w-full py-0 pl-10 pr-4 sm:text-sm sm:leading-6"
-              placeholder="Search tracking number, customer..."
-              type="search"
-              name="search"
-            />
           </div>
         </div>
 

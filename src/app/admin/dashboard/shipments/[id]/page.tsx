@@ -1,15 +1,31 @@
 import { notFound } from 'next/navigation';
 import { ShipmentDetailClient } from './shipment-detail-client';
 import { prisma } from '@/lib/db';
+import { isDelhiveryService } from '@/lib/courier/aggregation';
 
 export const dynamic = 'force-dynamic';
 
 async function getShipment(id: string) {
   try {
-    return await prisma.shipment.findUnique({
+    const shipment = await prisma.shipment.findUnique({
       where: { id },
       include: { history: { orderBy: { occurred_at: 'desc' } } },
     });
+    if (shipment && shipment.customer_update && shipment.history?.length > 0) {
+      const isDelhivery = isDelhiveryService(shipment.service, shipment.service_through, shipment.courier);
+      if (isDelhivery) {
+        const raw = shipment.customer_update.trim().toLowerCase();
+        const matchesCourierHistory = shipment.history.some(h => {
+          const hNote = (h.note || '').replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '').trim().toLowerCase();
+          const hStatus = (h.status || '').trim().toLowerCase();
+          return (hNote && hNote === raw) || (hStatus && hStatus === raw);
+        });
+        if (matchesCourierHistory) {
+          shipment.customer_update = null;
+        }
+      }
+    }
+    return shipment;
   } catch (error) {
     console.error('Failed to load shipment:', error);
     return null;

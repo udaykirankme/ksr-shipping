@@ -36,7 +36,6 @@ export default function NewShipmentPage() {
   const [error, setError] = useState('');
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [entryType, setEntryType] = useState<'shipment' | 'packing'>('shipment');
-  const [sameAsReceiver, setSameAsReceiver] = useState(false);
   const [sameAsSender, setSameAsSender] = useState(false);
 
   const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
@@ -119,38 +118,14 @@ export default function NewShipmentPage() {
     }
   }, [quoteId]);
 
-  const handleSameAsReceiverChange = (checked: boolean) => {
-    setSameAsReceiver(checked);
-    if (checked) {
-      setSameAsSender(false);
-      setFormData(prev => ({
-        ...prev,
-        sender_name: prev.receiver_name,
-        sender_phone: prev.receiver_phone,
-        sender_email: prev.receiver_email,
-        sender_address: prev.receiver_address,
-        sender_city: prev.receiver_city,
-        sender_state: prev.receiver_state,
-        sender_pincode: prev.receiver_pincode,
-        sender_country: prev.receiver_country,
-      }));
-    }
-  };
-
   const handleSameAsSenderChange = (checked: boolean) => {
     setSameAsSender(checked);
     if (checked) {
-      setSameAsReceiver(false);
       setFormData(prev => ({
         ...prev,
         receiver_name: prev.sender_name,
         receiver_phone: prev.sender_phone,
         receiver_email: prev.sender_email,
-        receiver_address: prev.sender_address,
-        receiver_city: prev.sender_city,
-        receiver_state: prev.sender_state,
-        receiver_pincode: prev.sender_pincode,
-        receiver_country: prev.sender_country,
       }));
     }
   };
@@ -180,26 +155,17 @@ export default function NewShipmentPage() {
     setFormData(prev => {
       const updated = { ...prev, [name]: value };
 
-      if (sameAsSender && name.startsWith('sender_')) {
-        const receiverKey = name.replace('sender_', 'receiver_') as keyof typeof prev;
-        if (receiverKey in prev) {
-          (updated as any)[receiverKey] = value;
-        }
-      } else if (sameAsReceiver && name.startsWith('receiver_')) {
-        const senderKey = name.replace('receiver_', 'sender_') as keyof typeof prev;
-        if (senderKey in prev) {
-          (updated as any)[senderKey] = value;
-        }
+      if (sameAsSender) {
+        if (name === 'sender_name') updated.receiver_name = value;
+        if (name === 'sender_phone') updated.receiver_phone = value;
+        if (name === 'sender_email') updated.receiver_email = value;
       }
 
       return updated;
     });
 
-    if (sameAsSender && name.startsWith('receiver_')) {
+    if (sameAsSender && (name === 'receiver_name' || name === 'receiver_phone' || name === 'receiver_email')) {
       setSameAsSender(false);
-    }
-    if (sameAsReceiver && name.startsWith('sender_')) {
-      setSameAsReceiver(false);
     }
   };
 
@@ -334,8 +300,7 @@ export default function NewShipmentPage() {
             <button 
               onClick={() => {
                 setCreatedId(null);
-                setSameAsReceiver(false);
-                setSameAsSender(false);
+                                setSameAsSender(false);
                 setFormData((prev) => ({
                   ...prev,
                   official_tracking_id: '',
@@ -698,6 +663,42 @@ export default function NewShipmentPage() {
               </div>
             </div>
 
+            {/* Same Contact Details Full-Width Checkbox */}
+            <div className="w-full">
+              <label
+                className={`group flex items-center justify-between p-3.5 sm:px-4 sm:py-3 rounded-2xl border cursor-pointer select-none transition-all duration-200 min-h-[48px] w-full ${
+                  sameAsSender
+                    ? 'border-orange-400 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400/30 shadow-xs'
+                    : 'border-gray-200/90 bg-white text-gray-700 hover:border-orange-200 hover:bg-orange-50/30 hover:text-gray-900 shadow-xs'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    name="same_contact_details"
+                    checked={sameAsSender}
+                    onChange={(e) => handleSameAsSenderChange(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div
+                    className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 ${
+                      sameAsSender
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
+                        : 'bg-white border-gray-300 group-hover:border-orange-300'
+                    }`}
+                  >
+                    <Check
+                      className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
+                        sameAsSender ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                      }`}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold tracking-tight">Same Sender and Receiver Details</span>
+                </div>
+                <Copy className={`w-4 h-4 ml-4 transition-colors ${sameAsSender ? 'text-orange-500' : 'text-gray-400 group-hover:text-orange-400'}`} />
+              </label>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Sender Info */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
@@ -732,40 +733,7 @@ export default function NewShipmentPage() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100">
-                    <label
-                      className={`group flex items-center justify-between p-3.5 sm:px-4 sm:py-3 rounded-2xl border cursor-pointer select-none transition-all duration-200 min-h-[48px] ${
-                        sameAsReceiver
-                          ? 'border-orange-400 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400/30 shadow-xs'
-                          : 'border-gray-200/90 bg-gray-50/50 text-gray-700 hover:border-orange-200 hover:bg-orange-50/30 hover:text-gray-900'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          name="same_as_receiver"
-                          checked={sameAsReceiver}
-                          onChange={(e) => handleSameAsReceiverChange(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 ${
-                            sameAsReceiver
-                              ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
-                              : 'bg-white border-gray-300 group-hover:border-orange-300'
-                          }`}
-                        >
-                          <Check
-                            className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
-                              sameAsReceiver ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
-                            }`}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold tracking-tight">Same as receiver details</span>
-                      </div>
-                      <Copy className={`w-4 h-4 transition-colors ${sameAsReceiver ? 'text-orange-500' : 'text-gray-400 group-hover:text-orange-400'}`} />
-                    </label>
-                  </div>
+
                 </div>
               </div>
 
@@ -802,45 +770,12 @@ export default function NewShipmentPage() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100">
-                    <label
-                      className={`group flex items-center justify-between p-3.5 sm:px-4 sm:py-3 rounded-2xl border cursor-pointer select-none transition-all duration-200 min-h-[48px] ${
-                        sameAsSender
-                          ? 'border-orange-400 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400/30 shadow-xs'
-                          : 'border-gray-200/90 bg-gray-50/50 text-gray-700 hover:border-orange-200 hover:bg-orange-50/30 hover:text-gray-900'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          name="same_as_sender"
-                          checked={sameAsSender}
-                          onChange={(e) => handleSameAsSenderChange(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 ${
-                            sameAsSender
-                              ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
-                              : 'bg-white border-gray-300 group-hover:border-orange-300'
-                          }`}
-                        >
-                          <Check
-                            className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
-                              sameAsSender ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
-                            }`}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold tracking-tight">Same as sender details</span>
-                      </div>
-                      <Copy className={`w-4 h-4 transition-colors ${sameAsSender ? 'text-orange-500' : 'text-gray-400 group-hover:text-orange-400'}`} />
-                    </label>
-                  </div>
                 </div>
               </div>
             </div>
 
             {/* Package & Payment */}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
                 <div>

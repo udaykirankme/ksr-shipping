@@ -7,6 +7,19 @@ import { getDashboardStats } from '@/lib/dashboard-stats';
 import { getShipmentsList } from '@/lib/shipments-query';
 import { parseBusinessDateTime, toBusinessDateInput, toBusinessTimeInput } from '@/lib/datetime';
 import { pushService } from '../push-service';
+import { revalidatePath } from 'next/cache';
+import { isDelhiveryService } from '@/lib/courier/aggregation';
+import { isCancelledOrReturnedStatus } from '@/lib/courier/normalization';
+
+function safeRevalidateShipments() {
+  try {
+    revalidatePath('/admin/dashboard/shipments');
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/track');
+  } catch {
+    // Silently ignore if invoked outside Next.js request context
+  }
+}
 
 
 const router = Router();
@@ -170,6 +183,7 @@ router.post('/shipments/:id/sync', async (req, res) => {
   try {
     const { syncTracking } = await import('@/lib/courier/sync');
     const result = await syncTracking(req.params.id);
+    safeRevalidateShipments();
     res.json({ success: true, data: result });
   } catch (err: any) {
     console.error(`Admin Sync Error for ${req.params.id}:`, err);
@@ -269,11 +283,12 @@ router.get('/shipments/export', async (req, res) => {
 
 router.get('/shipments', async (req, res) => {
   try {
-    const { search, status, courier, startDate, endDate, isActive, olderThan31Days, page = '1', limit = '10' } = req.query;
+    const { search, status, stage, courier, startDate, endDate, isActive, olderThan31Days, page = '1', limit = '10' } = req.query;
 
     const data = await getShipmentsList({
       search: search as string | undefined,
       status: status as string | undefined,
+      stage: stage !== undefined && stage !== '' ? (stage as string) : undefined,
       courier: courier as string | undefined,
       startDate: startDate as string | undefined,
       endDate: endDate as string | undefined,
@@ -297,6 +312,25 @@ router.get('/shipments/:id', async (req, res) => {
       include: { history: { orderBy: [{ occurred_at: 'desc' }, { created_at: 'desc' }] } }
     });
     if (!shipment) return res.status(404).json({ success: false, message: 'Not found'  });
+    safeRevalidateShipments();
+
+    // If customer_update was previously auto-defaulted from a courier event note or status,
+    // clear it so it's not pre-populated in the admin form
+    if (shipment.customer_update && shipment.history?.length > 0) {
+      const isDelhivery = isDelhiveryService(shipment.service, shipment.service_through, shipment.courier);
+      if (isDelhivery) {
+        const raw = shipment.customer_update.trim().toLowerCase();
+        const matchesCourierHistory = shipment.history.some(h => {
+          const hNote = (h.note || '').replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '').trim().toLowerCase();
+          const hStatus = (h.status || '').trim().toLowerCase();
+          return (hNote && hNote === raw) || (hStatus && hStatus === raw);
+        });
+        if (matchesCourierHistory) {
+          shipment.customer_update = null;
+        }
+      }
+    }
+
     res.json({ success: true, data: shipment });
   } catch (err) {
     console.error(err);
@@ -436,7 +470,8 @@ router.post('/shipments', async (req, res) => {
     data.paid_amount = Number(data.paid_amount) || 0;
     data.received_amount = Number(data.received_amount) || 0;
     data.miscellaneous_charges = Number(data.miscellaneous_charges) || 0;
-    data.profit = data.received_amount - data.paid_amount - data.miscellaneous_charges;
+    const isInitialCancelledOrReturned = isCancelledOrReturnedStatus(data.current_status || 'Shipment Created');
+    data.profit = isInitialCancelledOrReturned ? 0 : (data.received_amount - data.paid_amount - data.miscellaneous_charges);
 
     if (source_quote_id) {
       const quote = await prisma.quotationRequest.findUnique({ where: { id: source_quote_id } });
@@ -632,13 +667,14 @@ router.put('/shipments/:id', async (req, res) => {
       return res.status(409).json({ success: false, message: 'Conflict: This record has been updated by another user. Please refresh.'  });
     }
 
-    if (updateData.paid_amount !== undefined || updateData.received_amount !== undefined || updateData.miscellaneous_charges !== undefined) {
-      const paid = Number(updateData.paid_amount ?? current.paid_amount) || 0;
-      const received = Number(updateData.received_amount ?? current.received_amount) || 0;
-      const misc = Number(updateData.miscellaneous_charges ?? (current as any).miscellaneous_charges) || 0;
+    const effectiveStatus = (updateData.current_status || current.current_status || '') as string;
+    const paid = Number(updateData.paid_amount ?? current.paid_amount) || 0;
+    const received = Number(updateData.received_amount ?? current.received_amount) || 0;
+    const misc = Number(updateData.miscellaneous_charges ?? (current as any).miscellaneous_charges) || 0;
+    if (updateData.miscellaneous_charges !== undefined || (current as any).miscellaneous_charges !== undefined) {
       updateData.miscellaneous_charges = misc;
-      updateData.profit = received - paid - misc;
     }
+    updateData.profit = isCancelledOrReturnedStatus(effectiveStatus) ? 0 : Math.round((received - paid - misc) * 100) / 100;
 
     if (updateData.estimated_delivery) updateData.estimated_delivery = new Date(updateData.estimated_delivery as string);
     
@@ -670,6 +706,14 @@ router.put('/shipments/:id', async (req, res) => {
       data: {
         ...updateData,
         version: { increment: 1 }
+      },
+      include: {
+        history: {
+          orderBy: [
+            { occurred_at: 'desc' },
+            { created_at: 'desc' }
+          ]
+        }
       }
     });
 
@@ -723,6 +767,16 @@ router.patch('/shipments/:id/status', async (req, res) => {
     
     const occurredAt = occurred_at ? parseBusinessDateTime(occurred_at) : new Date();
 
+    const isCancelledOrReturned = isCancelledOrReturnedStatus(status);
+    if (isCancelledOrReturned) {
+      updateData.profit = 0;
+    } else {
+      const received = Number(current.received_amount) || 0;
+      const paid = Number(current.paid_amount) || 0;
+      const misc = Number((current as any).miscellaneous_charges) || 0;
+      updateData.profit = Math.round((received - paid - misc) * 100) / 100;
+    }
+
     if (status === 'Delivered') {
       updateData.delivered_at = occurredAt;
     }
@@ -744,6 +798,7 @@ router.patch('/shipments/:id/status', async (req, res) => {
       })
     ]);
 
+    safeRevalidateShipments();
     res.json({ success: true, data: { shipment, history } });
   } catch (error: any) {
     if (error.code === 'P2025') return res.status(409).json({ success: false, message: 'Conflict: This record has been updated. Please refresh.'  });
@@ -791,6 +846,10 @@ router.patch('/shipments/:id/status/:historyId', async (req, res) => {
       const newStatus = latestHistory?.status || 'Shipment Created';
       const newLocation = latestHistory?.location || null;
       const isDelivered = newStatus === 'Delivered';
+      const isCancelledOrReturned = isCancelledOrReturnedStatus(newStatus);
+      const computedProfit = isCancelledOrReturned
+        ? 0
+        : Math.round(((Number(current.received_amount) || 0) - (Number(current.paid_amount) || 0) - (Number((current as any).miscellaneous_charges) || 0)) * 100) / 100;
 
       return tx.shipment.update({
         where: { id: req.params.id },
@@ -798,6 +857,7 @@ router.patch('/shipments/:id/status/:historyId', async (req, res) => {
           current_status: newStatus,
           current_location: newLocation,
           delivered_at: isDelivered ? latestHistory?.occurred_at : null,
+          profit: computedProfit,
           version: { increment: 1 }
         },
         include: {
@@ -808,6 +868,9 @@ router.patch('/shipments/:id/status/:historyId', async (req, res) => {
       });
     });
 
+    safeRevalidateShipments();
+    safeRevalidateShipments();
+    safeRevalidateShipments();
     res.json({ success: true, data: updatedShipment });
   } catch (error: any) {
     console.error('Error editing status:', error);
@@ -846,6 +909,10 @@ router.post('/shipments/:id/status/undo', async (req, res) => {
       const newStatus = newLatest?.status || 'Shipment Created';
       const newLocation = newLatest?.location || null;
       const isDelivered = newStatus === 'Delivered';
+      const isCancelledOrReturned = isCancelledOrReturnedStatus(newStatus);
+      const computedProfit = isCancelledOrReturned
+        ? 0
+        : Math.round(((Number(current.received_amount) || 0) - (Number(current.paid_amount) || 0) - (Number((current as any).miscellaneous_charges) || 0)) * 100) / 100;
 
       return tx.shipment.update({
         where: { id: req.params.id },
@@ -853,6 +920,7 @@ router.post('/shipments/:id/status/undo', async (req, res) => {
           current_status: newStatus,
           current_location: newLocation,
           delivered_at: isDelivered ? newLatest?.occurred_at : null,
+          profit: computedProfit,
           version: { increment: 1 }
         },
         include: {
@@ -902,6 +970,10 @@ router.delete('/shipments/:id/status/:historyId', async (req, res) => {
       const newStatus = newLatest?.status || 'Shipment Created';
       const newLocation = newLatest?.location || null;
       const isDelivered = newStatus === 'Delivered';
+      const isCancelledOrReturned = isCancelledOrReturnedStatus(newStatus);
+      const computedProfit = isCancelledOrReturned
+        ? 0
+        : Math.round(((Number(current.received_amount) || 0) - (Number(current.paid_amount) || 0) - (Number((current as any).miscellaneous_charges) || 0)) * 100) / 100;
 
       return tx.shipment.update({
         where: { id: req.params.id },
@@ -909,6 +981,7 @@ router.delete('/shipments/:id/status/:historyId', async (req, res) => {
           current_status: newStatus,
           current_location: newLocation,
           delivered_at: isDelivered ? newLatest?.occurred_at : null,
+          profit: computedProfit,
           version: { increment: 1 }
         },
         include: {
@@ -1973,7 +2046,7 @@ router.get('/reports/analytics', async (req, res) => {
       prisma.shipment.count({ where: shipmentWhere }),
       prisma.shipment.findMany({ 
         where: { ...shipmentWhere, is_active: true },
-        select: { profit: true, received_amount: true, booked_date: true } 
+        select: { profit: true, received_amount: true, booked_date: true, current_status: true } 
       }),
       prisma.shipment.groupBy({ by: ['current_status'], _count: { _all: true }, where: shipmentWhere }),
       prisma.shipment.groupBy({ by: ['courier'], _count: { _all: true }, where: shipmentWhere }),
@@ -1991,16 +2064,21 @@ router.get('/reports/analytics', async (req, res) => {
       prisma.notification.count({ where: { ...standardWhere, read_at: null } }),
     ]);
 
-    const totalRevenue = shipmentsWithProfit.reduce((acc: number, s: { received_amount: number | null; profit: number | null; }) => acc + (s.received_amount || 0), 0);
-    const totalProfit = shipmentsWithProfit.reduce((acc: number, s: { received_amount: number | null; profit: number | null; }) => acc + (s.profit || 0), 0);
+    const totalRevenue = shipmentsWithProfit.reduce((acc: number, s: { received_amount: number | null; profit: number | null; current_status?: string | null; }) => acc + (s.received_amount || 0), 0);
+    const totalProfit = shipmentsWithProfit.reduce((acc: number, s: { received_amount: number | null; profit: number | null; current_status?: string | null; }) => {
+      if (isCancelledOrReturnedStatus(s.current_status)) return acc;
+      return acc + (s.profit || 0);
+    }, 0);
     
     // Revenue & Profit Time Series
     const revenueByDate: Record<string, { revenue: number, profit: number }> = {};
-    shipmentsWithProfit.forEach((s: { booked_date?: Date | null; received_amount?: number | null; profit?: number | null; }) => {
+    shipmentsWithProfit.forEach((s: { booked_date?: Date | null; received_amount?: number | null; profit?: number | null; current_status?: string | null; }) => {
       const dateStr = s.booked_date ? s.booked_date.toISOString().split('T')[0] : 'Unknown';
       if (!revenueByDate[dateStr]) revenueByDate[dateStr] = { revenue: 0, profit: 0 };
       revenueByDate[dateStr].revenue += (s.received_amount || 0);
-      revenueByDate[dateStr].profit += (s.profit || 0);
+      if (!isCancelledOrReturnedStatus(s.current_status)) {
+        revenueByDate[dateStr].profit += (s.profit || 0);
+      }
     });
     
     const revenueTimeSeries = Object.entries(revenueByDate).map(([date, data]) => ({

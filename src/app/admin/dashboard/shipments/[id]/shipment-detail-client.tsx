@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { isCancelledOrReturnedStatus } from '@/lib/courier/normalization';
+
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { shipmentService } from '@/lib/shipment-service';
@@ -11,7 +13,7 @@ import {
   toBusinessTimeInput,
   toBusinessDateInput,
 } from '@/lib/datetime';
-import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, Plane, CheckCircle2, RefreshCw, Share2, Edit3, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Save, MapPin, Clock, Copy, ArchiveRestore, Trash2, Truck, Plane, CheckCircle2, RefreshCw, Share2, Edit3, RotateCcw, X, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PremiumSelect } from "@/components/ui/PremiumSelect";
 import { PremiumDatePicker } from "@/components/ui/PremiumDatePicker";
@@ -143,6 +145,8 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const [syncing, setSyncing] = useState(false);
   
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingFinancials, setIsEditingFinancials] = useState(false);
+  const [savingFinancials, setSavingFinancials] = useState(false);
   
   // Status Update state
   const [statusUpdate, setStatusUpdate] = useState(() => ({
@@ -165,6 +169,15 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   });
   const [editLoading, setEditLoading] = useState(false);
 
+  const isInitialSame = Boolean(
+    shipment.sender_name &&
+    shipment.receiver_name &&
+    shipment.sender_name.trim().toLowerCase() === shipment.receiver_name.trim().toLowerCase() &&
+    shipment.sender_phone &&
+    shipment.receiver_phone &&
+    shipment.sender_phone.trim() === shipment.receiver_phone.trim()
+  );
+  const [sameAsSender, setSameAsSender] = useState(isInitialSame);
   const isDelivered = shipment.current_status === 'Delivered';
   const shareableStatus = getShareableStatus(shipment);
   
@@ -176,6 +189,57 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       occurred_at: nextUpdate.occurred_at,
     }));
   }, [shipment.current_status]);
+
+  // Layout refs and dynamic height calculation for Timeline card
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const updateStatusRef = useRef<HTMLDivElement>(null);
+  const timelineCardRef = useRef<HTMLDivElement>(null);
+  const [timelineHeight, setTimelineHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const calculateTimelineHeight = () => {
+      if (typeof window === 'undefined') return;
+      // Below 1280px (xl breakpoint), cards stack into single column
+      if (window.innerWidth < 1280) {
+        setTimelineHeight(null);
+        return;
+      }
+
+      if (!leftColRef.current) return;
+
+      const leftHeight = leftColRef.current.offsetHeight || 
+        Array.from(leftColRef.current.children).reduce((acc, el) => acc + (el as HTMLElement).offsetHeight, 0);
+      
+      const updateHeight = updateStatusRef.current ? updateStatusRef.current.offsetHeight : 0;
+      const gap = updateHeight > 0 ? 24 : 0; // gap-6 (1.5rem = 24px)
+      const available = leftHeight - updateHeight - gap;
+
+      if (available > 200) {
+        setTimelineHeight(Math.round(available));
+      }
+    };
+
+    calculateTimelineHeight();
+    const animId = requestAnimationFrame(calculateTimelineHeight);
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        calculateTimelineHeight();
+      });
+
+      if (leftColRef.current) observer.observe(leftColRef.current);
+      if (updateStatusRef.current) observer.observe(updateStatusRef.current);
+    }
+
+    window.addEventListener('resize', calculateTimelineHeight);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', calculateTimelineHeight);
+    };
+  }, [shipment, isEditing, isEditingFinancials, isDelivered, shareableStatus]);
 
     const handleMoneyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -190,7 +254,21 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     }
   };
 
+    const handleSameAsSenderChange = (checked: boolean) => {
+    if (!isEditing || isDelivered) return;
+    setSameAsSender(checked);
+    if (checked) {
+      setFormData((prev: any) => ({
+        ...prev,
+        receiver_name: prev.sender_name || '',
+        receiver_phone: prev.sender_phone || '',
+        receiver_email: prev.sender_email || prev.receiver_email || '',
+      }));
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name } = e.target;
     let value = e.target.value;
     if (e.target.type === 'number') {
       if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
@@ -198,7 +276,19 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         if (value === '') value = '0';
       }
     }
-    setFormData((prev: any) => ({ ...prev, [e.target.name]: value }));
+    setFormData((prev: any) => {
+      const updated = { ...prev, [name]: value };
+      if (sameAsSender) {
+        if (name === 'sender_name') updated.receiver_name = value;
+        if (name === 'sender_phone') updated.receiver_phone = value;
+        if (name === 'sender_email') updated.receiver_email = value;
+      }
+      return updated;
+    });
+
+    if (sameAsSender && (name === 'receiver_name' || name === 'receiver_phone' || name === 'receiver_email')) {
+      setSameAsSender(false);
+    }
   };
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -232,6 +322,58 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
   const normalizedCourierService = (shipment.service || '').toLowerCase().replace(/[\s\-_]+/g, '');
   const canSyncCourierTracking = normalizedCourierService === 'delhiveryb2b' || normalizedCourierService === 'delhiveryb2c' || normalizedCourierService === 'delhivery';
 
+  const notifyShipmentsChanged = () => {
+    try {
+      sessionStorage.setItem('ksr_shipments_need_refresh', 'true');
+      window.dispatchEvent(new CustomEvent('ksr-shipment-updated'));
+    } catch {}
+    router.refresh();
+  };
+
+  const handleSaveFinancials = async (e?: React.MouseEvent | React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError('');
+    setSuccess('');
+    setSavingFinancials(true);
+    try {
+      const { booked_date, booked_time, ...submitData } = formData as any;
+      let finalBookedDate = shipment.booked_date;
+      if (booked_date && booked_time) {
+        const dateStr = booked_date.split('T')[0];
+        finalBookedDate = new Date(`${dateStr}T${booked_time}:00`).toISOString();
+      }
+
+      const updated = await shipmentService.updateShipment(shipmentId, {
+        ...submitData,
+        booked_date: finalBookedDate,
+        weight: formData.weight ? parseFloat(formData.weight) : null,
+        num_packages: parseInt(formData.num_packages) || 1,
+        paid_amount: parseFloat(formData.paid_amount) || 0,
+        received_amount: parseFloat(formData.received_amount) || 0,
+        miscellaneous_charges: formData.miscellaneous_charges ? (parseFloat(formData.miscellaneous_charges) || 0) : 0,
+        version: shipment.version
+      }) as any;
+
+      setShipment((prev: any) => ({
+        ...prev,
+        ...updated,
+        history: updated.history || prev.history || []
+      }));
+      setFormData((prev: any) => ({
+        ...prev,
+        ...updated,
+        booked_time: updated.booked_date ? toBusinessTimeInput(updated.booked_date) : prev.booked_time
+      }));
+      setIsEditingFinancials(false);
+      setSuccess('Financial details updated successfully');
+      notifyShipmentsChanged();
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to update financials');
+    } finally {
+      setSavingFinancials(false);
+    }
+  };
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -263,12 +405,19 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         version: shipment.version // OCC
       }) as any;
       
-      setShipment(updated);
-      setFormData({
+      setShipment((prev: any) => ({
+        ...prev,
         ...updated,
-        booked_time: updated.booked_date ? toBusinessTimeInput(updated.booked_date) : ''
-      });
+        history: updated.history || prev.history || []
+      }));
+      setFormData((prev: any) => ({
+        ...prev,
+        ...updated,
+        booked_time: updated.booked_date ? toBusinessTimeInput(updated.booked_date) : prev.booked_time
+      }));
+      setIsEditing(false);
       setSuccess('Shipment details updated successfully');
+      notifyShipmentsChanged();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to update shipment');
       if ((err as Error).message?.includes('refresh')) {
@@ -299,10 +448,16 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       });
       
       const resData = res as any;
-      const newShipment = { ...resData.shipment, history: [resData.history, ...(shipment.history || [])] };
+      const isNewCancelledOrReturned = isCancelledOrReturnedStatus(submittedUpdate.status);
+      const newShipment = {
+        ...resData.shipment,
+        profit: isNewCancelledOrReturned ? 0 : resData.shipment.profit,
+        history: [resData.history, ...(shipment.history || [])]
+      };
       setShipment(newShipment);
       setFormData((prev: any) => ({ ...prev, ...newShipment }));
       setSuccess('Status updated successfully. You can now share this update with the sender or receiver.');
+      notifyShipmentsChanged();
       
       // Reset status input with next status and current date/time
       const nextUpdate = getNextStatusUpdate(resData.shipment.current_status);
@@ -353,6 +508,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         booked_time: updatedShipment.booked_date ? toBusinessTimeInput(updatedShipment.booked_date) : prev.booked_time
       }));
       setSuccess(`Status update undone. Shipment reverted to "${updatedShipment.current_status}".`);
+      notifyShipmentsChanged();
 
       const nextUpdate = getNextStatusUpdate(updatedShipment.current_status);
       setStatusUpdate({
@@ -398,6 +554,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         booked_time: updatedShipment.booked_date ? toBusinessTimeInput(updatedShipment.booked_date) : prev.booked_time
       }));
       setSuccess(`Status entry "${statusName}" deleted successfully.`);
+      notifyShipmentsChanged();
 
       const nextUpdate = getNextStatusUpdate(updatedShipment.current_status);
       setStatusUpdate({
@@ -458,6 +615,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         booked_time: updatedShipment.booked_date ? toBusinessTimeInput(updatedShipment.booked_date) : prev.booked_time
       }));
       setSuccess('Status entry updated successfully.');
+      notifyShipmentsChanged();
       setEditingHistoryItem(null);
 
       const nextUpdate = getNextStatusUpdate(updatedShipment.current_status);
@@ -484,9 +642,14 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         version: shipment.version
       });
       const resData = res as any;
-      setShipment(resData);
+      setShipment((prev: any) => ({
+        ...prev,
+        ...resData,
+        history: resData.history || prev.history || []
+      }));
       setFormData((prev: any) => ({ ...prev, ...resData }));
       setSuccess('Customer update saved successfully');
+      notifyShipmentsChanged();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to save customer update');
     } finally {
@@ -505,6 +668,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       const updatedData = updated as any;
       setShipment((prev: any) => ({ ...prev, is_active: updatedData.is_active }));
       setSuccess(`Shipment ${updatedData.is_active ? 'unarchived' : 'archived'} successfully`);
+      notifyShipmentsChanged();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to archive shipment');
     } finally {
@@ -592,6 +756,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     try {
       await refreshData(true);
       setSuccess(successMsg);
+      notifyShipmentsChanged();
     } catch (refreshErr: any) {
       console.error('[Refresh Error after Sync]', refreshErr);
       setError('Tracking synced successfully, but the page could not refresh automatically. Please refresh manually.');
@@ -643,7 +808,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-          <Link href="/admin/dashboard/shipments" className="shrink-0 mt-1 sm:mt-0 p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <Link href="/admin/dashboard/shipments" onClick={() => router.refresh()} className="shrink-0 mt-1 sm:mt-0 p-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Link>
           <div className="min-w-0">
@@ -755,12 +920,12 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left Column: Form */}
-        <div className="xl:col-span-2 space-y-6 order-2 xl:order-1">
-          
-          <form onSubmit={handleUpdate} className="space-y-6 opacity-100 transition-opacity">
-            {/* Basic Info */}
+            {/* Unified 2-Column Responsive Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+        {/* Left Column (2 cols on xl): Shipment Details, Contact Details, Financials, Package Details */}
+        <div ref={leftColRef} className="contents xl:flex xl:flex-col xl:col-span-2 xl:gap-6">
+          {/* Shipment Details */}
+          <div className="order-2 xl:order-none">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                  <div className="flex items-center gap-2">
@@ -918,11 +1083,71 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Contact Details, Financials, Package Details & Save Button */}
+          <form onSubmit={handleUpdate} className="order-3 xl:order-none flex flex-col gap-6 opacity-100 transition-opacity" >
+          {/* Same Sender and Receiver Details Full-Width Checkbox */}
+            {!isDelivered && (
+              <div className="w-full">
+                <label
+                  className={`group flex items-center justify-between p-3.5 sm:px-4 sm:py-3 rounded-2xl border select-none transition-all duration-200 min-h-[48px] w-full ${
+                    !isEditing || isDelivered
+                      ? 'cursor-not-allowed opacity-60 bg-gray-50/80 border-gray-200 text-gray-500'
+                      : sameAsSender
+                        ? 'cursor-pointer border-orange-400 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400/30 shadow-xs'
+                        : 'cursor-pointer border-gray-200/90 bg-white text-gray-700 hover:border-orange-200 hover:bg-orange-50/30 hover:text-gray-900 shadow-xs'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="sameSenderAndReceiverDetails"
+                      name="same_contact_details"
+                      checked={sameAsSender}
+                      disabled={!isEditing || isDelivered}
+                      onChange={(e) => handleSameAsSenderChange(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div
+                      className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-orange-500 peer-focus-visible:ring-offset-2 ${
+                        !isEditing || isDelivered
+                          ? sameAsSender
+                            ? 'bg-gray-300 border-gray-300 text-gray-600'
+                            : 'bg-gray-100 border-gray-300'
+                          : sameAsSender
+                            ? 'bg-orange-500 border-orange-500 text-white shadow-xs'
+                            : 'bg-white border-gray-300 group-hover:border-orange-300'
+                      }`}
+                    >
+                      <Check
+                        className={`w-3.5 h-3.5 stroke-[3] transition-transform duration-200 ${
+                          sameAsSender ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                        }`}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold tracking-tight">Same Sender and Receiver Details</span>
+                    {(!isEditing || isDelivered) && (
+                      <span className="text-[11px] font-medium text-gray-400 ml-1 hidden sm:inline">
+                        (Locked - unlock edit to modify)
+                      </span>
+                    )}
+                  </div>
+                  <Copy className={`w-4 h-4 ml-4 transition-colors ${
+                    !isEditing || isDelivered
+                      ? 'text-gray-300'
+                      : sameAsSender
+                        ? 'text-orange-500'
+                        : 'text-gray-400 group-hover:text-orange-400'
+                  }`} />
+                </label>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Sender Info */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Sender</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Sender Details</h2>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
@@ -941,7 +1166,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
               {/* Receiver Info */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Receiver</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Receiver Details</h2>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Name <span className="text-red-500">*</span></label>
@@ -965,18 +1190,53 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-semibold text-gray-900">Financials</h2>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(!isEditing)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                        isEditing
-                          ? 'bg-orange-100 text-orange-600'
-                          : 'bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600'
-                      }`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      {isEditing ? 'Lock Edit' : 'Edit Financials'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {isEditingFinancials ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleSaveFinancials}
+                            disabled={savingFinancials || loading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-500 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            {savingFinancials ? 'Saving...' : 'Save Financials'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev: any) => ({
+                                ...prev,
+                                received_amount: shipment.received_amount,
+                                paid_amount: shipment.paid_amount,
+                                miscellaneous_charges: shipment.miscellaneous_charges || 0,
+                              }));
+                              setIsEditingFinancials(false);
+                            }}
+                            disabled={savingFinancials || loading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingFinancials(true)}
+                          disabled={isDelivered || isEditing}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                            isEditing
+                              ? 'bg-orange-100 text-orange-600 cursor-default'
+                              : 'bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                          }`}
+                          title={isDelivered ? 'Delivered shipment is locked' : isEditing ? 'Editing via full form' : 'Edit Financials'}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          {isEditing ? 'Editing (Global)' : 'Edit Financials'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
                     <div>
@@ -990,7 +1250,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                         name="received_amount" 
                         value={formatIndianNumberString(formData.received_amount)} 
                         onChange={handleMoneyChange} 
-                        disabled={!isEditing} 
+                        disabled={!isEditing && !isEditingFinancials} 
                         className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-emerald-600 font-semibold bg-emerald-50/50 disabled:text-emerald-500 text-base sm:text-lg" 
                       />
                     </div>
@@ -1005,7 +1265,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                         name="paid_amount" 
                         value={formatIndianNumberString(formData.paid_amount)} 
                         onChange={handleMoneyChange} 
-                        disabled={!isEditing} 
+                        disabled={!isEditing && !isEditingFinancials} 
                         className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-red-600 font-semibold bg-red-50/50 disabled:text-red-500 text-base sm:text-lg" 
                       />
                     </div>
@@ -1023,7 +1283,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                         name="miscellaneous_charges" 
                         value={formatIndianNumberString(formData.miscellaneous_charges)} 
                         onChange={handleMoneyChange} 
-                        disabled={!isEditing} 
+                        disabled={!isEditing && !isEditingFinancials} 
                         className="w-full h-11 rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-amber-700 font-semibold bg-amber-50/40 disabled:text-amber-600 text-base sm:text-lg" 
                       />
                     </div>
@@ -1033,9 +1293,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                    <span className="font-semibold text-gray-700">Profit</span>
                    <span className="text-2xl font-bold text-gray-900">
                      {formatCurrency(
-                       isEditing
-                         ? (Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0) - (Number(formData.miscellaneous_charges) || 0)
-                         : (shipment.profit || 0)
+                       isCancelledOrReturnedStatus(formData.current_status || shipment.current_status)
+                         ? 0
+                         : (isEditing || isEditingFinancials)
+                           ? (Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0) - (Number(formData.miscellaneous_charges) || 0)
+                           : (shipment.profit || 0)
                      )}
                    </span>
                 </div>
@@ -1101,14 +1363,14 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 </button>
               </div>
             )}
-            
-          </form>
+        </form>
         </div>
 
-        {/* Right Column: Timeline & Status Update */}
-        <div className="space-y-6 order-1 xl:order-2">
+        {/* Right Column (1 col on xl): Update Status & Timeline */}
+        <div className="contents xl:flex xl:flex-col xl:col-span-1 xl:gap-6 xl:min-h-0">
+          {/* Update Status Card */}
           {(shareableStatus || !isDelivered) && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-orange-200 shadow-sm relative overflow-hidden">
+            <div ref={updateStatusRef} className="order-1 xl:order-none bg-white rounded-3xl p-6 sm:p-8 border border-orange-200 shadow-sm relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10 opacity-50"></div>
               <h2 className="text-lg font-bold text-gray-900 mb-6">
                 {isDelivered ? 'Share Status Update' : 'Update Status'}
@@ -1206,8 +1468,13 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
             </div>
           )}
 
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
+          {/* Timeline Card: Starts directly below Update Status with 24px gap, stretches to bottom */}
+          <div
+            ref={timelineCardRef}
+            style={timelineHeight ? { height: `${timelineHeight}px`, maxHeight: `${timelineHeight}px` } : undefined}
+            className="order-4 xl:order-none bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm flex flex-col flex-1 min-h-[440px] max-h-[560px] xl:max-h-none xl:min-h-0 overflow-hidden"
+          >
+            <div className="flex items-center justify-between mb-6 shrink-0">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-bold text-gray-900">Timeline</h2>
                 {shipment.history && shipment.history.length > 1 && (
@@ -1227,8 +1494,8 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 {shipment.history?.length || 0} updates
               </span>
             </div>
-            <div className="flow-root">
-              <ul role="list" className="-mb-8">
+            <div className="flow-root flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2 select-text [scrollbar-gutter:stable]">
+              <ul role="list" className="-mb-8 pb-4">
                 {shipment.history?.map((event: any, eventIdx: number) => {
                   const isLast = eventIdx === shipment.history.length - 1;
                   const isTop = eventIdx === 0;
@@ -1314,7 +1581,6 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Edit Status Modal */}

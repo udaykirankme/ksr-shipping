@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <section className="min-h-[75vh] bg-white flex flex-col items-center justify-center text-center px-4 py-16" aria-labelledby="not-found-heading">
+    <section className="min-h-screen bg-white flex flex-col items-center justify-center text-center px-4 pt-[74px] sm:pt-[82px] lg:pt-[92px] pb-16" aria-labelledby="not-found-heading">
       <p className="text-8xl md:text-9xl font-black text-gray-100 mb-2 select-none" aria-hidden="true">
         404
       </p>

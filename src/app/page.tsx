@@ -29,6 +29,7 @@ const PARTNERS = [
   { src: "/dtdc logo.png", alt: "DTDC" },
   { src: "/shadowfax logo.png", alt: "Shadowfax" },
   { src: "/ekart logo.jpg", alt: "Ekart" },
+  { src: "/amazon shipping logo.png", alt: "Amazon Shipping" },
   { src: "/fedex logo.jpg", alt: "FedEx" },
   { src: "/ups logo.png", alt: "UPS" },
   { src: "/dhl logo.jpg", alt: "DHL" },

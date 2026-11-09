@@ -1,3 +1,4 @@
+import { isCancelledOrReturnedStatus } from '@/lib/courier/normalization';
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '@/lib/db';
 import { parseBusinessDateTime } from '@/lib/datetime';
@@ -135,7 +136,15 @@ export const processWebhookEventCore = async (
     // 1. Load the shipment using the official tracking ID (AWB / LR)
     const shipment = await prisma.shipment.findUnique({
       where: { official_tracking_id: officialTrackingId },
-      select: { id: true, service: true, current_status: true, customer_update: true }
+      select: {
+        id: true,
+        service: true,
+        current_status: true,
+        customer_update: true,
+        received_amount: true,
+        paid_amount: true,
+        miscellaneous_charges: true
+      }
     });
 
     if (!shipment) {
@@ -219,17 +228,19 @@ export const processWebhookEventCore = async (
       if (normalizedStatus.toLowerCase() === 'delivered') {
          updateData.delivered_at = occurredAt;
       }
+      if (isCancelledOrReturnedStatus(normalizedStatus)) {
+         updateData.profit = 0;
+      } else if (isCancelledOrReturnedStatus(shipment.current_status)) {
+         const received = Number(shipment.received_amount) || 0;
+         const paid = Number(shipment.paid_amount) || 0;
+         const misc = Number((shipment as any).miscellaneous_charges) || 0;
+         updateData.profit = Math.round((received - paid - misc) * 100) / 100;
+      }
     }
 
     if (isNewerOrEqual) {
       if (eventLocation) {
         updateData.current_location = eventLocation;
-      }
-      if (eventCustomerUpdate && eventCustomerUpdate.trim() !== '') {
-        const cleanUpdate = sanitizeCustomerHistoryNote(eventCustomerUpdate).trim();
-        if (cleanUpdate) {
-          updateData.customer_update = cleanUpdate;
-        }
       }
     }
 

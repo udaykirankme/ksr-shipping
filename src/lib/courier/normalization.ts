@@ -986,50 +986,52 @@ export function resolveCustomerCurrentStatus(
 export function resolveCustomerEligibleUpdate(
   customerUpdate: string | null | undefined,
   cleanedHistory?: Array<{ status: string; note?: string | null }> | null,
-  isDelhivery: boolean = true
+  _isDelhivery: boolean = true
 ): string | null {
-  // For shipments other than Delhivery B2B and B2C:
+  // For all services (including Delhivery B2B and B2C):
   // Shipment update MUST be exactly what was entered in the admin.
-  // It should NOT be taken from the last update notes.
+  // It should NEVER be defaulted from latest courier event notes, statuses, or history.
   // If nothing was entered in admin (or it is empty), return null so there is no space for shipment update.
-  if (!isDelhivery) {
-    const raw = (customerUpdate || '').trim();
-    return raw !== '' ? raw : null;
+  const raw = (customerUpdate || '').trim();
+  if (!raw) return null;
+
+  // Clean any internal bracket IDs if present, but preserve admin-entered text
+  const clean = raw.replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '').trim();
+  if (!clean || isExceptionStatus(clean) || isInternalCode(clean)) {
+    return null;
   }
 
-  // Delhivery B2B and B2C logic (100% untouched):
-  const clean = (customerUpdate || '')
-    .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
-    .trim();
-
-  // If customer_update is present and NOT an exception, NOT internal code, and IS routine, preserve it
-  if (
-    clean &&
-    !isExceptionStatus(clean) &&
-    !isInternalCode(clean) &&
-    isRoutineOperationalStatus(clean)
-  ) {
-    return clean;
-  }
-
-  // If customer_update was an exception (or empty/unknown), return the latest eligible routine operational update from history
+  // If an existing database record had customer_update auto-populated from a courier event note or status,
+  // do not treat it as an admin-entered update.
   if (cleanedHistory && cleanedHistory.length > 0) {
-    for (const evt of cleanedHistory) {
-      if (!evt) continue;
-      const note = (evt.note || '')
-        .replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '')
-        .trim();
-      if (
-        note &&
-        !isExceptionStatus(evt.status, note) &&
-        !isInternalCode(note) &&
-        note.toLowerCase() !== 'status updated' &&
-        isRoutineOperationalStatus(evt.status, note)
-      ) {
-        return note;
-      }
+    const isCourierDefault = cleanedHistory.some((evt) => {
+      const evtNote = (evt.note || '').replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '').trim().toLowerCase();
+      const evtStatus = (evt.status || '').trim().toLowerCase();
+      const target = clean.toLowerCase();
+      return (evtNote && evtNote === target) || (evtStatus && evtStatus === target);
+    });
+    if (isCourierDefault) {
+      return null;
     }
   }
 
-  return null;
+  return clean;
+}
+
+/**
+ * Checks whether a shipment status represents a Cancelled or Returned journey.
+ * Shipments with these statuses must never have their profit added to profits.
+ */
+export function isCancelledOrReturnedStatus(status?: string | null): boolean {
+  if (!status) return false;
+  const s = status.trim().toLowerCase();
+  return (
+    s === 'cancelled' ||
+    s === 'canceled' ||
+    s === 'returned' ||
+    s === 'rto' ||
+    s.includes('cancel') ||
+    s.includes('return') ||
+    s.startsWith('rto')
+  );
 }
