@@ -393,6 +393,26 @@ function getVehicleY(p: number, positions: number[]): number {
   return startY + fraction * (endY - startY);
 }
 
+// Convert a physical vertical Y pixel coordinate back into continuous fractional stage progress (0 to 4).
+// Guarantees uniform physical velocity across varying card heights and small screen/mobile layouts.
+function getYProgress(y: number, positions: number[]): number {
+  if (!positions || positions.length < 5) return 0;
+  if (y <= positions[0]) return 0;
+  if (y >= positions[4]) return 4;
+
+  for (let i = 0; i < 4; i++) {
+    const yStart = positions[i];
+    const yEnd = positions[i + 1];
+    if (y >= yStart && y <= yEnd) {
+      const segmentHeight = yEnd - yStart;
+      if (segmentHeight <= 0) return i;
+      return i + (y - yStart) / segmentHeight;
+    }
+  }
+
+  return 4;
+}
+
 export default function TrackResult({
   initialData = null,
   searchedId = null,
@@ -534,6 +554,7 @@ export default function TrackResult({
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const circleRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [nodePositions, setNodePositions] = useState<number[]>([]);
+  const nodePositionsRef = useRef<number[]>([]);
   const [vehicleX, setVehicleX] = useState(22);
 
   const updateNodePositions = useCallback(() => {
@@ -555,6 +576,7 @@ export default function TrackResult({
     }
 
     if (positions.length === 5) {
+      nodePositionsRef.current = positions;
       setNodePositions(positions);
     }
   }, []);
@@ -638,9 +660,29 @@ export default function TrackResult({
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutSine(progress);
-      const current = eased * targetProgress;
 
-      setCurrentProgress(current);
+      // Physical distance-based interpolation: prevents speed spikes on smaller/mobile
+      // displays where intermediate stages have different heights (e.g. operational summary cards).
+      const positions = nodePositionsRef.current;
+      if (positions && positions.length === 5) {
+        const yStart = positions[0];
+        const yTarget =
+          isDelivered || finalStageIdx >= 4
+            ? positions[4]
+            : positions[finalStageIdx] +
+              0.5 * (positions[finalStageIdx + 1] - positions[finalStageIdx]);
+        const totalDistance = yTarget - yStart;
+
+        if (totalDistance > 0) {
+          const currentY = yStart + eased * totalDistance;
+          const currentStageProgress = getYProgress(currentY, positions);
+          setCurrentProgress(currentStageProgress);
+        } else {
+          setCurrentProgress(eased * targetProgress);
+        }
+      } else {
+        setCurrentProgress(eased * targetProgress);
+      }
 
       if (progress < 1) {
         animationFrameId = requestAnimationFrame(step);
@@ -660,7 +702,7 @@ export default function TrackResult({
       clearTimeout(timeoutId);
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-  }, [finalStageIdx, data?.tracking_id, targetProgress, updateNodePositions]);
+  }, [finalStageIdx, isDelivered, data?.tracking_id, targetProgress, updateNodePositions]);
 
   // Delivered Feedback Pop-up Modal state: triggers with success & thank you message upon reaching delivery
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -679,6 +721,35 @@ export default function TrackResult({
       return () => clearTimeout(timer);
     }
   }, [isDelivered, isAnimationComplete, feedbackDismissed]);
+
+  // Prevent background scrolling and handle Escape dismissal while feedback modal is open
+  useEffect(() => {
+    if (!showFeedbackModal) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowFeedbackModal(false);
+        setFeedbackDismissed(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showFeedbackModal]);
 
   const customerDisplayStatus = useMemo(() => {
     if (!data) return "In Transit";
@@ -943,7 +1014,7 @@ export default function TrackResult({
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
-                  Shipment Progress Tracker
+                  Shipment Progress
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Follow each milestone of your shipment journey with detailed operational logs
@@ -1142,9 +1213,12 @@ export default function TrackResult({
                               {isDelivered ? "Delivered" : "Current Stage"}
                             </span>
                           ) : isCompleted ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 transition-all duration-300">
-                              <Check className="w-2.5 h-2.5 text-emerald-600" />
-                              Completed
+                            <span
+                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-50 border border-emerald-200/80 transition-all duration-300"
+                              title="Completed"
+                              aria-label="Completed"
+                            >
+                              <Check className="w-3 h-3 text-emerald-600 stroke-[2.5]" />
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold text-gray-400 bg-gray-50 border border-gray-200 transition-all duration-300">
@@ -1459,7 +1533,7 @@ export default function TrackResult({
       {/* Delivered Feedback Pop-up Modal */}
       <AnimatePresence>
         {showFeedbackModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overscroll-contain">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -1470,7 +1544,7 @@ export default function TrackResult({
                 setShowFeedbackModal(false);
                 setFeedbackDismissed(true);
               }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs touch-none overscroll-contain"
               aria-hidden="true"
             />
 
@@ -1483,7 +1557,7 @@ export default function TrackResult({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 z-10 text-center overflow-hidden"
+              className="relative bg-white rounded-3xl max-w-md w-full px-4 py-6 sm:px-8 sm:py-8 shadow-2xl border border-gray-100 z-10 text-center overflow-hidden overscroll-contain"
             >
               {/* Ambient Decorative Glow */}
               <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
@@ -1515,9 +1589,11 @@ export default function TrackResult({
                 Delivered Successfully!
               </h3>
               <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                Thank you for choosing{" "}
+                Thank you for trusting{" "}
                 <span className="font-bold text-gray-900">KSR Shipping Services</span>.
-                We hope your delivery was safe and prompt!
+                <span className="block mt-1 text-gray-500 font-medium">
+                  Every delivery carries a promise. Every smile makes it worthwhile — delivering excellence every step of the way!
+                </span>
               </p>
 
               {/* 5-Star Visual Prompt */}
@@ -1529,17 +1605,23 @@ export default function TrackResult({
                   />
                 ))}
               </div>
-              <p className="text-xs sm:text-[13px] font-medium text-gray-500 mb-6">
+              <p
+                className="font-bold text-gray-900 tracking-tight whitespace-nowrap mb-6 text-center select-none"
+                style={{ fontSize: "clamp(9.5px, 2.75vw, 13px)" }}
+              >
                 Your feedback helps us continuously improve our service.
               </p>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2.5">
+              {/* Action Button */}
+              <div>
                 <a
                   href={business.googleReviewUrl || "https://g.page/r/CdBtDQra-a6oEB0/review"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setShowFeedbackModal(false)}
+                  onClick={() => {
+                    setShowFeedbackModal(false);
+                    setFeedbackDismissed(true);
+                  }}
                   className="w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all duration-200 group"
                   id="google-review-modal-btn"
                 >
@@ -1572,17 +1654,6 @@ export default function TrackResult({
                   <span>Write a Review on Google</span>
                   <ExternalLink className="w-4 h-4 text-white/80 group-hover:text-white transition-colors" />
                 </a>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFeedbackModal(false);
-                    setFeedbackDismissed(true);
-                  }}
-                  className="py-2 text-xs sm:text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
-                >
-                  Maybe Later
-                </button>
               </div>
             </motion.div>
           </div>
