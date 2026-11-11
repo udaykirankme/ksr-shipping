@@ -67,6 +67,20 @@ export const shipmentService = {
     });
   },
 
+  async updateFinancials(id: string, data: {
+    received_amount: number;
+    paid_amount: number;
+    miscellaneous_charges?: number;
+    version: number;
+  }) {
+    return apiFetch(`${API_BASE}/shipments/${id}/financials`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(data)
+    });
+  },
+
   async updateStatus(id: string, data: { status: string, location?: string, occurred_at?: string, note?: string, version: number }) {
     return apiFetch(`${API_BASE}/shipments/${id}/status`, {
       method: 'PATCH',

@@ -179,6 +179,64 @@ router.patch('/shipments/:id/customer-update', async (req, res) => {
   }
 });
 
+router.patch('/shipments/:id/financials', async (req, res) => {
+  try {
+    const { received_amount, paid_amount, miscellaneous_charges, version } = req.body;
+
+    if (version === undefined) {
+      return res.status(400).json({ success: false, message: 'Version is required for optimistic concurrency control' });
+    }
+
+    const current = await prisma.shipment.findUnique({ where: { id: req.params.id } });
+    if (!current) return res.status(404).json({ success: false, message: 'Not found' });
+
+    if (current.version !== version) {
+      return res.status(409).json({ success: false, message: 'Conflict: This record has been updated by another user. Please refresh.' });
+    }
+
+    const parseAmount = (val: any, fallback: number) => {
+      if (val === undefined || val === null || val === '') return fallback;
+      const num = Number(String(val).replace(/,/g, ''));
+      return isNaN(num) ? fallback : Math.round(num * 100) / 100;
+    };
+
+    const received = parseAmount(received_amount, Number(current.received_amount) || 0);
+    const paid = parseAmount(paid_amount, Number(current.paid_amount) || 0);
+    const misc = parseAmount(miscellaneous_charges, Number((current as any).miscellaneous_charges) || 0);
+
+    const effectiveStatus = (current.current_status || '') as string;
+    const isCancelledOrReturned = isCancelledOrReturnedStatus(effectiveStatus);
+    const profit = isCancelledOrReturned ? 0 : Math.round((received - paid - misc) * 100) / 100;
+
+    const updated = await prisma.shipment.update({
+      where: { id: req.params.id, version },
+      data: {
+        received_amount: received,
+        paid_amount: paid,
+        miscellaneous_charges: misc,
+        profit,
+        version: { increment: 1 }
+      },
+      include: {
+        history: {
+          orderBy: [
+            { occurred_at: 'desc' },
+            { created_at: 'desc' }
+          ]
+        }
+      }
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      return res.status(409).json({ success: false, message: 'Conflict: This record has been updated by another user. Please refresh.' });
+    }
+    console.error('[Financials Update Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to update financials' });
+  }
+});
+
 router.post('/shipments/:id/sync', async (req, res) => {
   try {
     const { syncTracking } = await import('@/lib/courier/sync');

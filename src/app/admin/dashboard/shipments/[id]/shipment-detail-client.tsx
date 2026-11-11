@@ -334,25 +334,33 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
     if (e) e.preventDefault();
     setError('');
     setSuccess('');
+
+    const parseMoney = (val: any) => {
+      if (val === undefined || val === null || val === '') return 0;
+      const clean = String(val).replace(/,/g, '').trim();
+      const num = parseFloat(clean);
+      return isNaN(num) ? 0 : num;
+    };
+
+    const receivedNum = parseMoney(formData.received_amount);
+    const paidNum = parseMoney(formData.paid_amount);
+    const miscNum = parseMoney(formData.miscellaneous_charges);
+
+    if (receivedNum < 0 || paidNum < 0 || miscNum < 0) {
+      setError('Financial amounts cannot be negative.');
+      return;
+    }
+
     setSavingFinancials(true);
     try {
-      const { booked_date, booked_time, ...submitData } = formData as any;
-      let finalBookedDate = shipment.booked_date;
-      if (booked_date && booked_time) {
-        const dateStr = booked_date.split('T')[0];
-        finalBookedDate = new Date(`${dateStr}T${booked_time}:00`).toISOString();
-      }
-
-      const updated = await shipmentService.updateShipment(shipmentId, {
-        ...submitData,
-        booked_date: finalBookedDate,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-        num_packages: parseInt(formData.num_packages) || 1,
-        paid_amount: parseFloat(formData.paid_amount) || 0,
-        received_amount: parseFloat(formData.received_amount) || 0,
-        miscellaneous_charges: formData.miscellaneous_charges ? (parseFloat(formData.miscellaneous_charges) || 0) : 0,
+      const res = await shipmentService.updateFinancials(shipmentId, {
+        received_amount: receivedNum,
+        paid_amount: paidNum,
+        miscellaneous_charges: miscNum,
         version: shipment.version
       }) as any;
+
+      const updated = res.data || res;
 
       setShipment((prev: any) => ({
         ...prev,
@@ -361,11 +369,14 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       }));
       setFormData((prev: any) => ({
         ...prev,
-        ...updated,
-        booked_time: updated.booked_date ? toBusinessTimeInput(updated.booked_date) : prev.booked_time
+        received_amount: updated.received_amount,
+        paid_amount: updated.paid_amount,
+        miscellaneous_charges: (updated.miscellaneous_charges && Number(updated.miscellaneous_charges) > 0) ? updated.miscellaneous_charges : '',
+        profit: updated.profit,
+        version: updated.version,
       }));
       setIsEditingFinancials(false);
-      setSuccess('Financial details updated successfully');
+      setSuccess('Financial details and profit updated successfully');
       notifyShipmentsChanged();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to update financials');
@@ -1209,7 +1220,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                                 ...prev,
                                 received_amount: shipment.received_amount,
                                 paid_amount: shipment.paid_amount,
-                                miscellaneous_charges: shipment.miscellaneous_charges || 0,
+                                miscellaneous_charges: (shipment.miscellaneous_charges && Number(shipment.miscellaneous_charges) > 0) ? shipment.miscellaneous_charges : '',
                               }));
                               setIsEditingFinancials(false);
                             }}
@@ -1224,16 +1235,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                         <button
                           type="button"
                           onClick={() => setIsEditingFinancials(true)}
-                          disabled={isDelivered || isEditing}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                            isEditing
-                              ? 'bg-orange-100 text-orange-600 cursor-default'
-                              : 'bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-orange-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-                          }`}
-                          title={isDelivered ? 'Delivered shipment is locked' : isEditing ? 'Editing via full form' : 'Edit Financials'}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200/60 transition-colors cursor-pointer"
+                          title="Edit Financials"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                          {isEditing ? 'Editing (Global)' : 'Edit Financials'}
+                          Edit Financials
                         </button>
                       )}
                     </div>
@@ -1296,8 +1302,12 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                        isCancelledOrReturnedStatus(formData.current_status || shipment.current_status)
                          ? 0
                          : (isEditing || isEditingFinancials)
-                           ? (Number(formData.received_amount) || 0) - (Number(formData.paid_amount) || 0) - (Number(formData.miscellaneous_charges) || 0)
-                           : (shipment.profit || 0)
+                           ? Math.round((
+                               (parseFloat(String(formData.received_amount || 0).replace(/,/g, '')) || 0) -
+                               (parseFloat(String(formData.paid_amount || 0).replace(/,/g, '')) || 0) -
+                               (parseFloat(String(formData.miscellaneous_charges || 0).replace(/,/g, '')) || 0)
+                             ) * 100) / 100
+                           : (shipment.profit !== undefined && shipment.profit !== null ? shipment.profit : 0)
                      )}
                    </span>
                 </div>
