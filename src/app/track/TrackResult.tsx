@@ -1110,11 +1110,6 @@ export default function TrackResult({
                     ? formatGroupTimestamp(stageEvents[0].last_occurred_at)
                     : stageTimestamp;
 
-                const summaryNotice =
-                  data.customer_update && data.customer_update.trim()
-                    ? data.customer_update.trim()
-                    : null;
-
                 return (
                   <div key={stage.key} className="relative flex items-start gap-3.5 sm:gap-5">
                     {/* Left: Node circle + vertically connecting line */}
@@ -1341,17 +1336,6 @@ export default function TrackResult({
                               <span className="uppercase text-[11px] sm:text-xs font-bold text-gray-800 tracking-tight">
                                 {latestSummaryLocation}
                               </span>
-                            </div>
-                          )}
-
-                          {/* Customer Operational Notice / Update */}
-                          {summaryNotice && (
-                            <div className="mt-2.5 p-2.5 sm:p-3 bg-blue-50/80 border border-blue-100 rounded-xl text-xs sm:text-sm text-blue-950 font-medium flex items-start gap-2">
-                              <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                              <div className="min-w-0 flex-1 leading-relaxed">
-                                <span className="font-bold text-blue-900 mr-1.5">Notice:</span>
-                                <span>{summaryNotice}</span>
-                              </div>
                             </div>
                           )}
 

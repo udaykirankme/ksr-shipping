@@ -55,7 +55,7 @@ export default async function DashboardPage() {
           icon={Package} 
           progress={100}
           colorClass="text-blue-500"
-          href="/admin/dashboard/shipments?stage=0"
+          href="/admin/dashboard/shipments"
           actionText="View Shipments"
         />
         <CircularKpi 
