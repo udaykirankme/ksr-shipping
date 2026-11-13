@@ -147,6 +147,10 @@ export interface TrackingResponse {
   current_status: KSRTrackingStatus;
   current_location?: string;
   estimated_delivery?: Date | null;
+  is_dynamic_edd?: boolean;
+  manifest_package_count?: number;
+  returned_package_count?: number;
+  is_complete_response?: boolean;
   events: TrackingEvent[];
 }
 

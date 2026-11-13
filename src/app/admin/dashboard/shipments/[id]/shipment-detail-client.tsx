@@ -709,6 +709,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       const dataToSpread = data as any;
       setFormData({
         ...dataToSpread,
+        estimated_delivery: dataToSpread.estimated_delivery ? toBusinessDateInput(dataToSpread.estimated_delivery) : '',
         miscellaneous_charges: (dataToSpread.miscellaneous_charges && Number(dataToSpread.miscellaneous_charges) > 0) ? dataToSpread.miscellaneous_charges : '',
         booked_time: dataToSpread.booked_date ? toBusinessTimeInput(dataToSpread.booked_date) : '',
       });

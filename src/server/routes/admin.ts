@@ -5,11 +5,12 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getDashboardStats } from '@/lib/dashboard-stats';
 import { getShipmentsList } from '@/lib/shipments-query';
-import { parseBusinessDateTime, toBusinessDateInput, toBusinessTimeInput } from '@/lib/datetime';
+import { parseBusinessDateTime, parseCalendarDate, toBusinessDateInput, toBusinessTimeInput } from '@/lib/datetime';
 import { pushService } from '../push-service';
 import { revalidatePath } from 'next/cache';
 import { isDelhiveryService } from '@/lib/courier/aggregation';
 import { isCancelledOrReturnedStatus } from '@/lib/courier/normalization';
+import { DYNAMIC_EDD_KEYS, extractFirstValidCalendarDate } from '@/lib/courier/date-extraction';
 
 function safeRevalidateShipments() {
   try {
@@ -512,7 +513,10 @@ router.post('/shipments', async (req, res) => {
       return res.status(400).json({ success: false, message: `Field received_amount is required` });
     }
 
-    if (data.estimated_delivery) data.estimated_delivery = new Date(data.estimated_delivery);
+    if (data.estimated_delivery) {
+      const parsedEdd = parseCalendarDate(data.estimated_delivery);
+      data.estimated_delivery = parsedEdd || new Date(data.estimated_delivery);
+    }
     if (data.booked_date) {
       if (data.booked_time) {
         data.booked_date = parseBusinessDateTime(`${data.booked_date}T${data.booked_time}:00`);
@@ -636,7 +640,8 @@ router.post('/shipments', async (req, res) => {
                 eventLocation = payload.location;
                 eventTimeStr = payload.timestamp ? (typeof payload.timestamp === 'number' ? new Date(payload.timestamp).toISOString() : payload.timestamp) : null;
                 eventCustomerUpdate = payload.shipment_remark;
-                estimatedDeliveryStr = payload.estimated_date || payload.promised_delivery_date;
+                const dynamicDate = extractFirstValidCalendarDate(payload, DYNAMIC_EDD_KEYS);
+                estimatedDeliveryStr = dynamicDate ? dynamicDate.toISOString() : undefined;
               }
 
               if (eventStatus) {
@@ -734,7 +739,10 @@ router.put('/shipments/:id', async (req, res) => {
     }
     updateData.profit = isCancelledOrReturnedStatus(effectiveStatus) ? 0 : Math.round((received - paid - misc) * 100) / 100;
 
-    if (updateData.estimated_delivery) updateData.estimated_delivery = new Date(updateData.estimated_delivery as string);
+    if (updateData.estimated_delivery) {
+      const parsedEdd = parseCalendarDate(updateData.estimated_delivery as string);
+      updateData.estimated_delivery = parsedEdd || new Date(updateData.estimated_delivery as string);
+    }
     
     if (updateData.booked_date) {
       updateData.booked_date = new Date(updateData.booked_date as string);

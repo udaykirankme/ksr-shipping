@@ -1,5 +1,7 @@
 import { CourierProvider, TrackingResponse, TrackingEvent, KSRTrackingStatus } from '../types';
 import { normalizeDelhiveryStatus } from '../normalization';
+import { parseCalendarDate } from '@/lib/datetime';
+import { DYNAMIC_EDD_KEYS, STATIC_SLA_KEYS, extractFirstValidCalendarDate } from '../date-extraction';
 
 // Module-level cache for the JWT, kept only in server memory.
 let cachedJwt: string | null = null;
@@ -181,17 +183,50 @@ export class DelhiveryB2BProvider implements CourierProvider {
       }
     }
 
+    // Multi-waybill EDD selection & completeness verification:
+    // In multi-piece shipments (e.g. 8 packages), delivery is complete only when ALL packages arrive.
+    const manifestPackageCount = typeof data.mcount === 'number' && data.mcount > 0 
+      ? data.mcount 
+      : (Array.isArray(data.wbns) ? data.wbns.length : 1);
+    const returnedPackageCount = Array.isArray(data.wbns) ? data.wbns.length : 0;
+    const isCompleteResponse = returnedPackageCount >= manifestPackageCount && manifestPackageCount > 0;
+
+    // 1. Collect all valid dynamic estimated delivery dates across all waybills in data.wbns.
+    const dynamicDates: Date[] = [];
+    const promisedDates: Date[] = [];
+
+    if (Array.isArray(data.wbns)) {
+      for (const wbnItem of data.wbns) {
+        if (!wbnItem || typeof wbnItem !== 'object') continue;
+
+        // Dynamic revised EDD fields (standardized candidate extraction)
+        const dynDate = extractFirstValidCalendarDate(wbnItem, DYNAMIC_EDD_KEYS);
+        if (dynDate) {
+          dynamicDates.push(dynDate);
+        }
+
+        // Static booking SLA fields
+        const promDate = extractFirstValidCalendarDate(wbnItem, STATIC_SLA_KEYS);
+        if (promDate) {
+          promisedDates.push(promDate);
+        }
+      }
+    }
+
     let estimated_delivery: Date | null = null;
-    const ed_raw = latest.estimated_date || latest.promised_delivery_date;
-    if (ed_raw) {
-      let ed = ed_raw;
-      if (!ed.includes('Z') && !ed.includes('+')) {
-        ed += '+05:30';
-      }
-      const d = new Date(ed);
-      if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
-        estimated_delivery = d;
-      }
+    let is_dynamic_edd = false;
+
+    if (dynamicDates.length > 0) {
+      // Deterministic selection: Pick the latest (maximum) calendar date among all dynamic dates.
+      // This is strictly permutation-invariant: it does not depend on the order in which Delhivery returns waybills.
+      const maxMs = Math.max(...dynamicDates.map(d => d.getTime()));
+      estimated_delivery = new Date(maxMs);
+      is_dynamic_edd = true;
+    } else if (promisedDates.length > 0) {
+      // If no waybill has a dynamic EDD, use the maximum static promised date as the initial baseline.
+      const maxMs = Math.max(...promisedDates.map(d => d.getTime()));
+      estimated_delivery = new Date(maxMs);
+      is_dynamic_edd = false;
     }
 
     // Generate events for each package scan present in data.wbns
@@ -272,6 +307,10 @@ export class DelhiveryB2BProvider implements CourierProvider {
       current_status,
       current_location,
       estimated_delivery,
+      is_dynamic_edd,
+      manifest_package_count: manifestPackageCount,
+      returned_package_count: returnedPackageCount,
+      is_complete_response: isCompleteResponse,
       events
     };
   }

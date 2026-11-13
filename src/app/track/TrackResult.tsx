@@ -916,6 +916,7 @@ export default function TrackResult({
                         day: "numeric",
                         month: "short",
                         year: "numeric",
+                        timeZone: "UTC",
                       })
                     : "Processing"}
                 </p>

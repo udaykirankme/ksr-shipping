@@ -86,6 +86,11 @@ export function buildStatusUpdateShareMessage(details: StatusUpdateShareDetails)
     : '';
 
   const isDelivered = details.status.toLowerCase() === 'delivered';
+  const isCreated = details.status.trim().toLowerCase() === 'shipment created';
+
+  if (isCreated) {
+    return buildShipmentCreatedShareMessage(details.trackingId, details.recipientName);
+  }
 
   if (isDelivered) {
     return `${greeting}

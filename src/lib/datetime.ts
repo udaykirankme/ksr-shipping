@@ -115,3 +115,52 @@ export function getBusinessMonthRange(month?: number, year?: number): { gte: Dat
 
   return { gte, lt };
 }
+
+/**
+ * Parse any courier EDD or user-input date into a pure UTC date-only Date object
+ * (YYYY-MM-DDT00:00:00.000Z) for PostgreSQL @db.Date columns, avoiding timezone day drift.
+ */
+export function parseCalendarDate(rawDate: string | Date | null | undefined): Date | null {
+  if (!rawDate) return null;
+  if (rawDate instanceof Date) {
+    if (isNaN(rawDate.getTime()) || rawDate.getFullYear() <= 1970) return null;
+    return new Date(Date.UTC(rawDate.getUTCFullYear(), rawDate.getUTCMonth(), rawDate.getUTCDate(), 0, 0, 0, 0));
+  }
+
+  const str = String(rawDate).trim();
+  if (!str) return null;
+
+  // Match YYYY-MM-DD or YYYY/MM/DD prefix (common in ISO strings and courier dates)
+  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    if (year > 1970 && month >= 0 && month < 12 && day >= 1 && day <= 31) {
+      const d = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+      // Strict calendar verification: prevent JavaScript auto-rollover (e.g. Feb 30 -> Mar 2)
+      if (
+        d.getUTCFullYear() === year &&
+        d.getUTCMonth() === month &&
+        d.getUTCDate() === day
+      ) {
+        return d;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  // Fallback to standard Date parsing
+  const d = new Date(str);
+  if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
+    const istDateStr = toBusinessDateInput(d);
+    if (istDateStr) {
+      const [y, m, day] = istDateStr.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, day, 0, 0, 0, 0));
+    }
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+  }
+
+  return null;
+}

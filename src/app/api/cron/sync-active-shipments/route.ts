@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { syncTracking } from '@/lib/courier/sync';
+import { DYNAMIC_EDD_KEYS, extractFirstValidCalendarDate } from '@/lib/courier/date-extraction';
 
 // Next.js config for Vercel Cron
 // Optionally you can set maxDuration if this is a long-running job.
@@ -60,7 +61,8 @@ export async function GET(req: NextRequest) {
             eventLocation = payload.location;
             eventTimeStr = payload.timestamp ? (typeof payload.timestamp === 'number' ? new Date(payload.timestamp).toISOString() : payload.timestamp) : null;
             eventCustomerUpdate = payload.shipment_remark;
-            estimatedDeliveryStr = payload.estimated_date || payload.promised_delivery_date;
+            const dynamicDate = extractFirstValidCalendarDate(payload, DYNAMIC_EDD_KEYS);
+            estimatedDeliveryStr = dynamicDate ? dynamicDate.toISOString() : undefined;
           }
 
           if (eventStatus) {
