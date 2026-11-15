@@ -1111,6 +1111,24 @@ export default function TrackResult({
                     ? formatGroupTimestamp(stageEvents[0].last_occurred_at)
                     : stageTimestamp;
 
+                const latestSummaryNote = (() => {
+                  const rawNote =
+                    stageEvents[0]?.events[0]?.note ||
+                    (isCurrentActive ? (data.history[0]?.note || data.customer_update) : undefined);
+                  if (!rawNote) return null;
+                  const clean = rawNote.trim();
+                  const lower = clean.toLowerCase();
+                  const headlineLower = (stageEvents[0]?.headline || stageEvents[0]?.status || latestSummaryStatus || "").trim().toLowerCase();
+                  if (
+                    lower === "status updated" ||
+                    lower === headlineLower ||
+                    isInternalCourierCode(clean)
+                  ) {
+                    return null;
+                  }
+                  return clean;
+                })();
+
                 return (
                   <div key={stage.key} className="relative flex items-start gap-3.5 sm:gap-5">
                     {/* Left: Node circle + vertically connecting line */}
@@ -1337,6 +1355,19 @@ export default function TrackResult({
                               <span className="uppercase text-[11px] sm:text-xs font-bold text-gray-800 tracking-tight">
                                 {latestSummaryLocation}
                               </span>
+                            </div>
+                          )}
+
+                          {/* Latest operational note if available */}
+                          {latestSummaryNote && (
+                            <div
+                              className={cn(
+                                "p-2 sm:p-2.5 bg-blue-50/70 border border-blue-100 rounded-lg text-xs text-blue-950 font-medium flex items-start gap-1.5",
+                                latestSummaryLocation ? "mt-2" : "mt-2.5"
+                              )}
+                            >
+                              <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+                              <p className="leading-snug">{latestSummaryNote}</p>
                             </div>
                           )}
 
