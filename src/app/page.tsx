@@ -27,6 +27,7 @@ import { TestimonialSocialProof } from "@/components/ui/testimonial-social-proof
 const PARTNERS = [
   { src: "/delhivery logo.jpg", alt: "Delhivery" },
   { src: "/dtdc logo.png", alt: "DTDC" },
+  { src: "/speed post.png", alt: "Speed Post" },
   { src: "/shadowfax logo.png", alt: "Shadowfax" },
   { src: "/ekart logo.jpg", alt: "Ekart" },
   { src: "/amazon shipping logo.png", alt: "Amazon Shipping" },

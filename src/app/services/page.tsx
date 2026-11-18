@@ -119,6 +119,7 @@ const SERVICES: Service[] = [
 const PARTNERS = [
   { src: "/delhivery logo.jpg", alt: "Delhivery" },
   { src: "/dtdc logo.png", alt: "DTDC" },
+  { src: "/speed post.png", alt: "Speed Post" },
   { src: "/shadowfax logo.png", alt: "Shadowfax" },
   { src: "/ekart logo.jpg", alt: "Ekart" },
   { src: "/fedex logo.jpg", alt: "FedEx" },
