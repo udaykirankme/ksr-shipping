@@ -395,6 +395,11 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
       return;
     }
 
+    if (!formData.official_tracking_id || !formData.official_tracking_id.trim()) {
+      setError('Official Tracking Number is required');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -407,6 +412,7 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
 
       const updated = await shipmentService.updateShipment(shipmentId, {
         ...submitData,
+        official_tracking_id: formData.official_tracking_id.trim(),
         booked_date: finalBookedDate,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         num_packages: parseInt(formData.num_packages) || 1,
@@ -844,25 +850,37 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                 <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">Archived</Badge>
               )}
             </div>
-            {shipment.official_tracking_id && (
+            {(shipment.official_tracking_id || isEditing) && (
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 sm:mt-2">
-                <p className="text-sm text-gray-500 flex items-center gap-2 cursor-pointer hover:text-gray-700 transition-colors break-all" onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')} title="Click to copy Official Tracking Number">
-                  <span className="shrink-0">Official Tracking:</span> <span className="font-medium">{shipment.official_tracking_id}</span>
-                  <Copy className="w-3 h-3 text-gray-400 hover:text-gray-600 shrink-0" />
+                <p 
+                  className="text-sm text-gray-500 flex items-center gap-2 cursor-pointer hover:text-gray-700 transition-colors break-all" 
+                  onClick={() => handleCopy(formData.official_tracking_id || shipment.official_tracking_id, 'Official Tracking Number')} 
+                  title="Click to copy Official Tracking Number"
+                >
+                  <span className="shrink-0">Official Tracking:</span> 
+                  <span className="font-medium font-mono">
+                    {formData.official_tracking_id || shipment.official_tracking_id || <span className="text-gray-400 italic font-sans">Not assigned</span>}
+                  </span>
+                  {(formData.official_tracking_id || shipment.official_tracking_id) && (
+                    <Copy className="w-3 h-3 text-gray-400 hover:text-gray-600 shrink-0" />
+                  )}
                 </p>
                 {(() => {
-                  const info = getOfficialTrackingInfo(shipment.service, shipment.official_tracking_id);
+                  const currentTracking = formData.official_tracking_id || shipment.official_tracking_id;
+                  if (!currentTracking) return null;
+                  const currentService = formData.service || shipment.service;
+                  const info = getOfficialTrackingInfo(currentService, currentTracking);
                   if (!info) return null;
                   return (
                     <a 
                       href={info.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      onClick={() => handleCopy(shipment.official_tracking_id, 'Official Tracking Number')}
+                      onClick={() => handleCopy(currentTracking, 'Official Tracking Number')}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-colors"
                       title={`Track on ${info.name} and copy tracking number`}
                     >
-                      Track on {info.name}
+                      <span>Track on {info.name}</span>
                     </a>
                   );
                 })()}
@@ -944,7 +962,18 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                    <h2 className="text-lg font-semibold text-gray-900">Shipment Details</h2>
                    <button
                      type="button"
-                     onClick={() => setIsEditing(!isEditing)}
+                      onClick={() => {
+                        if (isEditing) {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            ...shipment,
+                            estimated_delivery: shipment.estimated_delivery ? toBusinessDateInput(shipment.estimated_delivery) : "",
+                            booked_time: shipment.booked_date ? toBusinessTimeInput(shipment.booked_date) : "",
+                            miscellaneous_charges: (shipment.miscellaneous_charges && Number(shipment.miscellaneous_charges) > 0) ? shipment.miscellaneous_charges : "",
+                          }));
+                        }
+                        setIsEditing(!isEditing);
+                      }}
                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isEditing ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600 hover:text-orange-500 hover:bg-orange-50'}`}
                      title={isEditing ? "Lock Editing" : "Unlock Editing"}
                    >
@@ -1024,6 +1053,20 @@ export function ShipmentDetailClient({ shipmentId, initialData }: { shipmentId: 
                     placeholder="Select Vendor..."
                     disabled={isDelivered || !isEditing}
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Official Tracking Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    required
+                    name="official_tracking_id"
+                    value={formData.official_tracking_id || ''}
+                    onChange={handleChange}
+                    disabled={isDelivered || !isEditing}
+                    placeholder="Enter partner AWB / tracking number"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all disabled:bg-gray-50 disabled:text-gray-500 font-mono text-sm"
                   />
                 </div>
                 <div>
