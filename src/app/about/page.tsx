@@ -192,35 +192,39 @@ export default function AboutPage() {
         </div>
 
         {/* Business Office & Contact Card */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 text-sm">
-            {/* Office Location */}
-            <a 
-              href={business.googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-3.5 p-4 rounded-2xl transition-all duration-300 hover:bg-orange-50/60 border border-transparent hover:border-orange-100 hover:shadow-sm group cursor-pointer"
-            >
-              <div className="w-10 h-10 rounded-xl bg-orange-100/80 text-orange-600 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:scale-110 shadow-sm group-hover:shadow-orange-500/25">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-sm hover:shadow-md transition-shadow border border-gray-100 space-y-4 sm:space-y-6">
+          {/* Office Location - Horizontal Rectangle covering whole div */}
+          <a 
+            href={business.googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl transition-all duration-300 bg-orange-50/40 hover:bg-orange-50/70 border border-orange-100/80 hover:border-orange-200 hover:shadow-sm group cursor-pointer w-full"
+          >
+            <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-orange-100/80 text-orange-600 flex items-center justify-center shrink-0 transition-all duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:scale-110 shadow-sm group-hover:shadow-orange-500/25">
                 <MapPin className="w-5 h-5" />
               </div>
-              <div>
-                <span className="font-bold text-gray-900 block mb-1 group-hover:text-orange-600 transition-colors">Office Location</span>
+              <div className="min-w-0 flex-1">
+                <span className="font-bold text-gray-900 block mb-0.5 group-hover:text-orange-600 transition-colors">Office Location</span>
                 <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
                   {business.address}, {business.locality}, {business.region} - {business.postalCode}
                 </p>
-                <span className="inline-flex items-center text-xs font-semibold text-orange-600 mt-2 gap-1 group-hover:underline">
-                  View on Google Maps <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </span>
               </div>
-            </a>
+            </div>
+            <div className="inline-flex items-center text-xs sm:text-sm font-semibold text-orange-600 gap-1.5 shrink-0 group-hover:underline self-start sm:self-center">
+              <span>View on Google Maps</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </a>
 
+          {/* Contact Details Grid - Aligned perfectly below */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6 text-sm">
             {/* Phone & WhatsApp */}
-            <div className="flex items-start gap-3.5 p-4 rounded-2xl transition-all duration-300 hover:bg-orange-50/60 border border-transparent hover:border-orange-100 hover:shadow-sm group">
+            <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl transition-all duration-300 bg-gray-50/40 hover:bg-orange-50/50 border border-gray-100/80 hover:border-orange-200 hover:shadow-sm group h-full">
               <div className="w-10 h-10 rounded-xl bg-orange-100/80 text-orange-600 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:scale-110 shadow-sm group-hover:shadow-orange-500/25">
                 <Phone className="w-5 h-5" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <span className="font-bold text-gray-900 block mb-1.5 group-hover:text-orange-600 transition-colors">Phone & WhatsApp</span>
                 <div className="space-y-1">
                   <a 
@@ -245,12 +249,12 @@ export default function AboutPage() {
             {/* Email Support */}
             <a 
               href={`mailto:${business.email}`} 
-              className="flex items-start gap-3.5 p-4 rounded-2xl transition-all duration-300 hover:bg-orange-50/60 border border-transparent hover:border-orange-100 hover:shadow-sm group cursor-pointer"
+              className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl transition-all duration-300 bg-gray-50/40 hover:bg-orange-50/50 border border-gray-100/80 hover:border-orange-200 hover:shadow-sm group cursor-pointer h-full"
             >
               <div className="w-10 h-10 rounded-xl bg-orange-100/80 text-orange-600 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:scale-110 shadow-sm group-hover:shadow-orange-500/25">
                 <Mail className="w-5 h-5" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <span className="font-bold text-gray-900 block mb-1 group-hover:text-orange-600 transition-colors">Email Support</span>
                 <span className="text-gray-700 hover:text-orange-600 font-semibold text-xs sm:text-sm block break-all transition-colors">
                   {business.email}
@@ -260,11 +264,11 @@ export default function AboutPage() {
             </a>
 
             {/* Operating Hours */}
-            <div className="flex items-start gap-3.5 p-4 rounded-2xl transition-all duration-300 hover:bg-orange-50/60 border border-transparent hover:border-orange-100 hover:shadow-sm group">
+            <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl transition-all duration-300 bg-gray-50/40 hover:bg-orange-50/50 border border-gray-100/80 hover:border-orange-200 hover:shadow-sm group h-full">
               <div className="w-10 h-10 rounded-xl bg-orange-100/80 text-orange-600 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 group-hover:bg-orange-500 group-hover:text-white group-hover:scale-110 shadow-sm group-hover:shadow-orange-500/25">
                 <Clock className="w-5 h-5" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <span className="font-bold text-gray-900 block mb-1 group-hover:text-orange-600 transition-colors">Operating Hours</span>
                 <p className="text-gray-700 text-xs sm:text-sm font-medium">Monday - Saturday: 9:00 AM - 9:00 PM</p>
                 <span className="text-xs text-gray-500 block mt-2 font-medium">Sunday by prior appointment</span>

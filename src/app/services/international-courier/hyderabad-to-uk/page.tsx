@@ -154,7 +154,7 @@ export default function HyderabadToUkPage() {
         {/* Callout */}
         <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 p-6 sm:p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
           <div>
-            <h3 className="text-xl font-bold">Courier from Hyderabad to the UK?</h3>
+            <h2 className="text-xl font-bold">Courier from Hyderabad to the UK?</h2>
             <p className="text-xs sm:text-sm text-orange-100 mt-1">Book your free doorstep collection today or request pricing details.</p>
           </div>
           <Link

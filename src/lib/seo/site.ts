@@ -43,7 +43,7 @@ export const SITEMAP_IMAGES = [
   { path: "/commercial_shipping.png", title: "Commercial Shipping Service" },
   { path: "/shipment insurance.png", title: "Shipment Insurance Service" },
   { path: "/free packing.png", title: "Free Packing & Doorstep Pickup" },
-  { path: "/bg.png", title: `${business.name} Hero Illustration` },
+  { path: "/bg.webp", title: `${business.name} Hero Illustration` },
 ];
 
 export function absoluteUrl(path: string): string {

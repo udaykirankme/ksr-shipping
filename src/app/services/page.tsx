@@ -14,6 +14,7 @@ type Service = {
   shortDesc: string;
   icon: any;
   image: string;
+  imageAlt: string;
   overview: string;
   benefits: string[];
   features: string[];
@@ -32,6 +33,7 @@ const SERVICES: Service[] = [
     shortDesc: "Fast and reliable global delivery across 150+ countries with complete customs clearance and tracking.",
     icon: Plane,
     image: "/international_courier.png",
+    imageAlt: "Cargo airplane flying above a globe with delivery destination pins and stacked parcels",
     overview: "Seamless global shipping to over 150 countries. We handle all customs documentation, international routing, and clearance to ensure your package arrives without delays or unexpected fees.",
     benefits: ["Free Customs Clearance Assistance", "Door-to-door Real-time Tracking", "Express & Economy Delivery Options"],
     features: ["Supported Types: Documents, Parcels, Bulk Cartons", "Delivery time depends on destination and service", "Free Doorstep Pickup Available"],
@@ -44,6 +46,7 @@ const SERVICES: Service[] = [
     shortDesc: "Express air and cost-effective road cargo solutions connecting every city and village across India.",
     icon: Truck,
     image: "/domestic_courier.png",
+    imageAlt: "Cargo truck and airplane in front of a map of India with delivery route lines and stacked parcel boxes",
     overview: "Fast, reliable, and secure shipping across every state, city, and remote village in India. Choose between our Domestic Air Courier service for urgent deliveries or our Domestic Road Courier service for cost-effective transportation. We help you select the best option based on your shipment's urgency, destination, and budget.",
     benefits: ["✈️ Domestic Air Courier for urgent and time-sensitive shipments", "🚛 Domestic Road Courier for economical and bulk deliveries", "Smart route selection for the fastest and most efficient delivery"],
     features: ["Service Modes: Air Courier & Road Courier", "Delivery Time: Based on the selected shipping mode and destination", "Doorstep Pickup Available Across India"],
@@ -59,7 +62,8 @@ const SERVICES: Service[] = [
     title: "Food & Homemade Sweets Shipping",
     shortDesc: "Food-grade protective packing for homemade sweets, snacks, and leak-proof pickle jars overseas.",
     icon: Package,
-    image: "/bg.png",
+    image: "/bg.webp",
+    imageAlt: "Courier journey showing doorstep pickup, transport van, cargo plane, and delivery",
     overview: "Specialized food-grade packaging designed to reduce transit damage and maintain hygiene for homemade sweets, snacks, pickles, and dry spices sent from Hyderabad to the USA, UK, Canada, Australia, and worldwide.",
     benefits: ["Specialized Food-grade Materials", "Leak-resistant Pickle Packaging", "Express Global Air Dispatch"],
     features: ["Supported: Sweets, Snacks, Pickles, Spices", "Transit: 3-5 Days to Major Destinations", "Free Doorstep Pickup in Hyderabad"],
@@ -72,6 +76,7 @@ const SERVICES: Service[] = [
     shortDesc: "Strictly compliant healthcare logistics with temperature-aware handling for prescription medicines.",
     icon: HeartPulse,
     image: "/medicine_shipping.png",
+    imageAlt: "Temperature-controlled medicine container with prescription bottle, pill blister pack, capsules, and cargo airplane",
     overview: "Temperature-controlled and priority handling for prescription medicines, medical samples, and health essentials. We ensure strict compliance with health regulations.",
     benefits: ["Temperature-aware Handling", "Priority Custom Clearance", "Confidential & Secure Packaging"],
     features: ["Supported Types: Prescription Drugs, OTC", "Delivery: Express Priority Routing", "Specialized Documentation Support"],
@@ -84,6 +89,7 @@ const SERVICES: Service[] = [
     shortDesc: "Reinforced protective packing and cushioned layers for delicate glassware, artwork, and electronics.",
     icon: Box,
     image: "/fragile_shipping.png",
+    imageAlt: "Fragile shipping boxes with bubble wrap, cushioned glass vase, camera in foam padding, and tape dispenser",
     overview: "Specialized packing with premium bubble wrap, foam peanuts, and reinforced double-walled boxes to guarantee the safety of electronics, glassware, and artwork.",
     benefits: ["Premium Multi-layer Protection", "Special Handling Labels & Procedures", "Comprehensive Transit Insurance"],
     features: ["Supported Types: Glass, Electronics, Art", "Delivery: Extra-care Courier Network", "Professional Packing Service"],
@@ -96,6 +102,7 @@ const SERVICES: Service[] = [
     shortDesc: "Urgent and confidential door-to-door delivery for critical passports, legal contracts, and transcripts.",
     icon: FileText,
     image: "/express_document_delivery.png",
+    imageAlt: "Express courier truck with priority document envelope, paperwork, and cargo plane",
     overview: "Secure delivery of important documents with fast, reliable and trackable service. We ensure your critical paperwork reaches its destination safely and on time.",
     benefits: ["Priority Handling", "Confidential & Secure Packaging", "Real-time Tracking Updates"],
     features: ["Supported Types: Legal Documents, Contracts, Passports", "Delivery: 1-2 Business Days", "Signature Required Upon Delivery"],
@@ -108,6 +115,7 @@ const SERVICES: Service[] = [
     shortDesc: "Scalable B2B courier solutions, regular bulk dispatches, and customized corporate pricing.",
     icon: Building2,
     image: "/commercial_shipping.png",
+    imageAlt: "Forklift loading boxed cargo into a freight truck outside a warehouse with a cargo airplane above",
     overview: "B2B logistics tailored for scale. Bulk shipment solutions, warehouse pickups, regular dispatch scheduling, and discounted corporate rates.",
     benefits: ["Dedicated Account Manager", "Discounted Volume Pricing", "API Integration for Tracking"],
     features: ["Supported Types: Pallets, Bulk Cartons", "Delivery: Scheduled LTL / FTL", "Warehouse & Factory Pickups"],
@@ -120,6 +128,7 @@ const SERVICES: Service[] = [
     shortDesc: "Complimentary domestic transit protection up to ₹30,000 and comprehensive commercial coverage options.",
     icon: ShieldCheck,
     image: "/shipment insurance.png",
+    imageAlt: "Transit insurance shield, checklist clipboard, parcel boxes, cargo truck, airplane, and freight ship",
     overview: "Clear transit insurance for domestic, commercial and international shipments booked through established courier partners.",
     benefits: ["Free domestic cover up to ₹30,000", "Full cover for commercial & B2B", "International insurance available"],
     features: ["Domestic: complimentary, under 30 kg", "Commercial/B2B: valid invoice may be required", "International: subject to claim conditions"],
@@ -132,6 +141,7 @@ const SERVICES: Service[] = [
     shortDesc: "100% free doorstep pickup across Greater Hyderabad with complimentary food-grade and protective packing.",
     icon: Package,
     image: "/free packing.png",
+    imageAlt: "KSR packing a parcel for doorstep pickup in Hyderabad with service van outside",
     overview: "Convenient zero-cost doorstep collection and expert packing in standard cartons, multi-layer leak-proof wraps for food and pickles, and shock cushioning for fragile items.",
     benefits: ["100% Free Doorstep Collection", "Complimentary Standard Packaging", "Multi-layer Protection for Food & Pickles"],
     features: ["Pickup: Doorstep Across Greater Hyderabad", "Packing: Food-Grade & Fragile Included", "Booking: Established Courier Networks"],
@@ -225,7 +235,7 @@ export default function ServicesPage() {
                          <service.icon className="w-7 h-7 text-orange-500 group-hover:text-white transition-colors duration-300" />
                       </div>
                       
-                      <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors relative z-10 mb-2">{service.title}</h3>
+                      <h2 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors relative z-10 mb-2">{service.title}</h2>
                       
                       <p className="text-xs text-gray-500 leading-relaxed relative z-10 mb-5 max-w-xs">{service.shortDesc}</p>
                       
@@ -260,7 +270,7 @@ export default function ServicesPage() {
                       className="w-full lg:w-1/2"
                     >
                        <div className="w-full aspect-[4/3] bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-3xl border border-orange-200/50 flex flex-col items-center justify-center shadow-inner relative overflow-hidden group">
-                          <Image src={service.image} alt={service.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" sizes="(max-width: 1024px) 100vw, 50vw" />
+                          <Image src={service.image} alt={service.imageAlt} fill className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" sizes="(max-width: 1024px) 100vw, 50vw" />
                        </div>
                     </motion.div>
                     
@@ -281,7 +291,7 @@ export default function ServicesPage() {
                        
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-10">
                           <div>
-                             <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-green-500" /> Key Benefits</h4>
+                             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-green-500" /> Key Benefits</h3>
                              <ul className="space-y-3">
                                 {service.benefits.map((b, i) => (
                                   <li key={i} className="flex items-start gap-2 text-gray-600 text-sm font-medium">
@@ -292,7 +302,7 @@ export default function ServicesPage() {
                              </ul>
                           </div>
                           <div>
-                             <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-blue-500" /> Features & Info</h4>
+                             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-blue-500" /> Features & Info</h3>
                              <ul className="space-y-3">
                                 {service.features.map((f, i) => (
                                   <li key={i} className="flex items-start gap-2 text-gray-600 text-sm font-medium">
@@ -310,7 +320,7 @@ export default function ServicesPage() {
                                 <Info className="w-4 h-4" />
                              </div>
                              <div>
-                                <h5 className="font-bold text-gray-900 text-sm mb-1">{service.infoNote.title}</h5>
+                                <h4 className="font-bold text-gray-900 text-sm mb-1">{service.infoNote.title}</h4>
                                 <p className="text-sm text-gray-600 leading-relaxed">{service.infoNote.description}</p>
                              </div>
                           </div>
@@ -337,7 +347,7 @@ export default function ServicesPage() {
       {/* 4. Partners Marquee */}
       <section className="py-20 relative z-10 overflow-hidden">
          <div className="text-center mb-10">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Our Global Network Partners</h3>
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Our Global Network Partners</h2>
          </div>
          <div className="flex flex-col gap-6 relative group/container">
             <InfiniteCarousel speed={1}>

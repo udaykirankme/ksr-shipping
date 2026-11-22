@@ -25,7 +25,7 @@ export const SERVICE_SCHEMA_ITEMS: ServiceSchemaItem[] = [
     title: "Food & Homemade Sweets Shipping",
     overview:
       "Specialized food-grade packaging designed to reduce transit damage and maintain hygiene for homemade sweets, snacks, pickles, and dry spices sent from Hyderabad to the USA, UK, Canada, Australia, and worldwide.",
-    image: "/bg.png",
+    image: "/bg.webp",
   },
   {
     id: "medicine-shipping",

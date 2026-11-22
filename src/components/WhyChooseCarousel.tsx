@@ -345,6 +345,9 @@ export function WhyChooseCarousel() {
              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
            </motion.div>
            <h3 className="mt-4 text-3xl md:text-4xl font-black text-gray-900">Premium Shipping Experience</h3>
+           <p className="mt-4 text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+             KSR Shipping Services – A Courier Service is based in Begumpet, Hyderabad and has served customers since 2003. We collect your parcel from your doorstep, pack it free of charge and book it through established courier partners for domestic and international delivery.
+           </p>
         </div>
 
         <div className="mt-8 mb-16 sm:mb-12">

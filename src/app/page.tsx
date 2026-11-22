@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { motion } from "framer-motion";
 import { TrackingWidget } from "@/components/TrackingWidget";
 import dynamic from "next/dynamic";
@@ -50,8 +51,8 @@ export default function Home() {
         {/* MOBILE BACKGROUND */}
         <div className="lg:hidden absolute inset-x-0 top-0 z-0 pointer-events-none -translate-y-6">
           <Image
-            src="/bg_smaller_display1.png"
-            alt="Package journey illustration"
+            src="/bg_smaller_display1.webp"
+            alt=""
             width={800}
             height={1200}
             className="w-full h-auto opacity-100"
@@ -66,8 +67,8 @@ export default function Home() {
         {/* DESKTOP BACKGROUND */}
         <div className="hidden lg:block absolute inset-0 z-0 overflow-hidden pointer-events-none lg:-translate-y-10">
           <Image
-            src="/bg.png"
-            alt="Package journey illustration"
+            src="/bg.webp"
+            alt="Courier journey showing doorstep pickup, transport van, cargo plane, and delivery"
             fill
             priority
             className="object-cover object-[center_46%] opacity-100"
@@ -159,7 +160,9 @@ export default function Home() {
 
                 {/* MOBILE TRACKING - sits right below buttons */}
                 <div className="lg:hidden mt-4 mb-24">
-                  <TrackingWidget />
+                  <Suspense fallback={<div className="min-h-[140px]" />}>
+                    <TrackingWidget />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -172,7 +175,9 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="hidden lg:flex lg:col-span-6 lg:col-start-7 lg:mt-48 relative z-20 w-full min-w-0 scroll-mt-[90px] mb-16 justify-end"
             >
-              <TrackingWidget />
+              <Suspense fallback={<div className="min-h-[140px] w-full" />}>
+                <TrackingWidget />
+              </Suspense>
             </motion.div>
           </div>
         </div>
@@ -231,7 +236,7 @@ export default function Home() {
       {/* 5. Trusted Partners Marquee */}
       <section className="py-20 bg-white overflow-hidden relative">
         <div className="text-center mb-10">
-          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Our Trusted Courier Partners</h3>
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Our Trusted Courier Partners</h2>
         </div>
 
         <div className="flex flex-col gap-6 relative group/container">

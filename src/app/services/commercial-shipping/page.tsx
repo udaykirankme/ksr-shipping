@@ -94,7 +94,7 @@ export default function CommercialShippingPage() {
           <div className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100 bg-white aspect-[4/3]">
             <Image
               src="/commercial_shipping.png"
-              alt="Commercial Shipping and B2B Logistics"
+              alt="Forklift loading boxed cargo into a cargo truck outside a warehouse with a cargo airplane above"
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -107,7 +107,7 @@ export default function CommercialShippingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
           {capabilities.map((item, i) => (
             <div key={i} className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h2>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{item.desc}</p>
             </div>
           ))}

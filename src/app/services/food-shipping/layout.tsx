@@ -12,7 +12,7 @@ export default function FoodShippingLayout({ children }: { children: React.React
     title: "Food & Homemade Sweets Courier Services",
     description: seo.description,
     path: seo.path,
-    image: "/bg.png",
+    image: "/bg.webp",
     serviceType: "Specialized Food-Grade Packaging & International Food Shipping",
     areaServed: ["Hyderabad", "USA", "UK", "Canada", "Australia", "UAE", "Singapore", "New Zealand", "Europe"],
   });

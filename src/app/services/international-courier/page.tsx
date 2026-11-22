@@ -89,7 +89,7 @@ export default function InternationalCourierPage() {
           <div className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100 bg-white aspect-[4/3]">
             <Image
               src="/international_courier.png"
-              alt="International Courier Service from Hyderabad"
+              alt="Cargo airplane flying above a globe with delivery destination pins and stacked parcels"
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -144,7 +144,7 @@ export default function InternationalCourierPage() {
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4 text-green-700">
               <CheckCircle2 className="w-5 h-5" />
-              <h3 className="text-lg font-bold text-gray-900">Items Typically Eligible for Shipping</h3>
+              <h2 className="text-lg font-bold text-gray-900">Items Typically Eligible for Shipping</h2>
             </div>
             <ul className="space-y-3">
               {allowedItems.map((item, idx) => (
@@ -159,7 +159,7 @@ export default function InternationalCourierPage() {
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4 text-red-600">
               <AlertCircle className="w-5 h-5" />
-              <h3 className="text-lg font-bold text-gray-900">Restricted & Prohibited Cargo</h3>
+              <h2 className="text-lg font-bold text-gray-900">Restricted & Prohibited Cargo</h2>
             </div>
             <ul className="space-y-3">
               {restrictedItems.map((item, idx) => (

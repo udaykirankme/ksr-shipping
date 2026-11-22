@@ -183,7 +183,7 @@ export default function FreePackingAndPickupPage() {
                   {step.step}
                 </div>
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{step.title}</h4>
+                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{step.title}</h3>
                   <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{step.desc}</p>
                 </div>
               </div>
@@ -206,9 +206,9 @@ export default function FreePackingAndPickupPage() {
               <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-6">
                 <Layers className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">
+              <h2 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">
                 Multilayer Packing for Liquids, Pickles & Food
-              </h3>
+              </h2>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-4">
                 Shipping homemade sweets, savories, and traditional pickles overseas requires specialized care. We apply multilayer packing designed to prevent leakage, oil seepage, and staining during international flight and road transit.
               </p>
@@ -235,9 +235,9 @@ export default function FreePackingAndPickupPage() {
               <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-6">
                 <Box className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">
+              <h2 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">
                 Protective Packaging for Fragile Items
-              </h3>
+              </h2>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-4">
                 Delicate goods, glassware, precision electronics, and handicrafts require resilient cushioning. We use shock-absorbent bubble wrap, corner guards, and heavy-duty corrugated cartons to keep fragile items secure.
               </p>

@@ -108,7 +108,7 @@ export default function DomesticCourierPage() {
           <div className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100 bg-white aspect-[4/3]">
             <Image
               src="/domestic_courier.png"
-              alt="Domestic Courier Services Across India"
+              alt="Cargo truck and airplane in front of a map of India with delivery route lines and stacked parcel boxes"
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -130,7 +130,7 @@ export default function DomesticCourierPage() {
                     {mode.badge}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{mode.title}</h3>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">{mode.title}</h2>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">{mode.description}</p>
               </div>
 

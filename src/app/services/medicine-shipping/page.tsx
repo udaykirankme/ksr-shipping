@@ -95,7 +95,7 @@ export default function MedicineShippingPage() {
           <div className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100 bg-white aspect-[4/3]">
             <Image
               src="/medicine_shipping.png"
-              alt="Medicine Shipping Service from Hyderabad"
+              alt="Medicine container with prescription bottle, pill blister pack, capsules, and cargo airplane"
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"

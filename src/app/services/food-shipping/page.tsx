@@ -110,7 +110,7 @@ export default function FoodShippingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
           {categories.map((cat, i) => (
             <div key={i} className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{cat.title}</h3>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">{cat.title}</h2>
               <p className="text-xs text-gray-500 mb-4"><strong className="text-gray-800">Popular items:</strong> {cat.examples}</p>
               <div className="p-3.5 rounded-xl bg-orange-50/60 border border-orange-100 text-xs text-orange-800 flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
@@ -131,7 +131,7 @@ export default function FoodShippingPage() {
                 <div className="w-10 h-10 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center mb-3 text-sm">
                   {step.step}
                 </div>
-                <h4 className="font-bold text-gray-900 text-sm mb-1">{step.title}</h4>
+                <h3 className="font-bold text-gray-900 text-sm mb-1">{step.title}</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">{step.desc}</p>
               </div>
             ))}

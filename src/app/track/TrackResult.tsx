@@ -69,33 +69,34 @@ interface TrackingData {
 
 const getStatusColor = (status: string) => {
   if (isExceptionStatus(status)) return "bg-amber-100 text-amber-900 border-amber-200";
-  switch (status) {
-    case "Shipment Created":
-    case "Manifest Uploaded":
+  const norm = (status || "").trim().toLowerCase();
+  switch (norm) {
+    case "shipment created":
+    case "manifest uploaded":
       return "bg-gray-100 text-gray-800 border-gray-200";
-    case "Picked Up":
+    case "picked up":
       return "bg-orange-100 text-orange-800 border-orange-200";
-    case "Shipment Bagged":
+    case "shipment bagged":
       return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "Shipment Received":
+    case "shipment received":
       return "bg-teal-100 text-teal-800 border-teal-200";
-    case "Dispatched":
-    case "In Transit":
-    case "Vehicle Departed":
+    case "dispatched":
+    case "in transit":
+    case "vehicle departed":
       return "bg-orange-100 text-orange-800 border-orange-200";
-    case "At Hub":
+    case "at hub":
       return "bg-purple-100 text-purple-800 border-purple-200";
-    case "Out For Delivery":
+    case "out for delivery":
       return "bg-orange-100 text-orange-800 border-orange-200";
-    case "Delivered":
+    case "delivered":
       return "bg-green-100 text-green-800 border-green-200";
-    case "Cancelled":
+    case "cancelled":
       return "bg-red-100 text-red-800 border-red-200";
-    case "Returned":
-    case "Returned to Origin":
-    case "Return In Transit":
-    case "Return at Hub":
-    case "Return Out For Delivery":
+    case "returned":
+    case "returned to origin":
+    case "return in transit":
+    case "return at hub":
+    case "return out for delivery":
       return "bg-purple-100 text-purple-800 border-purple-200";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200";
@@ -118,38 +119,39 @@ const isAirShipment = (data: TrackingData): boolean => {
 
 const getStatusIcon = (status: string, className = "w-5 h-5", isAir = false) => {
   if (isExceptionStatus(status)) {
-    const s = status.toLowerCase();
+    const s = (status || "").toLowerCase();
     if (s.includes("cancel") || s.includes("reject")) return <XCircle className={className} />;
     if (s.includes("return") || s.includes("rto")) return <RotateCcw className={className} />;
     return <Clock className={className} />;
   }
-  switch (status) {
-    case "Shipment Created":
-    case "Manifest Uploaded":
+  const norm = (status || "").trim().toLowerCase();
+  switch (norm) {
+    case "shipment created":
+    case "manifest uploaded":
       return <Box className={className} />;
-    case "Picked Up":
+    case "picked up":
       return <Hand className={className} />;
-    case "Shipment Bagged":
+    case "shipment bagged":
       return <Package className={className} />;
-    case "Shipment Received":
+    case "shipment received":
       return <Inbox className={className} />;
-    case "Dispatched":
-    case "In Transit":
-    case "Vehicle Departed":
+    case "dispatched":
+    case "in transit":
+    case "vehicle departed":
       return isAir ? <Plane className={className} /> : <Truck className={className} />;
-    case "At Hub":
+    case "at hub":
       return <MapPin className={className} />;
-    case "Out For Delivery":
+    case "out for delivery":
       return isAir ? <Plane className={className} /> : <Truck className={className} />;
-    case "Delivered":
+    case "delivered":
       return <CheckCircle2 className={className} />;
-    case "Cancelled":
+    case "cancelled":
       return <XCircle className={className} />;
-    case "Returned":
-    case "Returned to Origin":
-    case "Return In Transit":
-    case "Return at Hub":
-    case "Return Out For Delivery":
+    case "returned":
+    case "returned to origin":
+    case "return in transit":
+    case "return at hub":
+    case "return out for delivery":
       return <RotateCcw className={className} />;
     default:
       return <Clock className={className} />;
@@ -165,36 +167,39 @@ const getDynamicMessage = (
   const fromName = sender ? <span className={highlightClass}>{sender}</span> : "the sender";
   const toName = receiver ? <span className={highlightClass}>{receiver}</span> : "the receiver";
 
-  switch (status) {
-    case "Shipment Created":
-    case "Manifest Uploaded":
+  const norm = (status || "").trim().toLowerCase();
+
+  switch (norm) {
+    case "shipment created":
+    case "manifest uploaded":
       return <>Your shipment has been registered successfully and is awaiting pickup.</>;
-    case "Picked Up":
+    case "picked up":
       return <>Great news! Your shipment from {fromName} to {toName} has been picked up successfully.</>;
-    case "Shipment Bagged":
+    case "shipment bagged":
       return <>Your shipment from {fromName} to {toName} has been bagged and is being prepared for dispatch.</>;
-    case "Shipment Received":
+    case "shipment received":
       return <>Your shipment from {fromName} to {toName} has been received at our facility and is being processed.</>;
-    case "Dispatched":
+    case "dispatched":
       return <>Your shipment from {fromName} to {toName} has been dispatched and is on its way.</>;
-    case "In Transit":
+    case "in transit":
+    case "vehicle departed":
       return <>Your shipment from {fromName} to {toName} is currently in transit. Thank you for your patience.</>;
-    case "At Hub":
+    case "at hub":
       return <>Your shipment from {fromName} to {toName} has arrived at our hub and is being processed for the next leg of its journey.</>;
-    case "Out For Delivery":
+    case "out for delivery":
       return <>Exciting news! Your shipment is out for delivery and will reach {toName} soon.</>;
-    case "Delivered":
+    case "delivered":
       return <>Your shipment from {fromName} to {toName} has been successfully delivered.</>;
-    case "Cancelled":
+    case "cancelled":
       return <>This shipment has been cancelled. Please contact KSR Shipping Services if you require assistance.</>;
-    case "Returned":
-    case "Returned to Origin":
+    case "returned":
+    case "returned to origin":
       return <>This shipment has been returned to {fromName}.</>;
-    case "Return In Transit":
+    case "return in transit":
       return <>This shipment is in transit back to {fromName}.</>;
-    case "Return at Hub":
+    case "return at hub":
       return <>This shipment has reached the distribution center nearest to {fromName}.</>;
-    case "Return Out For Delivery":
+    case "return out for delivery":
       return <>This shipment is out for delivery to return to {fromName}.</>;
     default:
       return <>Your shipment from {fromName} to {toName} is currently in transit.</>;
@@ -948,7 +953,7 @@ export default function TrackResult({
                   )}
                 </div>
                 <p className="font-medium text-xs sm:text-sm md:text-[14px] leading-relaxed text-gray-800">
-                  {getDynamicMessage(data.current_status, data.sender_name, data.receiver_name)}
+                  {getDynamicMessage(customerDisplayStatus || data.current_status, data.sender_name, data.receiver_name)}
                 </p>
               </div>
 
