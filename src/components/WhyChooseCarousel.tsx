@@ -340,7 +340,7 @@ export function WhyChooseCarousel() {
            >
              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
              <h2 className="text-sm sm:text-base font-bold text-orange-500 tracking-widest uppercase">
-               Why Choose KSR
+               Why Choose KSR Shipping Services
              </h2>
              <div className="h-[2px] w-8 sm:w-12 bg-orange-200"></div>
            </motion.div>

@@ -56,12 +56,12 @@ const faqs = [
   {
     question: "Does KSR Shipping Services operate delivery networks directly?",
     answer:
-      "No. KSR collects, professionally packs, and books shipments through established courier partners (such as DHL, FedEx, UPS, DTDC, and Delhivery); KSR does not operate delivery networks directly.",
+      "No. KSR Shipping Services collects, professionally packs, and books shipments through established courier partners (such as DHL, FedEx, UPS, DTDC, and Delhivery); we do not operate delivery networks directly.",
   },
   {
     question: "Where can I review specific claim procedures or coverage conditions?",
     answer:
-      "To review specific terms, documentation requirements, or coverage conditions for your shipment before booking, please contact KSR directly via phone or WhatsApp.",
+      "To review specific terms, documentation requirements, or coverage conditions for your shipment before booking, please contact our team directly via phone or WhatsApp.",
   },
   {
     question: "What should I send if my shipment is damaged?",
@@ -104,7 +104,7 @@ export default function ShipmentInsurancePage() {
               href="/contact"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-md hover:shadow-orange-200 transition-all text-sm"
             >
-              Contact KSR
+              Contact Our Team
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -163,7 +163,7 @@ export default function ShipmentInsurancePage() {
         <div className="bg-white rounded-3xl p-8 sm:p-10 border border-gray-100 shadow-sm mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-3 tracking-tight">How It Works with KSR Shipping Services</h2>
           <p className="text-sm text-gray-600 leading-relaxed mb-8">
-            KSR acts as your dedicated booking and packing service. We collect your parcel from your doorstep, pack it in a standard carton with quality packing material, and book the consignment through established courier partner networks.
+            We act as your dedicated booking and packing service. We collect your parcel from your doorstep, pack it in a standard carton with quality packing material, and book the consignment through established courier partner networks.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -193,7 +193,7 @@ export default function ShipmentInsurancePage() {
           <div className="mt-8 p-4 rounded-2xl bg-orange-50/70 border border-orange-100 text-xs sm:text-sm text-orange-900 flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Please Note:</strong> KSR collects, packs, and books shipments through partner networks and does not operate delivery networks directly. For specific terms, documentation rules, or claim conditions before booking, please consult our team.
+              <strong>Please Note:</strong> KSR Shipping Services collects, packs, and books shipments through partner networks and does not operate delivery networks directly. For specific terms, documentation rules, or claim conditions before booking, please consult our team.
             </p>
           </div>
         </div>
@@ -234,7 +234,7 @@ export default function ShipmentInsurancePage() {
         <div className="rounded-3xl bg-gradient-to-r from-orange-500 to-orange-600 p-8 sm:p-10 text-white text-center shadow-lg">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3 tracking-tight">Questions About Shipment Insurance?</h2>
           <p className="text-orange-100 text-sm sm:text-base max-w-xl mx-auto mb-6">
-            Contact KSR before booking to confirm insurance conditions, invoice requirements, or packaging guidelines for your destination.
+            Contact KSR Shipping Services before booking to confirm insurance conditions, invoice requirements, or packaging guidelines for your destination.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link

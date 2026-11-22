@@ -66,7 +66,7 @@ export default function ContactPage() {
          {/* Header */}
          <div className="pt-3 pb-3 sm:pt-4 sm:pb-4 lg:pt-5 lg:pb-3 px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="max-w-3xl mx-auto">
-               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 lg:mb-4 tracking-tight">Contact <span className="text-orange-500">KSR Team</span></h1>
+               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 lg:mb-4 tracking-tight">Contact <span className="text-orange-500">KSR Shipping Services</span></h1>
                <p className="text-base md:text-xl text-gray-600 leading-relaxed">
                   Have a question, feedback, or need help with a shipment? We&apos;re here for you.
                </p>

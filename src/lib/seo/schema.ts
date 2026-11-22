@@ -42,13 +42,15 @@ export function getOpeningHoursSpecification() {
 }
 
 export function getSameAsLinks(): string[] {
+  if (Array.isArray(business.sameAs) && business.sameAs.length > 0) {
+    return business.sameAs.filter((link): link is string => typeof link === "string" && link.trim().length > 0);
+  }
   return [
     business.social.instagram,
     business.social.facebook,
     business.social.linkedin,
     business.social.youtube,
     business.googleMapsUrl,
-    business.googleReviewUrl,
   ].filter((link): link is string => typeof link === "string" && link.trim().length > 0);
 }
 
@@ -76,11 +78,12 @@ export function buildOrganizationSchema() {
   return {
     "@type": "Organization",
     "@id": `${SITE_URL}/#organization`,
-    name: SITE_NAME,
-    legalName: "KSR Shipping Services – A Courier Service",
-    foundingDate: "2003",
-    disambiguatingDescription:
-      "Independent courier booking and packing service in Begumpet, Hyderabad, established in 2003. Not affiliated with KSR Freight.",
+    name: business.legalName,
+    legalName: business.legalName,
+    alternateName: business.alternateNames,
+    description: business.description || business.seo.defaultDescription,
+    foundingDate: business.foundingDate,
+    disambiguatingDescription: business.disambiguatingDescription,
     url: SITE_URL,
     logo: {
       "@type": "ImageObject",
@@ -113,17 +116,18 @@ export function buildLocalBusinessSchema() {
   return {
     "@type": ["LocalBusiness", "CourierService"],
     "@id": `${SITE_URL}/#localbusiness`,
-    name: SITE_NAME,
-    legalName: "KSR Shipping Services – A Courier Service",
-    foundingDate: "2003",
-    disambiguatingDescription:
-      "Independent courier booking and packing service in Begumpet, Hyderabad, established in 2003. Not affiliated with KSR Freight.",
+    name: business.legalName,
+    legalName: business.legalName,
+    alternateName: business.alternateNames,
+    description: business.description || business.seo.defaultDescription,
+    foundingDate: business.foundingDate,
+    disambiguatingDescription: business.disambiguatingDescription,
     url: SITE_URL,
     image: absoluteUrl(business.logoSquareUrl || business.logoUrl),
     logo: absoluteUrl(business.logoSquareUrl || business.logoUrl),
     telephone: PHONE_E164,
     email: business.email,
-    priceRange: "$$",
+    priceRange: business.priceRange || "₹₹",
     address: getPostalAddress(),
     geo: getGeoCoordinates(),
     hasMap: business.googleMapsUrl,
@@ -173,7 +177,7 @@ export function buildWebSiteSchema() {
     "@id": `${SITE_URL}/#website`,
     name: SITE_NAME,
     url: SITE_URL,
-    description: business.seo.defaultDescription,
+    description: business.description || business.seo.defaultDescription,
     inLanguage: "en-IN",
     publisher: { "@id": `${SITE_URL}/#organization` },
     potentialAction: {

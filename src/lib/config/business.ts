@@ -1,5 +1,12 @@
 export const business = {
-  name: "KSR Shipping Services - A Courier Service",
+  name: "KSR Shipping Services – A Courier Service",
+  legalName: "KSR Shipping Services – A Courier Service",
+  alternateNames: ["KSR Shipping Services", "KSR Shipping"],
+  foundingDate: "2003",
+  disambiguatingDescription:
+    "Independent courier booking and packing service in Begumpet, Hyderabad, established in 2003. Not affiliated with KSR Freight.",
+  description:
+    "Domestic and international courier booking with free doorstep pickup and packing in Begumpet, Hyderabad.",
   logoUrl: "/logo.png",
   logoSquareUrl: "/logo-square.png",
   siteUrl: "https://www.ksrshipping.com",
@@ -16,15 +23,20 @@ export const business = {
   phoneSecondary: "+91 99120 14267",
   whatsapp: "+91 99638 14267",
   email: "ksrshippingservice@gmail.com",
-  googleMapsUrl: "https://maps.app.goo.gl/aKJmfr8GzsbEtgtz7?g_st=ac",
+  googleMapsUrl: "https://maps.app.goo.gl/aKJmfr8GzsbEtgtz7",
   googleReviewUrl: "https://g.page/r/CdBtDQra-a6oEB0/review",
+  priceRange: "₹₹",
   hours: "Mon-Sat: 9:00 AM - 9:00 PM, Sun: Closed",
   social: {
     facebook: "",
-    instagram: "https://www.instagram.com/ksr_shipping_services?igsh=MWxveW1odmlnMXcxeA==",
+    instagram: "https://www.instagram.com/ksr_shipping_services/",
     linkedin: "",
     youtube: "",
   },
+  sameAs: [
+    "https://www.instagram.com/ksr_shipping_services/",
+    "https://maps.app.goo.gl/aKJmfr8GzsbEtgtz7",
+  ],
   legal: {
     gstin: "",
     iecNumber: "",

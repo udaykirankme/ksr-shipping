@@ -40,7 +40,7 @@ ${trackUrl}
 
 Thank you for choosing *KSR Shipping Services*. We appreciate your trust in us.
 
-— Team *KSR*`;
+— Team *KSR Shipping Services*`;
 }
 
 export function buildPackingCreatedShareMessage(
@@ -59,7 +59,7 @@ Amount Received: ₹${amount}
 
 We appreciate your trust in us.
 
-— Team *KSR*`;
+— Team *KSR Shipping Services*`;
 }
 
 
@@ -101,7 +101,7 @@ ${business.googleReviewUrl}
 
 Thank you for choosing *KSR Shipping Services*.
 
-— Team *KSR*`;
+— Team *KSR Shipping Services*`;
   }
 
   return `${greeting}
@@ -117,7 +117,7 @@ ${trackUrl}
 
 Thank you for choosing *KSR Shipping Services*.
 
-— Team *KSR*`;
+— Team *KSR Shipping Services*`;
 }
 
 export function buildContactReplyMessage(customerName?: string): string {

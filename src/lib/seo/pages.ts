@@ -234,7 +234,7 @@ export const pageSeo: Record<string, PageSeoConfig> = {
   freePackingAndPickup: {
     title: "Free Packing & Pickup",
     description:
-      "Enjoy 100% free doorstep pickup across Hyderabad and complimentary professional packaging, including food-grade multilayer and fragile protection with KSR.",
+      "Free doorstep pickup across Hyderabad with complimentary professional packaging, food-grade packing, and fragile protection with KSR Shipping Services.",
     path: "/services/free-packing-and-pickup",
     keywords: [
       "free courier pickup hyderabad",

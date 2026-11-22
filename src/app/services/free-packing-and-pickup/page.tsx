@@ -23,7 +23,7 @@ const processSteps = [
   {
     step: "2",
     title: "Shipment Evaluation & Quotation",
-    desc: "KSR evaluates the shipment details and provides a clear, upfront quotation based on destination and package size.",
+    desc: "Our team evaluates the shipment details and provides a clear, upfront quotation based on destination and package size.",
   },
   {
     step: "3",
@@ -33,17 +33,17 @@ const processSteps = [
   {
     step: "4",
     title: "Doorstep Collection & Expert Packing",
-    desc: "KSR arranges doorstep collection and expertly packs the items in a standard carton using quality packing material.",
+    desc: "We arrange doorstep collection and expertly pack the items in a standard carton using quality packing material.",
   },
   {
     step: "5",
     title: "Office Intake",
-    desc: "The packed shipment is brought to the KSR office in Begumpet, ready for courier booking.",
+    desc: "The packed shipment is brought to our Begumpet office, ready for courier booking.",
   },
   {
     step: "6",
     title: "Established Courier Partner Booking",
-    desc: "KSR books the consignment through an appropriate established courier partner (including DHL, FedEx, UPS, DTDC, or Delhivery).",
+    desc: "We book the consignment through an appropriate established courier partner (including DHL, FedEx, UPS, DTDC, or Delhivery).",
   },
   {
     step: "7",
@@ -74,14 +74,14 @@ const faqs = [
       "Fragile and delicate items are packed using quality protective cushioning, shock-absorbing bubble wrap, and sturdy corrugated cartons to protect them against transit vibration.",
   },
   {
-    question: "Does KSR operate the delivery transportation fleets directly?",
+    question: "Does KSR Shipping Services operate the delivery transportation fleets directly?",
     answer:
-      "No. KSR collects, expertly packs, and books shipments through established courier partner networks (including DHL, FedEx, UPS, DTDC, and Delhivery); KSR does not operate delivery networks directly.",
+      "No. KSR Shipping Services collects, expertly packs, and books shipments through established courier partner networks (including DHL, FedEx, UPS, DTDC, and Delhivery); we do not operate delivery networks directly.",
   },
   {
     question: "Can I ship from outside Hyderabad?",
     answer:
-      "Domestic shipments can also be booked from other states. International shipments are available from Hyderabad only. Contact KSR to arrange your shipment.",
+      "Domestic shipments can also be booked from other states. International shipments are available from Hyderabad only. Contact our team to arrange your shipment.",
   },
 ];
 
@@ -193,7 +193,7 @@ export default function FreePackingAndPickupPage() {
           <div className="mt-8 p-4 rounded-2xl bg-orange-50/70 border border-orange-100 text-xs sm:text-sm text-orange-900 flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Partner Network Fulfillment:</strong> KSR collects, professionally packs, and books shipments through established courier partners (such as DHL, FedEx, UPS, DTDC, and Delhivery). KSR does not operate delivery aircraft or ground transport fleets directly.
+              <strong>Partner Network Fulfillment:</strong> KSR Shipping Services collects, professionally packs, and books shipments through established courier partners (such as DHL, FedEx, UPS, DTDC, and Delhivery). We do not operate delivery aircraft or ground transport fleets directly.
             </p>
           </div>
         </div>
