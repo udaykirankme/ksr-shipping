@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/seo/site";
+import { business } from "@/lib/config";
 
 export default function robots(): MetadataRoute.Robots {
+  const siteUrl = business.siteUrl.replace(/\/$/, "");
+
   return {
     rules: [
       {
@@ -18,12 +20,12 @@ export default function robots(): MetadataRoute.Robots {
           "Google-Extended",
           "Applebot-Extended",
           "Bingbot",
+          "OAI-SearchBot",
         ],
         allow: "/",
         disallow: ["/api/", "/admin/", "/health"],
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL.replace(/^https?:\/\//, ""),
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

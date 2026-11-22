@@ -52,7 +52,27 @@ export function getSameAsLinks(): string[] {
   ].filter((link): link is string => typeof link === "string" && link.trim().length > 0);
 }
 
+function getLegalIdentifiers(): Record<string, unknown> {
+  const legalProps: Record<string, unknown> = {};
+  const gstin = business.legal?.gstin?.trim();
+  const iec = business.legal?.iecNumber?.trim();
+
+  if (gstin) {
+    legalProps.taxID = gstin;
+  }
+  if (iec) {
+    legalProps.identifier = {
+      "@type": "PropertyValue",
+      name: "IEC",
+      value: iec,
+    };
+  }
+  return legalProps;
+}
+
 export function buildOrganizationSchema() {
+  const legalProps = getLegalIdentifiers();
+
   return {
     "@type": "Organization",
     "@id": `${SITE_URL}/#organization`,
@@ -73,6 +93,7 @@ export function buildOrganizationSchema() {
     telephone: PHONE_E164,
     address: getPostalAddress(),
     sameAs: getSameAsLinks(),
+    ...legalProps,
     contactPoint: [
       {
         "@type": "ContactPoint",
@@ -87,6 +108,8 @@ export function buildOrganizationSchema() {
 }
 
 export function buildLocalBusinessSchema() {
+  const legalProps = getLegalIdentifiers();
+
   return {
     "@type": ["LocalBusiness", "CourierService"],
     "@id": `${SITE_URL}/#localbusiness`,
@@ -106,6 +129,7 @@ export function buildLocalBusinessSchema() {
     hasMap: business.googleMapsUrl,
     openingHoursSpecification: getOpeningHoursSpecification(),
     sameAs: getSameAsLinks(),
+    ...legalProps,
     areaServed: [
       { "@type": "City", name: "Hyderabad" },
       { "@type": "AdministrativeArea", name: "Telangana" },

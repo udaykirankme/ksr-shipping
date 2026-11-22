@@ -24,11 +24,18 @@ export const business = {
     linkedin: "",
     youtube: "",
   },
+  legal: {
+    gstin: "",
+    iecNumber: "",
+    registrationType: "",
+    registrationNumber: "",
+    certificatesAvailableOnRequest: true,
+  },
   seo: {
     defaultTitle: "KSR Shipping Services - Best Courier Services Hyderabad",
     defaultDescription: "Reliable courier services in Hyderabad with free doorstep pickup and packing. Quality packaging, fast domestic and international parcel delivery.",
     keywords: [
-      "courier service hyderabad", 
+      "courier service hyderabad",
       "international shipping hyderabad",
       "free pickup courier hyderabad",
       "food grade packing courier",

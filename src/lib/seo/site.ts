@@ -1,7 +1,6 @@
 import { business } from "@/lib/config";
 
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://www.ksrshipping.com";
+export const SITE_URL = business.siteUrl.replace(/\/$/, "");
 
 export const SITE_NAME = business.name;
 export const THEME_COLOR = "#FF6A00";

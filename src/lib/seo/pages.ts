@@ -101,11 +101,12 @@ export const pageSeo: Record<string, PageSeoConfig> = {
   about: {
     title: "About Us",
     description:
-      "KSR Shipping Services in Begumpet, Hyderabad provides international and domestic courier delivery with free doorstep pickup and food-grade packing.",
+      "KSR Shipping Services is a registered courier business in Hyderabad since 2003. Domestic and worldwide shipping with free doorstep pickup & packing.",
     path: "/about",
     keywords: [
       "about ksr shipping services",
-      "courier company hyderabad",
+      "registered courier business hyderabad",
+      "courier company hyderabad since 2003",
       "ksr shipping begumpet",
       "international logistics partner hyderabad",
     ],

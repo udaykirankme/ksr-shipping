@@ -16,6 +16,13 @@ import {
 import { business } from "@/lib/config";
 
 export default function AboutPage() {
+  const whatsappDigits = business.whatsapp.replace(/\D/g, "");
+  const requestCertificatesUrl = whatsappDigits
+    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
+        "Hello KSR Shipping Services, I would like to request copies of your business registration certificates."
+      )}`
+    : "/contact";
+
   const highlights = [
     {
       icon: Globe2,
@@ -113,24 +120,9 @@ export default function AboutPage() {
               <p className="text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed mb-3.5">
                 At <strong>KSR Shipping Services</strong>, we bridge geographical boundaries by delivering packages safely to destinations across India and more than 150 countries worldwide. Whether sending traditional sweets to family abroad, dispatching urgent university admission documents, shipping eligible prescription medicines, or managing corporate shipments, we ensure each consignment receives careful attention.
               </p>
-              <p className="text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed mb-6">
+              <p className="text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed">
                 Through our strategic relationships with leading international and domestic carriers—including DHL, FedEx, UPS, DTDC, Delhivery, Shadowfax, and Ekart—we combine tier-one transit networks with personalized local support right from our Begumpet office.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <Link
-                  href="/get-quotation"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-300 hover:-translate-y-0.5 text-sm active:translate-y-0 w-full sm:w-auto"
-                >
-                  Request a Quote
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/track"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold transition-all hover:-translate-y-0.5 text-sm active:translate-y-0 w-full sm:w-auto border border-gray-200/60"
-                >
-                  Track Shipment
-                </Link>
-              </div>
             </div>
 
             <div className="bg-gradient-to-br from-orange-50/80 via-orange-50/40 to-amber-50/30 rounded-2xl p-5 sm:p-8 border border-orange-100 mt-2 lg:mt-0">
@@ -151,6 +143,92 @@ export default function AboutPage() {
               </ul>
             </div>
           </div>
+        </div>
+
+        {/* Legal & Registrations Section */}
+        <section
+          aria-labelledby="legal-registrations-heading"
+          className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-10 shadow-[0_4px_24px_rgba(249,115,22,0.05)] hover:shadow-md border border-orange-100/70 transition-all duration-300 mb-8 sm:mb-10"
+        >
+          <div className="w-10 h-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full mb-3" />
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+            <div className="max-w-3xl">
+              <h2
+                id="legal-registrations-heading"
+                className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 tracking-tight"
+              >
+                Legal &amp; Registrations
+              </h2>
+              <p className="text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed mb-3">
+                KSR Shipping Services is a registered business holding GST registration, an Importer Exporter Code (IEC) and business registration certificates. Copies are available on request.
+              </p>
+              <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
+                Operating continuously from Begumpet, Hyderabad since 2003, we maintain strict statutory compliance across all domestic transport and overseas express courier consignments.
+              </p>
+
+              {(Boolean(business.legal.gstin) || Boolean(business.legal.iecNumber) || Boolean(business.legal.registrationNumber)) && (
+                <div className="flex flex-wrap items-center gap-3 pt-3">
+                  {business.legal.gstin ? (
+                    <div className="px-3 py-1.5 rounded-xl bg-orange-50/70 border border-orange-100 text-xs font-semibold text-gray-800">
+                      <span className="text-gray-500 font-normal">GSTIN: </span>{business.legal.gstin}
+                    </div>
+                  ) : null}
+                  {business.legal.iecNumber ? (
+                    <div className="px-3 py-1.5 rounded-xl bg-orange-50/70 border border-orange-100 text-xs font-semibold text-gray-800">
+                      <span className="text-gray-500 font-normal">IEC: </span>{business.legal.iecNumber}
+                    </div>
+                  ) : null}
+                  {business.legal.registrationNumber ? (
+                    <div className="px-3 py-1.5 rounded-xl bg-orange-50/70 border border-orange-100 text-xs font-semibold text-gray-800">
+                      <span className="text-gray-500 font-normal">{business.legal.registrationType || "Registration No."}: </span>{business.legal.registrationNumber}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {business.legal.certificatesAvailableOnRequest ? (
+                <div className="pt-4">
+                  <a
+                    href={requestCertificatesUrl}
+                    target={whatsappDigits ? "_blank" : undefined}
+                    rel={whatsappDigits ? "noopener noreferrer" : undefined}
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline transition-colors group"
+                  >
+                    <span>Request certificates</span>
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  </a>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex sm:flex-col items-center sm:items-end justify-start gap-2 shrink-0 pt-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50/80 border border-orange-200/60 text-[11px] sm:text-xs font-semibold text-orange-800">
+                <ShieldCheck className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                <span>Verified Documentation</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200/70 text-[11px] sm:text-xs font-medium text-gray-600">
+                <Clock className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                <span>Since 2003 · Hyderabad</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Action CTAs */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10 sm:mb-14">
+          <Link
+            href="/get-quotation"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-300 hover:-translate-y-0.5 text-sm active:translate-y-0 w-full sm:w-auto"
+          >
+            Request a Quote
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/track"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-gray-100 text-gray-800 font-bold transition-all hover:-translate-y-0.5 text-sm active:translate-y-0 w-full sm:w-auto border border-gray-200 shadow-sm"
+          >
+            Track Shipment
+          </Link>
         </div>
 
         {/* Capabilities Grid */}
