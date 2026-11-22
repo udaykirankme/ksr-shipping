@@ -1,6 +1,7 @@
 export const business = {
   name: "KSR Shipping Services - A Courier Service",
   logoUrl: "/logo.png",
+  logoSquareUrl: "/logo-square.png",
   siteUrl: "https://www.ksrshipping.com",
   locality: "Begumpet",
   region: "Telangana",

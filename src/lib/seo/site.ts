@@ -34,6 +34,7 @@ export const PUBLIC_ROUTES = [
 
 export const SITEMAP_IMAGES = [
   { path: "/logo.png", title: `${business.name} Logo` },
+  { path: "/logo-square.png", title: `${business.name} Square Logo` },
   { path: "/international_courier.png", title: "International Courier Service" },
   { path: "/domestic_courier.png", title: "Domestic Courier Service" },
   { path: "/medicine_shipping.png", title: "Medicine Shipping Service" },
