@@ -27,8 +27,8 @@ export default function CommercialShippingPage() {
       desc: "Guidance on GST invoices, packing lists, Importer Exporter Code (IEC) declarations, and customs formalities.",
     },
     {
-      title: "Flexible Freight Modes",
-      desc: "Choose between air freight for rapid delivery or surface cargo for economical distribution of heavier consignments.",
+      title: "Flexible Shipping Modes",
+      desc: "Choose between air courier for rapid delivery or surface cargo for economical distribution of heavier consignments.",
     },
   ];
 
@@ -72,7 +72,7 @@ export default function CommercialShippingPage() {
               Commercial Cargo & B2B <span className="text-orange-500">Shipping</span>
             </h1>
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-6">
-              Scalable commercial freight and bulk courier solutions for Hyderabad businesses. Warehouse collections, scheduled dispatches, and multi-modal logistics across India and worldwide.
+              Scalable commercial and bulk courier solutions for Hyderabad businesses. Warehouse collections, scheduled dispatches, and multi-modal logistics across India and worldwide.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -133,7 +133,7 @@ export default function CommercialShippingPage() {
         <div className="rounded-3xl bg-gradient-to-r from-orange-500 to-orange-600 p-8 sm:p-10 text-white text-center shadow-lg">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3 tracking-tight">Expand Your Commercial Distribution</h2>
           <p className="text-orange-100 text-sm sm:text-base max-w-xl mx-auto mb-6">
-            Partner with KSR Shipping Services for reliable domestic cargo dispatches and international freight forwarding from Hyderabad.
+            Partner with KSR Shipping Services for reliable domestic cargo dispatches and international courier dispatches from Hyderabad.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link

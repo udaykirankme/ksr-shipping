@@ -1,7 +1,7 @@
 export const business = {
   name: "KSR Shipping Services - A Courier Service",
   logoUrl: "/logo.png",
-  siteUrl: "https://ksrshipping.com",
+  siteUrl: "https://www.ksrshipping.com",
   locality: "Begumpet",
   region: "Telangana",
   country: "IN",
@@ -26,7 +26,7 @@ export const business = {
   },
   seo: {
     defaultTitle: "KSR Shipping Services - Best Courier Services Hyderabad",
-    defaultDescription: "Reliable and fast courier services in Hyderabad. 100% Free Pickup & Packing. High-quality food-grade materials used. Affordable domestic and international shipping.",
+    defaultDescription: "Reliable courier services in Hyderabad with free doorstep pickup and packing. Quality packaging, fast domestic and international parcel delivery.",
     keywords: [
       "courier service hyderabad", 
       "international shipping hyderabad",

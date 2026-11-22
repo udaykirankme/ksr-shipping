@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronDown, MessageCircleQuestion } from "lucide-react";
 import Link from "next/link";
 
@@ -70,26 +70,28 @@ export default function FAQPage() {
                    </motion.div>
                  </button>
 
-                 <AnimatePresence initial={false}>
-                   {isOpen && (
-                     <motion.div
-                       initial={{ height: 0, opacity: 0 }}
-                       animate={{ height: "auto", opacity: 1 }}
-                       exit={{ height: 0, opacity: 0 }}
-                       transition={{ duration: 0.3, ease: "easeInOut" }}
-                       className="overflow-hidden"
-                     >
-                       <div
-                         id={`faq-panel-${i}`}
-                         role="region"
-                         aria-labelledby={`faq-button-${i}`}
-                         className="p-6 pt-0 text-gray-600 leading-relaxed"
-                       >
-                         {faq.answer}
-                       </div>
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
+                 <motion.div
+                   initial={false}
+                   animate={{
+                     height: isOpen ? "auto" : 0,
+                     opacity: isOpen ? 1 : 0,
+                   }}
+                   transition={{ duration: 0.3, ease: "easeInOut" }}
+                   className="overflow-hidden"
+                   style={{
+                     height: isOpen ? "auto" : 0,
+                     opacity: isOpen ? 1 : 0,
+                   }}
+                 >
+                   <div
+                     id={`faq-panel-${i}`}
+                     role="region"
+                     aria-labelledby={`faq-button-${i}`}
+                     className="p-6 pt-0 text-gray-600 leading-relaxed"
+                   >
+                     {faq.answer}
+                   </div>
+                 </motion.div>
                </motion.div>
              );
            })}

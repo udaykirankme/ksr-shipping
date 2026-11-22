@@ -55,5 +55,6 @@ Thumbs.db
 *.tsbuildinfo
 check_*.mjs
 scratch*
+_debug_*
   
  

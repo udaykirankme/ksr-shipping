@@ -70,6 +70,8 @@ export function Footer() {
               <li><Link href="/services/fragile-shipping" className="hover:text-orange-500 transition-colors">Fragile Shipping</Link></li>
               <li><Link href="/services/document-shipping" className="hover:text-orange-500 transition-colors">Document Delivery</Link></li>
               <li><Link href="/services/commercial-shipping" className="hover:text-orange-500 transition-colors">Commercial Shipping</Link></li>
+              <li><Link href="/services/shipment-insurance" className="hover:text-orange-500 transition-colors">Shipment Insurance</Link></li>
+              <li><Link href="/services/free-packing-and-pickup" className="hover:text-orange-500 transition-colors">Free Packing &amp; Pickup</Link></li>
             </ul>
           </nav>
 

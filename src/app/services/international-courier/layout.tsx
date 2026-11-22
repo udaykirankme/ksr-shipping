@@ -5,7 +5,13 @@ import { buildIndividualServiceSchema } from "@/lib/seo/schema";
 
 const seo = pageSeo.internationalCourier;
 
-export const metadata: Metadata = createSeoMetadata(seo);
+export const metadata: Metadata = {
+  ...createSeoMetadata(seo),
+  title: {
+    default: seo.title,
+    template: "%s | KSR Shipping Services",
+  },
+};
 
 export default function InternationalCourierLayout({ children }: { children: React.ReactNode }) {
   const serviceSchema = buildIndividualServiceSchema({

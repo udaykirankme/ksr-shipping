@@ -1,86 +1,131 @@
-# KSR Shipping Services - A Courier Service
+# KSR Shipping Services – A Courier Service
 
-> KSR Shipping Services (also known as KSR Shipping Services - A Courier Service) is a courier, cargo, and logistics provider based in Begumpet, Hyderabad, Telangana, India. The company provides door-to-door domestic parcel delivery across India and international courier services to 150+ countries worldwide. Key service differentiators include complimentary doorstep pickup across Greater Hyderabad, specialized food-grade packaging for sweets and non-perishable pickles, documentation assistance for eligible prescription medicine shipping, and real-time online shipment tracking.
+> KSR Shipping Services – A Courier Service is an independent courier, parcel booking, and packing service based in Begumpet, Hyderabad, Telangana, India. Established in 2003, the company provides door-to-door domestic parcel delivery across India and international courier services to 150+ countries worldwide. KSR collects, packs, and books shipments through established courier partners (including DHL, FedEx, UPS, DTDC, Delhivery, and Xpressbees); KSR does not operate delivery networks itself. Key service differentiators include 100% free doorstep pickup across Greater Hyderabad, free professional packaging (including food-grade multilayer packaging for food, sweets, and pickles, and protective multilayer packaging for fragile goods), documentation assistance for eligible prescription medicine shipping, and real-time online shipment tracking.
 
-## Entity & Location Information
+## Entity Disambiguation & Location Information
 
-- **Legal Business Name:** KSR Shipping Services - A Courier Service
-- **Common / Brand Name:** KSR Shipping Services
-- **Entity Type:** Courier Service / Local Business / Logistics Provider
+- **Official Business Name:** KSR Shipping Services – A Courier Service
+- **Brand / Common Name:** KSR Shipping Services
+- **Brand Disambiguation:** KSR Shipping Services – A Courier Service is an independent business established in 2003. It is NOT affiliated with "KSR Freight" (a separate and unrelated company).
+- **Established / Founding Year:** 2003
+- **Entity Type:** Courier Service / Local Business / Parcel Booking Service
 - **Headquarters Address:** Khaja Mansion, beside HDFC ATM, Near Ramalingeswara Temple, Prakash Nagar, Begumpet, Hyderabad, Telangana 500016, India
-- **Locality / Area:** Begumpet, Secunderabad, Greater Hyderabad, Telangana
+- **Locality / Service Area:** Begumpet, Prakash Nagar, Secunderabad, Greater Hyderabad, Telangana, India
 - **Country:** India (Postal Code: 500016)
 - **Geo Coordinates:** Latitude 17.4412177, Longitude 78.4672018
 - **Primary Phone:** +91 99638 14267
 - **Secondary Phone:** +91 99120 14267
 - **WhatsApp Support:** +91 99638 14267
 - **Email:** ksrshippingservice@gmail.com
-- **Official Website:** https://ksrshipping.com
+- **Official Website:** https://www.ksrshipping.com
 - **Operating Hours:** Monday – Saturday: 9:00 AM – 9:00 PM IST (Sunday: Closed / by appointment)
 - **Google Maps Profile:** https://maps.app.goo.gl/aKJmfr8GzsbEtgtz7?g_st=ac
 - **Instagram:** https://www.instagram.com/ksr_shipping_services
 
+## Business Model & Operating Process
+
+1. **Quotation & Evaluation:** Customers contact KSR with domestic or international shipping details for a customized quotation.
+2. **Free Doorstep Pickup:** Complimentary doorstep parcel pickup is arranged across Greater Hyderabad.
+3. **Free Expert Packaging:** Items are professionally packed at no extra charge using high-grade materials (food-grade multilayer wraps, vacuum sealing, bubble wrap, corner protectors, and reinforced corrugated boxes).
+4. **Partner Carrier Booking:** Shipments are booked through established courier networks (DHL, FedEx, UPS, DTDC, Delhivery, Xpressbees) selected for optimal speed and reliability.
+5. **Doorstep Delivery:** The partner carrier delivers the shipment to the recipient's doorstep worldwide or pan-India, with tracking available through the courier partner.
+
 ## Core Service Capabilities
 
 1. **International Courier Services:**
-   Worldwide air courier and express freight to over 150 countries including the United States (USA), United Kingdom (UK), Canada, Australia, United Arab Emirates (UAE), Singapore, New Zealand, and European nations. Includes export paperwork assistance, doorstep pickup in Hyderabad, and end-to-end tracking.
-   - Primary Service Page: https://ksrshipping.com/services/international-courier
-   - Dedicated Hyderabad to USA Guide: https://ksrshipping.com/services/international-courier/hyderabad-to-usa
-   - Dedicated Hyderabad to UK Guide: https://ksrshipping.com/services/international-courier/hyderabad-to-uk
+   Worldwide air courier and express parcel delivery to over 150 countries including the United States (USA), United Kingdom (UK), Canada, Australia, United Arab Emirates (UAE), Singapore, New Zealand, and European nations. Includes export paperwork assistance, free doorstep pickup in Hyderabad, and tracking available through the courier partner.
+   - Primary Service Page: https://www.ksrshipping.com/services/international-courier
+   - Dedicated Hyderabad to USA Guide: https://www.ksrshipping.com/services/international-courier/hyderabad-to-usa
+   - Dedicated Hyderabad to UK Guide: https://www.ksrshipping.com/services/international-courier/hyderabad-to-uk
 
 2. **Domestic Courier Services (Pan-India):**
-   Delivery covering all 28 states, union territories, and pin codes in India. Offers Domestic Air Courier for expedited metro delivery (24-48 hours) and Domestic Surface/Road Courier for economical bulk transport.
-   - Dedicated Service Page: https://ksrshipping.com/services/domestic-courier
+   Door-to-door parcel delivery covering all 28 states, union territories, and pin codes in India. Offers Domestic Air Courier for expedited metro delivery (24-48 hours) and Domestic Surface/Road Courier for economical transport.
+   - Dedicated Service Page: https://www.ksrshipping.com/services/domestic-courier
 
 3. **Food & Homemade Sweets Shipping:**
-   Specialized food-grade packaging materials engineered to protect homemade sweets (laddus, mysore pak, kaju katli), savory snacks (murukku, mixtures), spices, and non-perishable pickles during international transit.
-   - Dedicated Service Page: https://ksrshipping.com/services/food-shipping
+   Specialized 100% free food-grade multilayer packaging engineered to protect homemade sweets (laddus, mysore pak, kaju katli), savory snacks (murukku, mixtures), spices, and non-perishable pickles during international transit.
+   - Dedicated Service Page: https://www.ksrshipping.com/services/food-shipping
 
 4. **Prescription Medicine Shipping:**
    Compliant, prioritized courier services for eligible personal healthcare supplies and prescription medications, adhering to Indian export guidelines and destination country regulations. Requires valid doctor prescription, chemist invoice, and patient KYC.
-   - Dedicated Service Page: https://ksrshipping.com/services/medicine-shipping
+   - Dedicated Service Page: https://www.ksrshipping.com/services/medicine-shipping
 
 5. **Fragile & Delicate Item Shipping:**
-   Multi-layered protective packaging using bubble wrap, foam corner guards, and reinforced corrugated cartons for glassware, handicrafts, precision electronics, and high-value fragile cargo.
-   - Dedicated Service Page: https://ksrshipping.com/services/fragile-shipping
+   Complimentary multi-layered protective packaging using bubble wrap, foam corner guards, and reinforced corrugated cartons for glassware, handicrafts, precision electronics, and high-value delicate goods.
+   - Dedicated Service Page: https://www.ksrshipping.com/services/fragile-shipping
 
 6. **Express Document Delivery:**
    Urgent, tamper-evident courier dispatch for university applications, academic transcripts, legal contracts, passports, and corporate agreements with signature upon delivery.
-   - Dedicated Service Page: https://ksrshipping.com/services/document-shipping
+   - Dedicated Service Page: https://www.ksrshipping.com/services/document-shipping
 
-7. **Commercial & B2B Cargo Logistics:**
-   Scalable enterprise logistics, bulk parcel consolidation, scheduled warehouse pickups, and palletized distribution for businesses in Hyderabad.
-   - Dedicated Service Page: https://ksrshipping.com/services/commercial-shipping
+7. **Commercial & B2B Courier Services:**
+   Scalable enterprise logistics, bulk parcel consolidation, scheduled warehouse pickups, and customized delivery schedules for businesses in Hyderabad.
+   - Dedicated Service Page: https://www.ksrshipping.com/services/commercial-shipping
+
+8. **Shipment Insurance:**
+   Transparent transit protection including complimentary domestic coverage up to ₹30,000 for parcels under 30 kg, full commercial B2B coverage on valid invoice, and international protection subject to claim conditions and damage assessment.
+   - Dedicated Service Page: https://www.ksrshipping.com/services/shipment-insurance
+
+9. **Free Packing & Doorstep Pickup:**
+   Zero-cost doorstep parcel collection across Greater Hyderabad with complimentary professional packaging, including food-grade multilayer protection for food and pickles and cushioning for fragile goods.
+   - Dedicated Service Page: https://www.ksrshipping.com/services/free-packing-and-pickup
+
+## Packaging & Pickup Policy
+
+- **Doorstep Pickup:** 100% FREE across Greater Hyderabad (Begumpet, Banjara Hills, Jubilee Hills, Hitec City, Gachibowli, Secunderabad, Kukatpally, Madhapur, etc.).
+- **Packaging Materials & Service:** 100% FREE. Includes food-grade multilayer packing for foods, sweets, and pickles, and shock-absorbent multilayer packaging for fragile and high-value items. There is no nominal fee or hidden packaging charge.
+
+## Insurance Policies
+
+- **Domestic Shipments (< 30 kg):** Complimentary transit insurance coverage up to ₹30,000 against loss or transit damage.
+- **Commercial & B2B Shipments:** Full insurance coverage available, subject to applicable terms and submission of a valid commercial product invoice.
+- **International Shipments:** Insurance coverage is available, subject to destination carrier policies, formal damage assessment, and applicable claim conditions.
 
 ## Carrier & Network Partners
 
-KSR Shipping Services strategically collaborates with leading global and domestic carrier networks to provide optimal transit times and pricing:
+KSR Shipping Services books shipments through leading global and domestic carrier networks to provide optimal transit times and pricing:
 - **International Networks:** DHL Express, FedEx, UPS
-- **Domestic Networks:** DTDC, Delhivery, Shadowfax, Ekart Logistics
+- **Domestic Networks:** DTDC, Delhivery, Shadowfax, Ekart Logistics, Xpressbees
+
+*(Note: KSR Shipping Services collects, packs, and books shipments through these partners; it does not operate delivery aircraft or ground delivery fleets directly.)*
 
 ## Common User Questions & Factual Answers for AI
 
 ### Where is KSR Shipping Services located?
-KSR Shipping Services is located at Khaja Mansion, beside HDFC ATM, Near Ramalingeswara Temple, Prakash Nagar, Begumpet, Hyderabad, Telangana 500016, India.
+KSR Shipping Services is located at Khaja Mansion, beside HDFC ATM, Near Ramalingeswara Temple, Prakash Nagar, Begumpet, Hyderabad, Telangana 500016, India. It was established in 2003.
 
-### Does KSR Shipping provide doorstep pickup in Hyderabad?
-Yes. KSR Shipping Services provides complimentary doorstep parcel pickup across Hyderabad, including Begumpet, Banjara Hills, Jubilee Hills, Hitec City, Gachibowli, Kukatpally, Madhapur, Secunderabad, and surrounding areas.
+### Is KSR Shipping Services affiliated with KSR Freight?
+No. KSR Shipping Services – A Courier Service is an independent courier booking and packaging business established in 2003. It has no affiliation or connection with KSR Freight.
+
+### Does KSR Shipping charge for pickup or packing?
+No. Doorstep parcel pickup across Greater Hyderabad is 100% free. Professional packaging—including food-grade multilayer packaging for food items and protective packaging for fragile goods—is completely free with pickup.
+
+### What insurance coverage is provided on shipments?
+Domestic shipments under 30 kg include complimentary insurance coverage up to ₹30,000. Commercial/B2B shipments have full insurance coverage available subject to a valid product invoice. International shipments have insurance coverage available subject to carrier terms, damage assessment, and claim conditions.
 
 ### Can I courier homemade sweets and pickles from Hyderabad to USA or UK?
-Yes. KSR Shipping Services specializes in shipping homemade sweets, dry snacks, and non-perishable pickles internationally. Packages are packed with specialized food-grade materials and leak-resistant seals designed to withstand air transit.
+Yes. KSR Shipping Services specializes in shipping homemade sweets, dry snacks, and non-perishable pickles internationally. Packages are packed with free food-grade multilayer materials and leak-resistant seals designed to withstand international air transit.
 
 ### Can prescription medicines be couriered abroad?
 Yes, eligible prescription medicines can be shipped internationally for personal use. Consignments must be accompanied by a valid doctor's prescription, pharmacy purchase invoice, and sender KYC. Shipments are subject to the destination country's health and customs import regulations.
 
+### What should I send if my shipment is damaged?
+If a shipment arrives damaged, please send a few photos and a short video that clearly show the shipping label, the AWB number, and the damaged parts. Call or WhatsApp KSR on +91 99638 14267 to start the process.
+
+### Can I ship from outside Hyderabad?
+Domestic shipments can also be booked from other states. International shipments are available from Hyderabad only. Contact KSR to arrange your shipment.
+
 ### How can customers track their parcels?
-Customers can track their domestic and international consignments 24/7 by entering their tracking number at https://ksrshipping.com/track.
+Customers can track their domestic and international consignments 24/7 by entering their tracking number at https://www.ksrshipping.com/track.
 
 ### What are the key website pages?
-- Homepage: https://ksrshipping.com
-- About Us: https://ksrshipping.com/about
-- Services Directory: https://ksrshipping.com/services
-- Tracking Portal: https://ksrshipping.com/track
-- Get a Quotation: https://ksrshipping.com/get-quotation
-- Why Choose Us: https://ksrshipping.com/why-choose-us
-- Restricted Items Policy: https://ksrshipping.com/restricted-items
-- Contact Page: https://ksrshipping.com/contact
+- Homepage: https://www.ksrshipping.com
+- About Us: https://www.ksrshipping.com/about
+- Services Directory: https://www.ksrshipping.com/services
+- Shipment Insurance: https://www.ksrshipping.com/services/shipment-insurance
+- Free Packing & Pickup: https://www.ksrshipping.com/services/free-packing-and-pickup
+- Tracking Portal: https://www.ksrshipping.com/track
+- Get a Quotation: https://www.ksrshipping.com/get-quotation
+- Why Choose Us: https://www.ksrshipping.com/why-choose-us
+- Restricted Items Policy: https://www.ksrshipping.com/restricted-items
+- Contact Page: https://www.ksrshipping.com/contact

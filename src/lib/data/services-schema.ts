@@ -21,6 +21,13 @@ export const SERVICE_SCHEMA_ITEMS: ServiceSchemaItem[] = [
     image: "/domestic_courier.png",
   },
   {
+    id: "food-shipping",
+    title: "Food & Homemade Sweets Shipping",
+    overview:
+      "Specialized food-grade packaging designed to reduce transit damage and maintain hygiene for homemade sweets, snacks, pickles, and dry spices sent from Hyderabad to the USA, UK, Canada, Australia, and worldwide.",
+    image: "/bg.png",
+  },
+  {
     id: "medicine-shipping",
     title: "Medicine Shipping",
     overview:
@@ -47,5 +54,19 @@ export const SERVICE_SCHEMA_ITEMS: ServiceSchemaItem[] = [
     overview:
       "B2B logistics tailored for scale. Bulk shipment solutions, warehouse pickups, regular dispatch scheduling, and discounted corporate rates.",
     image: "/commercial_shipping.png",
+  },
+  {
+    id: "shipment-insurance",
+    title: "Shipment Insurance",
+    overview:
+      "Clear transit insurance for domestic, commercial and international shipments booked through established courier partners.",
+    image: "/shipment insurance.png",
+  },
+  {
+    id: "free-packing-and-pickup",
+    title: "Free Packing & Doorstep Pickup",
+    overview:
+      "Convenient zero-cost doorstep collection and expert packing in standard cartons, multi-layer leak-proof wraps for food and pickles, and shock cushioning for fragile items.",
+    image: "/free packing.png",
   },
 ];

@@ -37,7 +37,7 @@ export const FAQS: FaqItem[] = [
   {
     question: "Do you provide packaging materials?",
     answer:
-      "We provide standard packaging materials like courier flyers and boxes for free. For specialized needs like fragile item packing or food-grade packing, we offer professional packaging services for a nominal fee to ensure the utmost safety.",
+      "Yes. Professional packaging—including specialized food-grade multilayer packing for homemade sweets and pickles, as well as protective packaging for fragile items—is completely free with our complimentary doorstep pickup service across Hyderabad.",
   },
   {
     question: "Can I ship medicines internationally?",
@@ -47,7 +47,7 @@ export const FAQS: FaqItem[] = [
   {
     question: "Is there insurance for my shipments?",
     answer:
-      "Basic liability coverage is included for all shipments. For high-value items, we strongly recommend purchasing additional transit insurance, which we can arrange at the time of booking for complete peace of mind.",
+      "Yes. Domestic shipments under 30 kg include complimentary transit insurance coverage up to ₹30,000. For commercial and B2B consignments, comprehensive insurance is available and may require a valid product invoice. For international shipments, insurance is available subject to destination damage assessment and applicable claim conditions.",
   },
   {
     question: "What should I do if my shipment is delayed?",

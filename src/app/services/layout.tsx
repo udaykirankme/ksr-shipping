@@ -6,7 +6,13 @@ import { buildServiceCatalogSchema } from "@/lib/seo/schema";
 
 const seo = pageSeo.services;
 
-export const metadata: Metadata = createSeoMetadata(seo);
+export const metadata: Metadata = {
+  ...createSeoMetadata(seo),
+  title: {
+    default: seo.title,
+    template: "%s | KSR Shipping Services",
+  },
+};
 
 export default function ServicesLayout({ children }: { children: React.ReactNode }) {
   return (

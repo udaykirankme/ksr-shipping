@@ -65,7 +65,7 @@ export default function WhyChooseUsPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16 divide-x divide-orange-200">
                <div className="flex flex-col items-center">
                   <div className="text-4xl md:text-5xl font-black text-orange-500 mb-2">
-                    15+
+                    20+
                   </div>
                   <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Years Experience</div>
                </div>
@@ -83,9 +83,9 @@ export default function WhyChooseUsPage() {
                </div>
                <div className="flex flex-col items-center">
                   <div className="text-4xl md:text-5xl font-black text-orange-500 mb-2">
-                    99.5%
+                    100%
                   </div>
-                  <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">On-Time Delivery</div>
+                  <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Free Pickup & Packing</div>
                </div>
             </div>
             

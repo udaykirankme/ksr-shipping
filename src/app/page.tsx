@@ -193,7 +193,7 @@ export default function Home() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">
-                15+
+                20+
               </div>
               <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Years Experience</div>
             </div>
@@ -220,9 +220,9 @@ export default function Home() {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div className="text-2xl sm:text-3xl font-black text-gray-900 mb-1">
-                99.5%
+                100%
               </div>
-              <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">On-Time Delivery</div>
+              <div className="text-gray-600 font-medium text-xs sm:text-sm uppercase tracking-wider">Free Pickup & Packing</div>
             </div>
           </div>
         </div>

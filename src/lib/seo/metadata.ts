@@ -11,7 +11,7 @@ export type PageSeoConfig = {
   ogType?: "website" | "article";
 };
 
-const DEFAULT_OG_IMAGE = "/logo.png";
+const DEFAULT_OG_IMAGE = "/og-image.png";
 
 export function createPageMetadata({
   title,
@@ -58,8 +58,8 @@ export function createPageMetadata({
       images: [
         {
           url: ogImage,
-          width: 512,
-          height: 512,
+          width: 1200,
+          height: 630,
           alt: `${SITE_NAME} — Courier Services in Hyderabad`,
         },
       ],
@@ -90,7 +90,7 @@ export const rootMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: business.seo.defaultTitle,
-    template: `%s | ${SITE_NAME}`,
+    template: `%s | KSR Shipping Services`,
   },
   description: business.seo.defaultDescription,
   keywords: business.seo.keywords,

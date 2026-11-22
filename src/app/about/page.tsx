@@ -80,7 +80,7 @@ export default function AboutPage() {
           {/* Subtitle */}
           <p className="text-sm sm:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto mb-4 sm:mb-5 px-1">
             Headquartered in Begumpet, Hyderabad, KSR Shipping Services provides comprehensive international courier, 
-            pan-India domestic cargo, and specialized packaging solutions tailored for families, students, and businesses.
+            pan-India domestic cargo, and specialized packaging solutions tailored for families, individuals, and businesses.
           </p>
 
           {/* Mobile & Desktop Quick Value Badges */}

@@ -49,7 +49,7 @@ export default function DomesticCourierPage() {
     },
     {
       q: "What is the difference between Air and Surface domestic courier?",
-      a: "Domestic Air Courier uses commercial air freight for the fastest delivery (typically 1 to 2 business days to major metros). Domestic Surface Courier travels via road or rail network and offers substantial cost savings for bulk and heavier consignments.",
+      a: "Domestic Air Courier uses commercial air cargo for the fastest delivery (typically 1 to 2 business days to major metros). Domestic Surface Courier travels via road or rail network and offers substantial cost savings for bulk and heavier consignments.",
     },
     {
       q: "Which courier delivery partners do you work with for domestic shipping?",

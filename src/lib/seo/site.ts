@@ -1,7 +1,7 @@
 import { business } from "@/lib/config";
 
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://ksrshipping.com";
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://www.ksrshipping.com";
 
 export const SITE_NAME = business.name;
 export const THEME_COLOR = "#FF6A00";
@@ -20,6 +20,8 @@ export const PUBLIC_ROUTES = [
   { path: "/services/fragile-shipping", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/services/document-shipping", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/services/commercial-shipping", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/services/shipment-insurance", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/services/free-packing-and-pickup", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/get-quotation", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/track", priority: 0.9, changeFrequency: "weekly" as const },
   { path: "/why-choose-us", priority: 0.8, changeFrequency: "monthly" as const },
@@ -39,6 +41,8 @@ export const SITEMAP_IMAGES = [
   { path: "/fragile_shipping.png", title: "Fragile Shipping Service" },
   { path: "/express_document_delivery.png", title: "Express Document Delivery" },
   { path: "/commercial_shipping.png", title: "Commercial Shipping Service" },
+  { path: "/shipment insurance.png", title: "Shipment Insurance Service" },
+  { path: "/free packing.png", title: "Free Packing & Doorstep Pickup" },
   { path: "/bg.png", title: `${business.name} Hero Illustration` },
 ];
 

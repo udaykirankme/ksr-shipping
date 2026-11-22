@@ -49,7 +49,7 @@ export function getSameAsLinks(): string[] {
     business.social.youtube,
     business.googleMapsUrl,
     business.googleReviewUrl,
-  ].filter(Boolean);
+  ].filter((link): link is string => typeof link === "string" && link.trim().length > 0);
 }
 
 export function buildOrganizationSchema() {
@@ -57,6 +57,10 @@ export function buildOrganizationSchema() {
     "@type": "Organization",
     "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    legalName: "KSR Shipping Services – A Courier Service",
+    foundingDate: "2003",
+    disambiguatingDescription:
+      "Independent courier booking and packing service in Begumpet, Hyderabad, established in 2003. Not affiliated with KSR Freight.",
     url: SITE_URL,
     logo: {
       "@type": "ImageObject",
@@ -87,6 +91,10 @@ export function buildLocalBusinessSchema() {
     "@type": ["LocalBusiness", "CourierService"],
     "@id": `${SITE_URL}/#localbusiness`,
     name: SITE_NAME,
+    legalName: "KSR Shipping Services – A Courier Service",
+    foundingDate: "2003",
+    disambiguatingDescription:
+      "Independent courier booking and packing service in Begumpet, Hyderabad, established in 2003. Not affiliated with KSR Freight.",
     url: SITE_URL,
     image: absoluteUrl(business.logoUrl),
     logo: absoluteUrl(business.logoUrl),
@@ -114,6 +122,7 @@ export function buildLocalBusinessSchema() {
       { "@type": "Country", name: "UAE" },
       { "@type": "Country", name: "Singapore" },
       { "@type": "Country", name: "New Zealand" },
+      { "@type": "Continent", name: "Europe" },
     ],
     parentOrganization: { "@id": `${SITE_URL}/#organization` },
     knowsAbout: [
@@ -125,7 +134,7 @@ export function buildLocalBusinessSchema() {
       "Urgent Healthcare Logistics",
       "Fragile and Electronics Item Packaging",
       "Confidential Legal Document and Passport Delivery",
-      "Commercial and B2B Freight Logistics",
+      "Commercial and B2B Courier Services",
       "Customs Clearance and International Documentation",
       "Real-Time Parcel Tracking",
       "Affordable Courier to USA, UK, Canada, Australia, UAE, Singapore, Europe",
@@ -216,6 +225,28 @@ export function buildFaqPageSchema(faqs: FaqItem[]) {
   };
 }
 
+const INDIAN_STATES = new Set([
+  "Telangana",
+  "Andhra Pradesh",
+  "Karnataka",
+  "Tamil Nadu",
+  "Maharashtra",
+  "Delhi",
+]);
+
+export function formatAreaServed(name: string) {
+  if (name === "Hyderabad") {
+    return { "@type": "City" as const, name };
+  }
+  if (INDIAN_STATES.has(name)) {
+    return { "@type": "AdministrativeArea" as const, name };
+  }
+  if (name === "Europe") {
+    return { "@type": "Continent" as const, name };
+  }
+  return { "@type": "Country" as const, name };
+}
+
 export type ServiceSchemaItem = {
   id: string;
   title: string;
@@ -255,22 +286,28 @@ export const DEFAULT_SERVICES_SCHEMA: ServiceSchemaItem[] = [
     image: "/commercial_shipping.png",
   },
   {
-    id: "document-shipping",
+    id: "document-delivery",
     title: "Express Document Delivery",
     overview: "Confidential, tamper-evident, and urgent courier delivery of legal documents, passports, contracts, and business certificates with signature upon delivery.",
     image: "/express_document_delivery.png",
   },
   {
-    id: "food-grade-packing",
-    title: "Premium Food-Grade Packing for Sweets, Snacks & Pickles",
-    overview: "Specialized, certified food-grade packaging materials engineered to keep homemade treats, traditional sweets, spices, and pickles fresh, hygienic, and leak-proof during international transit.",
+    id: "food-shipping",
+    title: "Food & Homemade Sweets Shipping",
+    overview: "Specialized food-grade packaging designed to reduce transit damage and maintain hygiene for homemade sweets, snacks, pickles, and dry spices sent from Hyderabad to the USA, UK, Canada, Australia, and worldwide.",
     image: "/bg.png",
   },
   {
-    id: "free-doorstep-pickup",
-    title: "100% Free Doorstep Courier Pickup",
-    overview: "Convenient, zero-cost doorstep collection directly from your home or office in Hyderabad and surrounding areas, eliminating branch queues.",
-    image: "/bg.png",
+    id: "shipment-insurance",
+    title: "Shipment Insurance",
+    overview: "Clear transit insurance for domestic, commercial and international shipments booked through established courier partners.",
+    image: "/shipment insurance.png",
+  },
+  {
+    id: "free-packing-and-pickup",
+    title: "Free Packing & Doorstep Pickup",
+    overview: "Convenient zero-cost doorstep collection and expert packing in standard cartons, multi-layer leak-proof wraps for food and pickles, and shock cushioning for fragile items.",
+    image: "/free packing.png",
   },
 ];
 
@@ -288,7 +325,19 @@ export function buildServiceCatalogSchema(services: ServiceSchemaItem[] = DEFAUL
         description: service.overview,
         image: absoluteUrl(service.image),
         provider: { "@id": `${SITE_URL}/#localbusiness` },
-        areaServed: ["Hyderabad", "Telangana", "India", "USA", "UK", "Canada", "Australia", "UAE", "Singapore", "New Zealand", "Europe"],
+        areaServed: [
+          "Hyderabad",
+          "Telangana",
+          "India",
+          "USA",
+          "UK",
+          "Canada",
+          "Australia",
+          "UAE",
+          "Singapore",
+          "New Zealand",
+          "Europe",
+        ].map(formatAreaServed),
         serviceType: service.title,
       },
     })),
@@ -412,10 +461,7 @@ export function buildIndividualServiceSchema({
     url,
     serviceType: serviceType || title,
     provider: { "@id": `${SITE_URL}/#localbusiness` },
-    areaServed: areaServed.map((name) => ({
-      "@type": name === "Hyderabad" ? "City" : "Country",
-      name,
-    })),
+    areaServed: areaServed.map(formatAreaServed),
     ...(image ? { image: absoluteUrl(image) } : {}),
   };
 }
@@ -429,7 +475,6 @@ export function buildGlobalSchemaGraph() {
       buildWebSiteSchema(),
       buildServiceCatalogSchema(),
       buildWhyChooseUsItemListSchema(),
-      buildHomeFaqSchema(),
       ...buildSiteNavigationSchema(),
     ],
   };

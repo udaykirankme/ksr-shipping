@@ -34,7 +34,7 @@ const SERVICES: Service[] = [
     image: "/international_courier.png",
     overview: "Seamless global shipping to over 150 countries. We handle all customs documentation, international routing, and clearance to ensure your package arrives without delays or unexpected fees.",
     benefits: ["Free Customs Clearance Assistance", "Door-to-door Real-time Tracking", "Express & Economy Delivery Options"],
-    features: ["Supported Types: Documents, Parcels, Freight", "Delivery: 3-7 Business Days globally", "Free Doorstep Pickup Available"],
+    features: ["Supported Types: Documents, Parcels, Bulk Cartons", "Delivery time depends on destination and service", "Free Doorstep Pickup Available"],
     coverage: "150+ Countries Worldwide",
     detailHref: "/services/international-courier",
   },
@@ -105,7 +105,7 @@ const SERVICES: Service[] = [
   {
     id: "commercial-shipping",
     title: "Commercial Shipping",
-    shortDesc: "Scalable B2B logistics, pallet freight, regular bulk dispatches, and customized corporate pricing.",
+    shortDesc: "Scalable B2B courier solutions, regular bulk dispatches, and customized corporate pricing.",
     icon: Building2,
     image: "/commercial_shipping.png",
     overview: "B2B logistics tailored for scale. Bulk shipment solutions, warehouse pickups, regular dispatch scheduling, and discounted corporate rates.",
@@ -113,6 +113,30 @@ const SERVICES: Service[] = [
     features: ["Supported Types: Pallets, Bulk Cartons", "Delivery: Scheduled LTL / FTL", "Warehouse & Factory Pickups"],
     coverage: "Global B2B Network",
     detailHref: "/services/commercial-shipping",
+  },
+  {
+    id: "shipment-insurance",
+    title: "Shipment Insurance",
+    shortDesc: "Complimentary domestic transit protection up to ₹30,000 and comprehensive commercial coverage options.",
+    icon: ShieldCheck,
+    image: "/shipment insurance.png",
+    overview: "Clear transit insurance for domestic, commercial and international shipments booked through established courier partners.",
+    benefits: ["Free domestic cover up to ₹30,000", "Full cover for commercial & B2B", "International insurance available"],
+    features: ["Domestic: complimentary, under 30 kg", "Commercial/B2B: valid invoice may be required", "International: subject to claim conditions"],
+    coverage: "Transit Insurance",
+    detailHref: "/services/shipment-insurance",
+  },
+  {
+    id: "free-packing-and-pickup",
+    title: "Free Packing & Doorstep Pickup",
+    shortDesc: "100% free doorstep pickup across Greater Hyderabad with complimentary food-grade and protective packing.",
+    icon: Package,
+    image: "/free packing.png",
+    overview: "Convenient zero-cost doorstep collection and expert packing in standard cartons, multi-layer leak-proof wraps for food and pickles, and shock cushioning for fragile items.",
+    benefits: ["100% Free Doorstep Collection", "Complimentary Standard Packaging", "Multi-layer Protection for Food & Pickles"],
+    features: ["Pickup: Doorstep Across Greater Hyderabad", "Packing: Food-Grade & Fragile Included", "Booking: Established Courier Networks"],
+    coverage: "Greater Hyderabad Pickup & Pan-India/Global Delivery",
+    detailHref: "/services/free-packing-and-pickup",
   }
 ];
 
@@ -168,7 +192,7 @@ export default function ServicesPage() {
             >
                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-3 sm:mb-4 tracking-tight">Our <span className="text-orange-500">Services</span></h1>
                <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                 From important international documents to heavy domestic freight, we have a premium shipping solution tailored for you.
+                 From important international documents to heavy domestic parcels, we have a premium shipping solution tailored for you.
                </p>
             </motion.div>
          </div>
@@ -180,13 +204,16 @@ export default function ServicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                {SERVICES.map((service, i) => {
                  const isLast = i === SERVICES.length - 1;
+                 const isOddOnSm = isLast && SERVICES.length % 2 === 1;
+                 const isSingleOnLg = isLast && SERVICES.length % 3 === 1;
                  return (
                    <Link 
                      href={`#${service.id}`} 
                      key={i}
                      className={cn(
                        "h-full bg-gradient-to-b from-white to-orange-50/30 p-6 rounded-2xl border border-orange-100 shadow-[0_4px_20px_rgba(249,115,22,0.05)] flex flex-col items-center text-center hover:shadow-[0_12px_32px_rgba(249,115,22,0.18)] hover:border-orange-300 hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm cursor-pointer",
-                       isLast ? "sm:col-span-2 sm:max-w-md sm:mx-auto sm:w-full lg:col-span-1 lg:col-start-2 lg:max-w-none lg:mx-0" : ""
+                       isOddOnSm ? "sm:col-span-2 sm:max-w-md sm:mx-auto sm:w-full" : "",
+                       isSingleOnLg ? "lg:col-span-1 lg:col-start-2 lg:max-w-none lg:mx-0" : "lg:col-span-1 lg:col-start-auto lg:max-w-none lg:mx-0"
                      )}
                    >
                       {/* Top Animated Accent Bar */}

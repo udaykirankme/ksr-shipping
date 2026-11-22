@@ -2,9 +2,9 @@ import type { PageSeoConfig } from "./metadata";
 
 export const pageSeo: Record<string, PageSeoConfig> = {
   home: {
-    title: "KSR Shipping Services - Best Courier Services in Hyderabad | Free Pickup & Food-Grade Packing",
+    title: "KSR Shipping Services - Best Courier Services Hyderabad",
     description:
-      "Best courier services in Hyderabad. 100% Free Doorstep Pickup, Premium Food-Grade Packing for sweets & pickles, safe medicine shipping, and fast international & domestic courier to 150+ countries.",
+      "Reliable courier services in Hyderabad with free doorstep pickup and packing. Quality packaging, fast domestic and international parcel delivery.",
     path: "/",
     keywords: [
       "courier service hyderabad",
@@ -25,9 +25,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   services: {
-    title: "Courier Services — International Shipping, Medicine, Food-Grade & Domestic",
+    title: "Our Courier Services",
     description:
-      "Explore KSR Shipping Services: 100% Free Doorstep Pickup, specialized food-grade packing for sweets & pickles, international courier to 150+ countries, urgent medicine transport, fragile packaging, and pan-India domestic shipping.",
+      "Courier services by KSR Shipping Services Hyderabad: free doorstep pickup and packing, domestic parcels, international delivery, food and medicine.",
     path: "/services",
     keywords: [
       "international courier hyderabad",
@@ -43,7 +43,7 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   getQuotation: {
-    title: "Get a Shipping Quote",
+    title: "Get a Quote",
     description:
       "Request a free courier quotation from KSR Shipping Services for domestic and international shipments from Hyderabad, Telangana.",
     path: "/get-quotation",
@@ -57,9 +57,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     keywords: ["track shipment", "courier tracking hyderabad", "parcel tracking"],
   },
   whyChooseUs: {
-    title: "Why Choose Us - Free Pickup & Food-Grade Packing",
+    title: "Why Choose Us",
     description:
-      "Discover why customers trust KSR Shipping Services. We offer 100% free doorstep pickup, premium food-grade packing, affordable international delivery, and real-time tracking.",
+      "Why choose KSR Shipping Services in Hyderabad: 100% free doorstep pickup, expert food-grade packing, reliable domestic and international courier booking.",
     path: "/why-choose-us",
     keywords: [
       "free pickup courier", 
@@ -85,7 +85,7 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     keywords: ["courier support", "shipping help", "ksr shipping support"],
   },
   faq: {
-    title: "Frequently Asked Questions",
+    title: "Courier FAQs",
     description:
       "Find answers to common questions about KSR Shipping Services courier, tracking, domestic and international shipping policies.",
     path: "/faq",
@@ -99,9 +99,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     keywords: ["restricted items courier", "prohibited shipping items", "international shipping restrictions"],
   },
   about: {
-    title: "About KSR Shipping Services - Logistics & Courier in Hyderabad",
+    title: "About Us",
     description:
-      "Learn about KSR Shipping Services, a trusted courier and cargo logistics provider based in Begumpet, Hyderabad. Offering international shipping to 150+ countries, pan-India domestic courier, food-grade packing, and complimentary doorstep pickup.",
+      "KSR Shipping Services in Begumpet, Hyderabad provides international and domestic courier delivery with free doorstep pickup and food-grade packing.",
     path: "/about",
     keywords: [
       "about ksr shipping services",
@@ -111,9 +111,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   internationalCourier: {
-    title: "International Courier Services from Hyderabad | KSR Shipping Services",
+    title: "International Courier",
     description:
-      "Reliable worldwide courier services from Hyderabad to 150+ countries including USA, UK, Canada, Australia, UAE, and Singapore. Doorstep collection, transparent documentation, and global parcel tracking.",
+      "Reliable international courier from Hyderabad to 150+ countries with free doorstep pickup, quality food-grade packing, and established courier booking.",
     path: "/services/international-courier",
     keywords: [
       "international courier services hyderabad",
@@ -123,9 +123,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   internationalCourierUsa: {
-    title: "International Courier from Hyderabad to USA | KSR Shipping Services",
+    title: "Hyderabad to USA Courier",
     description:
-      "Fast and secure international courier service from Hyderabad to the USA. Specialized food-grade packaging for sweets and snacks, urgent document delivery, and complete tracking updates.",
+      "Secure international courier from Hyderabad to the USA with free doorstep pickup, food-grade packing for sweets & pickles, and trusted courier booking.",
     path: "/services/international-courier/hyderabad-to-usa",
     keywords: [
       "courier from hyderabad to usa",
@@ -135,9 +135,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   internationalCourierUk: {
-    title: "International Courier from Hyderabad to UK | KSR Shipping Services",
+    title: "Hyderabad to UK Courier",
     description:
-      "Dependable international shipping service from Hyderabad to the United Kingdom. Complimentary doorstep pickup, food-grade packing, and end-to-end milestone tracking.",
+      "Reliable courier from Hyderabad to the UK. Complimentary doorstep pickup, food-grade packing for sweets & savories, and established carrier delivery.",
     path: "/services/international-courier/hyderabad-to-uk",
     keywords: [
       "courier from hyderabad to uk",
@@ -147,9 +147,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   domesticCourier: {
-    title: "Domestic Courier Services Across India | KSR Shipping Services Hyderabad",
+    title: "Domestic Courier",
     description:
-      "Fast and economical domestic courier services across India from Hyderabad. Air express and surface cargo options connecting all major Indian cities and pincodes with doorstep pickup.",
+      "Fast, reliable domestic courier services across India from Hyderabad. Free doorstep pickup, complimentary packing, and express air or surface transport.",
     path: "/services/domestic-courier",
     keywords: [
       "domestic courier service hyderabad",
@@ -159,9 +159,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   foodShipping: {
-    title: "Food & Homemade Sweets Courier from Hyderabad | KSR Shipping Services",
+    title: "Food & Sweets Shipping",
     description:
-      "Specialized food-grade packing and international courier for homemade sweets, snacks, spices, and non-perishable food items from Hyderabad to USA, UK, Canada, Australia, and worldwide.",
+      "Specialized food-grade packing and courier for homemade sweets, snacks, and pickles from Hyderabad worldwide with free doorstep pickup and safe packing.",
     path: "/services/food-shipping",
     keywords: [
       "food items courier international hyderabad",
@@ -171,9 +171,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   medicineShipping: {
-    title: "Medicine Courier Services from Hyderabad | KSR Shipping Services",
+    title: "Medicine Courier",
     description:
-      "Secure and compliant courier services for essential prescription medicines from Hyderabad to domestic and international destinations, with proper documentation assistance.",
+      "Compliant prescription medicine courier from Hyderabad to domestic and international destinations with documentation guidance and free doorstep pickup.",
     path: "/services/medicine-shipping",
     keywords: [
       "medicine courier service hyderabad",
@@ -183,9 +183,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   fragileShipping: {
-    title: "Fragile Item Packing & Shipping Services | KSR Shipping Services",
+    title: "Fragile Item Shipping",
     description:
-      "Multi-layered protective packaging and careful handling for delicate goods, glassware, handicrafts, and electronics shipped from Hyderabad across India and worldwide.",
+      "Protective packaging and courier for fragile goods, glass, and electronics from Hyderabad. Free doorstep pickup, bubble wrap packing, and careful transit.",
     path: "/services/fragile-shipping",
     keywords: [
       "fragile item courier hyderabad",
@@ -195,9 +195,9 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   documentShipping: {
-    title: "Express Document Delivery Services | KSR Shipping Services Hyderabad",
+    title: "Document Delivery",
     description:
-      "Confidential and urgent express courier delivery for legal documents, university applications, transcripts, and business paperwork with doorstep pickup and proof of delivery.",
+      "Urgent and confidential express document courier services in Hyderabad with free doorstep pickup, proof of delivery, and fast domestic or global dispatch.",
     path: "/services/document-shipping",
     keywords: [
       "express document courier hyderabad",
@@ -207,15 +207,39 @@ export const pageSeo: Record<string, PageSeoConfig> = {
     ],
   },
   commercialShipping: {
-    title: "Commercial & B2B Cargo Logistics | KSR Shipping Services Hyderabad",
+    title: "Commercial Courier",
     description:
-      "Flexible commercial cargo and B2B shipping solutions for businesses in Hyderabad. Bulk parcel distribution, warehouse dispatches, and customized freight schedules.",
+      "Commercial B2B courier solutions in Hyderabad with free doorstep pickup, bulk parcel packing, and scheduled dispatches via established courier partners.",
     path: "/services/commercial-shipping",
     keywords: [
       "commercial cargo hyderabad",
       "b2b logistics courier hyderabad",
       "bulk shipping hyderabad",
       "corporate courier solutions",
+    ],
+  },
+  shipmentInsurance: {
+    title: "Shipment Insurance",
+    description:
+      "Learn about KSR Shipping Services transit insurance: complimentary domestic coverage up to ₹30,000, commercial B2B protection, and international terms.",
+    path: "/services/shipment-insurance",
+    keywords: [
+      "courier shipment insurance",
+      "domestic parcel insurance hyderabad",
+      "transit insurance coverage",
+      "commercial b2b courier insurance",
+    ],
+  },
+  freePackingAndPickup: {
+    title: "Free Packing & Pickup",
+    description:
+      "Enjoy 100% free doorstep pickup across Hyderabad and complimentary professional packaging, including food-grade multilayer and fragile protection with KSR.",
+    path: "/services/free-packing-and-pickup",
+    keywords: [
+      "free courier pickup hyderabad",
+      "free packing courier",
+      "doorstep parcel collection",
+      "food grade packaging courier",
     ],
   },
   privacyPolicy: {
