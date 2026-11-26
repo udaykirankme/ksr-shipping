@@ -158,15 +158,19 @@ export function isDuplicateEvent(
  * 3. Stripping internal barcodes/WBNs/IDs so they are never exposed in public tracking
  * 4. Deduplicating identical physical events delivered across webhook and API sync
  */
-export function sanitizeHistoryForCustomer<T extends { status: string; location?: string | null; note?: string | null; occurred_at: Date | string }>(
+export function sanitizeHistoryForCustomer<T extends { status: string; location?: string | null; note?: string | null; occurred_at: Date | string; updated_by?: string | null; is_manual?: boolean }>(
   history: T[],
   isDelhivery: boolean = true
-): T[] {
-  const result: T[] = [];
+): (Omit<T, 'updated_by'> & { is_manual?: boolean })[] {
+  const result: (Omit<T, 'updated_by'> & { is_manual?: boolean })[] = [];
 
   for (const item of history) {
-    // Exclude exception events from public customer consumption
-    if (isExceptionStatus(item.status, item.note)) {
+    const isManual = Boolean(item.is_manual || item.updated_by);
+    const { updated_by: _omitUpdatedBy, ...restItem } = item;
+
+    // Exclude exception events from public customer consumption;
+    // for admin-entered history entries, only check the status itself so custom notes (e.g. delivery attempts) are preserved.
+    if (isExceptionStatus(item.status, isManual ? undefined : item.note)) {
       continue;
     }
     const cleanNote = sanitizeCustomerHistoryNote(item.note);
@@ -174,12 +178,12 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
     
     let finalStatus: string;
     if (isDelhivery) {
-      const normalizedStatus = normalizeOperationalStatus(item.status, cleanNote);
-      if (isExceptionStatus(normalizedStatus, cleanNote)) {
+      const normalizedStatus = normalizeOperationalStatus(item.status, isManual ? undefined : cleanNote);
+      if (isExceptionStatus(normalizedStatus, isManual ? undefined : cleanNote)) {
         continue;
       }
       // Unknown event safety suppression for public customer history
-      if (!isRoutineOperationalStatus(normalizedStatus, cleanNote)) {
+      if (!isRoutineOperationalStatus(normalizedStatus, isManual ? undefined : cleanNote)) {
         continue;
       }
       finalStatus = normalizedStatus;
@@ -214,9 +218,10 @@ export function sanitizeHistoryForCustomer<T extends { status: string; location?
 
     if (!isDuplicate) {
       result.push({
-        ...item,
+        ...restItem,
         status: finalStatus,
         note: cleanNote || null,
+        is_manual: isManual,
         package_id: pkgId || (item as any).package_id || undefined
       });
     }

@@ -48,6 +48,7 @@ async function getInitialTrackingData(id?: string) {
             location: true,
             note: true,
             occurred_at: true,
+            updated_by: true,
           },
           orderBy: [
             { occurred_at: 'desc' },

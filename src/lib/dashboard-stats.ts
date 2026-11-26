@@ -65,6 +65,7 @@ export async function getDashboardStats(month?: number, year?: number): Promise<
             note: true,
             location: true,
             occurred_at: true,
+            updated_by: true,
           },
         },
       },

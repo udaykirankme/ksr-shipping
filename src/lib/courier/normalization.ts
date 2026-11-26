@@ -691,7 +691,7 @@ export function getMilestoneStageIndex(
  */
 export function resolveMilestoneFromHistory(
   currentStatus: string | null | undefined,
-  history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string }> | null,
+  history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string; is_manual?: boolean; updated_by?: string | null }> | null,
   customerUpdate?: string | null | undefined,
   isDelhivery: boolean = false
 ): number {
@@ -700,22 +700,27 @@ export function resolveMilestoneFromHistory(
 
     if (history && history.length > 0) {
       for (const evt of history) {
-        if (isExceptionStatus(evt.status, evt.note)) continue;
-        const stage = getNonDelhiveryMilestoneStage(evt.status, evt.note);
+        const isManual = Boolean(evt.is_manual || evt.updated_by);
+        const noteForCheck = isManual ? undefined : evt.note;
+        if (isExceptionStatus(evt.status, noteForCheck)) continue;
+        const stage = getNonDelhiveryMilestoneStage(evt.status, noteForCheck);
         if (stage > maxStage) {
           maxStage = stage;
         }
       }
     }
 
-    if (currentStatus && !isExceptionStatus(currentStatus, customerUpdate)) {
-      const currentStage = getNonDelhiveryMilestoneStage(currentStatus, customerUpdate);
+    if (currentStatus && !isExceptionStatus(currentStatus)) {
+      const currentStage = getNonDelhiveryMilestoneStage(currentStatus);
       if (currentStage > maxStage) {
         maxStage = currentStage;
       }
     }
 
-    if (isReturnStatus(currentStatus, customerUpdate) || (history && history.some(e => isReturnStatus(e.status, e.note)))) {
+    if (
+      isReturnStatus(currentStatus) ||
+      (history && history.some(e => isReturnStatus(e.status, (e.is_manual || e.updated_by) ? undefined : e.note)))
+    ) {
       return Math.min(maxStage, 3);
     }
 
@@ -739,23 +744,25 @@ export function resolveMilestoneFromHistory(
   let isReturnedShipment = isReturnStatus(currentStatus, customerUpdate);
 
   for (const evt of chronological) {
-    if (isExceptionStatus(evt.status, evt.note)) {
+    const isManual = Boolean(evt.is_manual || evt.updated_by);
+    const noteForCheck = isManual ? undefined : evt.note;
+    if (isExceptionStatus(evt.status, noteForCheck)) {
       continue; // Exception events must never advance progressive milestones
     }
-    if (isReturnStatus(evt.status, evt.note)) {
+    if (isReturnStatus(evt.status, noteForCheck)) {
       isReturnedShipment = true;
-      const returnStage = getMilestoneStageIndex(evt.status, evt.note);
+      const returnStage = getMilestoneStageIndex(evt.status, noteForCheck);
       maxStage = Math.max(maxStage, returnStage);
       hasConfirmedTransit = true;
       hasConfirmedPickup = true;
       continue;
     }
-    if (!isRoutineOperationalStatus(evt.status, evt.note)) {
+    if (!isRoutineOperationalStatus(evt.status, noteForCheck)) {
       continue; // Unknown events must not advance milestones
     }
 
     const s = (evt.status || '').trim().toLowerCase();
-    const n = (evt.note || '').trim().toLowerCase();
+    const n = isManual ? '' : (evt.note || '').trim().toLowerCase();
 
     // 1. Delivered to Consignee (Stage 4)
     if (
@@ -929,7 +936,7 @@ export function resolveMilestoneFromHistory(
  */
 export function resolveCustomerCurrentStatus(
   rawStatus: string | null | undefined,
-  history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string }> | null,
+  history?: Array<{ status: string; note?: string | null; location?: string | null; occurred_at?: Date | string; is_manual?: boolean; updated_by?: string | null }> | null,
   customerUpdate?: string | null | undefined,
   isDelhivery: boolean = false
 ): string {
@@ -941,13 +948,14 @@ export function resolveCustomerCurrentStatus(
       return db - da; // newest first
     });
     const latestEvent = sorted[0];
-    if (latestEvent && isReturnStatus(latestEvent.status, latestEvent.note)) {
-      return resolveReturnDescription(latestEvent.status, latestEvent.note);
+    const latestNote = (latestEvent?.is_manual || latestEvent?.updated_by) ? undefined : latestEvent?.note;
+    if (latestEvent && isReturnStatus(latestEvent.status, latestNote)) {
+      return resolveReturnDescription(latestEvent.status, latestNote);
     }
   }
 
-  if (isReturnStatus(rawStatus, customerUpdate)) {
-    return resolveReturnDescription(rawStatus, customerUpdate);
+  if (isReturnStatus(rawStatus, isDelhivery ? customerUpdate : undefined)) {
+    return resolveReturnDescription(rawStatus, isDelhivery ? customerUpdate : undefined);
   }
 
   const cleanRaw = (rawStatus || '').trim();
@@ -985,8 +993,8 @@ export function resolveCustomerCurrentStatus(
  */
 export function resolveCustomerEligibleUpdate(
   customerUpdate: string | null | undefined,
-  cleanedHistory?: Array<{ status: string; note?: string | null }> | null,
-  _isDelhivery: boolean = true
+  cleanedHistory?: Array<{ status: string; note?: string | null; is_manual?: boolean; updated_by?: string | null }> | null,
+  isDelhivery: boolean = true
 ): string | null {
   // For all services (including Delhivery B2B and B2C):
   // Shipment update MUST be exactly what was entered in the admin.
@@ -997,7 +1005,13 @@ export function resolveCustomerEligibleUpdate(
 
   // Clean any internal bracket IDs if present, but preserve admin-entered text
   const clean = raw.replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '').trim();
-  if (!clean || isExceptionStatus(clean) || isInternalCode(clean)) {
+  if (!clean || isInternalCode(clean)) {
+    return null;
+  }
+
+  // For Delhivery shipments, still guard against legacy auto-populated courier exception strings,
+  // while allowing intentional admin-entered customer updates on non-Delhivery shipments.
+  if (isDelhivery && isExceptionStatus(clean)) {
     return null;
   }
 
@@ -1005,6 +1019,7 @@ export function resolveCustomerEligibleUpdate(
   // do not treat it as an admin-entered update.
   if (cleanedHistory && cleanedHistory.length > 0) {
     const isCourierDefault = cleanedHistory.some((evt) => {
+      if (evt.is_manual || evt.updated_by) return false;
       const evtNote = (evt.note || '').replace(/\[(?:ID|PKG|WBN|AWB):[^\]]+\]/gi, '').trim().toLowerCase();
       const evtStatus = (evt.status || '').trim().toLowerCase();
       const target = clean.toLowerCase();

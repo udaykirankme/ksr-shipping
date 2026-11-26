@@ -76,7 +76,8 @@ router.post('/track', apiLimiter, async (req, res) => {
             status: true,
             location: true,
             note: true,
-            occurred_at: true
+            occurred_at: true,
+            updated_by: true
           },
           orderBy: [
             { occurred_at: 'desc' },

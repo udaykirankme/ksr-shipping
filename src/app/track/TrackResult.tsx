@@ -44,6 +44,7 @@ interface TrackingHistoryEvent {
   location: string;
   note: string;
   occurred_at: string;
+  is_manual?: boolean;
 }
 
 interface TrackingData {
@@ -800,9 +801,10 @@ export default function TrackResult({
     let activeMilestone = 0;
 
     for (const g of chronological) {
+      const isManual = Boolean(g.events[0]?.is_manual);
       const rawStage = getMilestoneStageIndex(
         g.status,
-        g.events[0]?.note,
+        isManual ? undefined : g.events[0]?.note,
         undefined,
         isDelhivery
       );
@@ -1119,7 +1121,7 @@ export default function TrackResult({
                 const latestSummaryNote = (() => {
                   const rawNote =
                     stageEvents[0]?.events[0]?.note ||
-                    (isCurrentActive ? (data.history[0]?.note || data.customer_update) : undefined);
+                    (isCurrentActive ? data.customer_update : undefined);
                   if (!rawNote) return null;
                   const clean = rawNote.trim();
                   const lower = clean.toLowerCase();

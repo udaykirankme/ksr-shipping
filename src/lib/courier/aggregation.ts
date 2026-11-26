@@ -8,6 +8,8 @@ export interface RawTrackingScan {
   occurred_at: string | Date;
   raw_status?: string | null;
   package_id?: string | null;
+  is_manual?: boolean;
+  updated_by?: string | null;
 }
 
 export interface AggregatedTrackingGroup {
@@ -28,6 +30,7 @@ export interface AggregatedTrackingGroup {
     note: string;
     occurred_at: Date;
     package_id?: string | null;
+    is_manual?: boolean;
   }[];
 }
 
@@ -251,17 +254,21 @@ export function aggregateTrackingHistory(
     headline: string;
     occurredAt: Date;
     packageId: string | null;
+    isManual: boolean;
   }
 
   const validScans: ParsedScan[] = [];
 
   for (const evt of dedupedScans) {
+    const isManual = Boolean(evt.is_manual);
+    const noteForCheck = isManual ? undefined : evt.note;
+
     // Absolute public exception suppression
-    if (isExceptionStatus(evt.status, evt.note)) {
+    if (isExceptionStatus(evt.status, noteForCheck)) {
       continue;
     }
     // Unknown event safety suppression
-    if (!isRoutineOperationalStatus(evt.status, evt.note)) {
+    if (!isRoutineOperationalStatus(evt.status, noteForCheck)) {
       continue;
     }
 
@@ -280,8 +287,8 @@ export function aggregateTrackingHistory(
 
     if (isDelhivery) {
       // 100% untouched Delhivery B2B and B2C operational action resolution
-      normStatus = normalizeOperationalStatus(evt.status, cleanNote);
-      canonicalAction = getCanonicalAction(normStatus, cleanNote);
+      normStatus = normalizeOperationalStatus(evt.status, isManual ? undefined : cleanNote);
+      canonicalAction = getCanonicalAction(normStatus, isManual ? '' : cleanNote);
       headline = toTitleCase(canonicalAction);
     } else {
       // Services other than Delhivery B2B and B2C:
@@ -289,7 +296,7 @@ export function aggregateTrackingHistory(
       const rawStatusTrimmed = (evt.status || '').trim();
       normStatus = rawStatusTrimmed
         ? toTitleCase(rawStatusTrimmed.replace(/_/g, ' '))
-        : normalizeOperationalStatus(evt.status, cleanNote);
+        : normalizeOperationalStatus(evt.status, isManual ? undefined : cleanNote);
       canonicalAction = normStatus;
       headline = normStatus;
     }
@@ -302,7 +309,8 @@ export function aggregateTrackingHistory(
       canonicalAction,
       headline,
       occurredAt,
-      packageId
+      packageId,
+      isManual
     });
   }
 
@@ -450,7 +458,8 @@ export function aggregateTrackingHistory(
         location: item.location,
         note: item.note,
         occurred_at: item.occurredAt,
-        package_id: item.packageId
+        package_id: item.packageId,
+        is_manual: item.isManual
       }))
     };
   });
