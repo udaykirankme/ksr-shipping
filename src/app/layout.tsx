@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { PublicLayoutWrapper } from "@/components/layout/PublicLayoutWrapper";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { rootMetadata } from "@/lib/seo/metadata";
 import { buildGlobalSchemaGraph } from "@/lib/seo/schema";
@@ -41,6 +42,7 @@ export default function RootLayout({
         className={`${inter.className} ${inter.variable} bg-white text-gray-900 antialiased min-h-screen flex flex-col`}
       >
         <PublicLayoutWrapper>{children}</PublicLayoutWrapper>
+        <GoogleAnalytics />
       </body>
     </html>
   );

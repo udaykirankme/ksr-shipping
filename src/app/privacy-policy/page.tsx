@@ -52,6 +52,7 @@ export default function PrivacyPolicyPage() {
 
           <p><strong>7. Cookies and Tracking Technologies</strong><br/>
           Our website uses cookies and similar technologies to enable core website functionality, remember your preferences, analyze website traffic, and measure the effectiveness of our services. You may control or disable cookies through your browser settings at any time; however, disabling certain cookies may affect the functionality of our website, including the shipment tracking tool. Where required by applicable law, we will seek your consent before placing non-essential cookies and will provide a mechanism for you to manage your cookie preferences.</p>
+          <p>We use Google Analytics to understand how visitors use our website. It uses cookies and collects anonymised usage data such as pages visited, device type and approximate location. It does not collect your name, phone number or shipment details.</p>
 
           <p><strong>8. Sharing and Disclosure of Information</strong><br/>
           We may share your information with:</p>

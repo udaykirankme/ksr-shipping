@@ -48,6 +48,7 @@ export default function GetQuotationPage() {
       });
 
       if (res.ok) {
+        if (typeof window !== "undefined" && typeof window.gtag === "function") window.gtag("event", "form_submit_quote", { page_path: "/get-quotation" });
         setSuccess(true);
       } else {
         const data = await res.json().catch(() => null);
